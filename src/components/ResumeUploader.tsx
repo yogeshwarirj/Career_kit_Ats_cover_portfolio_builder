@@ -163,7 +163,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
       onChange={(e) => handleFileUpload(e.target.files[0])}
     />
   </div>
-)}
+)};
 
           {uploadStatus === 'error' && (
             <div className="text-sm text-red-600 bg-red-50 p-4 rounded-lg mt-4 max-w-md">
