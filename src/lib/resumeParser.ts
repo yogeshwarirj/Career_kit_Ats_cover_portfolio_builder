@@ -36,6 +36,7 @@ export interface ParsedResume {
     name: string;
     issuer: string;
     date: string;
+     [key: string]: any; 
   }>;
 }
 
