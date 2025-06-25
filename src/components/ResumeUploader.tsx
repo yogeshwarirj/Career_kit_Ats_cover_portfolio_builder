@@ -122,7 +122,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
   };
 
   return (
- <div className={`w-full ${className}`}>
+<div className={`w-full ${className}`}>
   <div
     className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${getStatusColor()}`}
   >
@@ -137,13 +137,16 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
             ? 'Upload your resume in DOCX format for comprehensive ATS analysis'
             : 'Only Microsoft Word documents (.docx) are supported for best results'}
         </p>
-
         {/* DOCX File Button */}
         <div className="flex items-center justify-center space-x-2 mb-4">
           <button
             type="button"
-            onClick={() => document.getElementById('docx-upload-input').click()}
-            className="flex items-center px-3 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation(); // Prevent event bubbling
+              document.getElementById('docx-upload-input')?.click();
+            }}
+            className="flex items-center px-3 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-blue-200 transition-colors duration-200"
           >
             <FileText className="h-4 w-4 mr-2" />
             DOCX Only
@@ -155,14 +158,15 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) {
-                handleFileUpload(file); // Replace with your file handling logic
+                handleFileUpload(file);
               }
+              // Reset the input value so the same file can be selected again
+              e.target.value = '';
             }}
             style={{ display: 'none' }}
           />
         </div>
       </div>
-
       {/* PDF Conversion Notice */}
       {uploadStatus !== 'success' && (
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 max-w-md">
@@ -179,6 +183,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
                 href="https://www.adobe.com/acrobat/online/pdf-to-word.html"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()} // Prevent triggering file upload
                 className="inline-flex items-center px-3 py-2 bg-orange-600 text-white text-sm font-medium rounded-md hover:bg-orange-700 transition-colors duration-200"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
@@ -189,7 +194,6 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
         </div>
       )}
     </div>
-
     {/* Upload Progress Animation */}
     {isUploading && (
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 rounded-b-xl overflow-hidden">
@@ -198,8 +202,6 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
     )}
   </div>
 </div>
-
-
 
       {/* Why DOCX Notice */}
       <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
