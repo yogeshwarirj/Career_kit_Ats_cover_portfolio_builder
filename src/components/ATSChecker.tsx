@@ -69,37 +69,24 @@ const ATSChecker: React.FC<ATSCheckerProps> = ({
     setIsAnalyzing(false);
   };
 
-  const analyzeDocument = (content: string, jobDesc: string) => {
-    const contentWords = content.toLowerCase().split(/\s+/);
-    const jobWords = jobDesc.toLowerCase().split(/\s+/);
-    
-    // Extract keywords from job description
-    const jobKeywords = extractKeywords(jobDesc);
-    const foundKeywords = jobKeywords.filter(keyword => 
-      content.toLowerCase().includes(keyword.toLowerCase())
-    );
-    const missingKeywords = jobKeywords.filter(keyword => 
-      !content.toLowerCase().includes(keyword.toLowerCase())
-    );
+const analyzeDocument = useCallback((content: string, jobDesc: string) => {
+  const keywords = extractKeywords(jobDesc);
+  const found = keywords.filter(k => content.toLowerCase().includes(k.toLowerCase()));
+  const missing = keywords.filter(k => !content.toLowerCase().includes(k.toLowerCase()));
+  const keywordScore = keywords.length ? Math.round((found.length / keywords.length) * 100) : 75;
 
-    // Calculate keyword score
-    const keywordScore = jobKeywords.length > 0 
-      ? Math.round((foundKeywords.length / jobKeywords.length) * 100)
-      : 75;
+  const formattingScore = analyzeFormatting(content);
+  const contentScore = analyzeContentQuality(content);
 
-    // Analyze formatting
-    const formattingScore = analyzeFormatting(content);
-    
-    // Analyze content quality
-    const contentScore = analyzeContentQuality(content);
-    
-    // Overall score
-    const score = Math.round((keywordScore + formattingScore + contentScore) / 3);
+  // Weighted score
+  const score = Math.round((keywordScore * 0.4 + formattingScore * 0.3 + contentScore * 0.3));
+
+  
 
     return {
       score,
       keywords: {
-        found: foundKeywords,
+         found,
         missing: missingKeywords.slice(0, 5),
         suggestions: generateKeywordSuggestions(missingKeywords)
       },
