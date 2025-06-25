@@ -812,12 +812,35 @@ Preferred Qualifications:
             </button>
           </div>
 
-          {/* Resume Comparison */}
-          {showComparison && (
-            <div className="mb-8">
-              <ResumeComparison />
-            </div>
-          )}
+      /*    {/* Resume Comparison */}
+    {showComparison && (
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+    <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+      <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+        <BarChart3 className="h-5 w-5 text-teal-600 mr-2" />
+        Before Optimization
+      </h4>
+      <ul className="list-disc list-inside text-sm text-gray-700 space-y-2">
+        <li>Overall Score: {analysisResult.beforeScore}%</li>
+        <li>Found Keywords: {analysisResult.beforeKeywords.found.length}</li>
+        <li>Missing Keywords: {analysisResult.beforeKeywords.missing.length}</li>
+      </ul>
+    </div>
+    
+    <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+      <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+        <BarChart3 className="h-5 w-5 text-green-600 mr-2" />
+        After Optimization
+      </h4>
+      <ul className="list-disc list-inside text-sm text-gray-700 space-y-2">
+        <li>Overall Score: {optimizedResult.afterScore}%</li>
+        <li>Found Keywords: {optimizedResult.afterKeywords.found.length}</li>
+        <li>Missing Keywords: {optimizedResult.afterKeywords.missing.length}</li>
+      </ul>
+    </div>
+  </div>
+)}
+
 
           {/* Optimized Resume Preview */}
           <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
