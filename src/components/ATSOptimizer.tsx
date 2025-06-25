@@ -428,7 +428,7 @@ Preferred Qualifications:
                   <Download className="h-6 w-6 text-white" />
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-2">Multiple Formats</h3>
-                <p className="text-sm text-gray-600">Export your optimized resume in txt ATS-friendly formats</p>
+                <p className="text-sm text-gray-600">Export your optimized resume in TEXT ATS-friendly formats</p>
               </div>
             </div>
           </div>
@@ -497,7 +497,18 @@ Preferred Qualifications:
                   <div className="text-sm text-gray-600">Copy and paste the job description</div>
                 </button>
                 
-            
+                <button
+                  onClick={() => setInputMethod('url')}
+                  className={`flex-1 p-4 rounded-lg border-2 transition-all duration-200 ${
+                    inputMethod === 'url'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  <Target className="h-6 w-6 mx-auto mb-2" />
+                  <div className="font-medium">Job URL</div>
+                  <div className="text-sm text-gray-600">Provide a link to the job posting</div>
+                </button>
               </div>
             </div>
 
@@ -709,7 +720,7 @@ Preferred Qualifications:
                       Found Keywords ({analysisResult.keywords.found.length})
                     </h5>
                     <div className="flex flex-wrap gap-2">
-                      {analysisResult.keywords.found.map((keyword, index) => (
+                      {analysisResult.keywords.found.slice(0, 10).map((keyword, index) => (
                         <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded-full">
                           {keyword}
                         </span>
@@ -728,7 +739,7 @@ Preferred Qualifications:
                       Missing Keywords ({analysisResult.keywords.missing.length})
                     </h5>
                     <div className="flex flex-wrap gap-2">
-                      {analysisResult.keywords.missing.map((keyword, index) => (
+                      {analysisResult.keywords.missing.slice(0, 8).map((keyword, index) => (
                         <span key={index} className="px-2 py-1 bg-red-100 text-red-800 text-sm rounded-full">
                           {keyword}
                         </span>
@@ -751,7 +762,7 @@ Preferred Qualifications:
                 </h4>
                 
                 <div className="space-y-3">
-                  {analysisResult.recommendations.map((rec, index) => (
+                  {analysisResult.recommendations.slice(0, 6).map((rec, index) => (
                     <div key={index} className="flex items-start">
                       <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
                       <p className="text-sm text-gray-700">{rec}</p>
@@ -812,35 +823,12 @@ Preferred Qualifications:
             </button>
           </div>
 
-      /*    {/* Resume Comparison */}
-    {showComparison && (
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-    <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-      <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-        <BarChart3 className="h-5 w-5 text-teal-600 mr-2" />
-        Before Optimization
-      </h4>
-      <ul className="list-disc list-inside text-sm text-gray-700 space-y-2">
-        <li>Overall Score: {analysisResult.beforeScore}%</li>
-        <li>Found Keywords: {analysisResult.beforeKeywords.found.length}</li>
-        <li>Missing Keywords: {analysisResult.beforeKeywords.missing.length}</li>
-      </ul>
-    </div>
-    
-    <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-      <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-        <BarChart3 className="h-5 w-5 text-green-600 mr-2" />
-        After Optimization
-      </h4>
-      <ul className="list-disc list-inside text-sm text-gray-700 space-y-2">
-        <li>Overall Score: {optimizedResult.afterScore}%</li>
-        <li>Found Keywords: {optimizedResult.afterKeywords.found.length}</li>
-        <li>Missing Keywords: {optimizedResult.afterKeywords.missing.length}</li>
-      </ul>
-    </div>
-  </div>
-)}
-
+          {/* Resume Comparison */}
+          {showComparison && (
+            <div className="mb-8">
+              <ResumeComparison />
+            </div>
+          )}
 
           {/* Optimized Resume Preview */}
           <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
