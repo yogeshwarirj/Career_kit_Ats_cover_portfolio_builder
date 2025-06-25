@@ -505,9 +505,7 @@ Preferred Qualifications:
                       : 'border-gray-300 hover:border-gray-400'
                   }`}
                 >
-                  <Target className="h-6 w-6 mx-auto mb-2" />
-                  <div className="font-medium">Job URL</div>
-                  <div className="text-sm text-gray-600">Provide a link to the job posting</div>
+                
                 </button>
               </div>
             </div>
