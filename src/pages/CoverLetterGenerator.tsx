@@ -37,7 +37,7 @@ const CoverLetterGenerator: React.FC = () => {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [savedLetters, setSavedLetters] = useState<CoverLetterData[]>([]);
   const [subscription, setSubscription] = useState<UserSubscription>({
-    isSubscribed: true,
+    isSubscribed: false,
     freeLettersUsed: 0,
     maxFreeLetters: 3,
     subscriptionType: null,
