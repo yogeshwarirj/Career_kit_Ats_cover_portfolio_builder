@@ -122,113 +122,73 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
   };
 
   return (
-    <div className={`w-full ${className}`}>
-      <div
-        {...getRootProps()}
-        className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 ${getStatusColor()}`}
-      >
-        <input {...getInputProps()} />
-        
-        <div className="flex flex-col items-center space-y-4">
-          {getStatusIcon()}
-          
-          <div>
-            <p className="text-lg font-medium text-gray-900 mb-2">
-              {getStatusText()}
-            </p>
-            
-            <p className="text-sm text-gray-600 mb-3">
-              {mode === 'cover-letter' 
-                ? 'Upload your resume in DOCX format to generate a personalized cover letter'
-                : mode === 'ats-analysis'
-                ? 'Upload your resume in DOCX format for comprehensive ATS analysis'
-                : 'Only Microsoft Word documents (.docx) are supported for best results'
-              }
-            </p>
+ <div className={`w-full ${className}`}>
+  <div
+    className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${getStatusColor()}`}
+  >
+    <div className="flex flex-col items-center space-y-4">
+      {getStatusIcon()}
+      <div>
+        <p className="text-lg font-medium text-gray-900 mb-2">{getStatusText()}</p>
+        <p className="text-sm text-gray-600 mb-3">
+          {mode === 'cover-letter'
+            ? 'Upload your resume in DOCX format to generate a personalized cover letter'
+            : mode === 'ats-analysis'
+            ? 'Upload your resume in DOCX format for comprehensive ATS analysis'
+            : 'Only Microsoft Word documents (.docx) are supported for best results'}
+        </p>
 
-         
-              {/* DOCX File Icon */}
-            {!isUploading && uploadStatus !== 'success' && (
-              <div className="flex items-center justify-center space-x-2 mb-4">
-             <button
-                  onClick={() => document.getElementById('file-upload').click()}
-                  className="flex items-center px-3 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  DOCX Only
-                </button>
-                <input
-                  id="file-upload"
-                  type="file"
-                  accept=".docx"
-                  style={{ display: 'none' }}
-                  onChange={(e) => handleFileUpload(e.target.files[0])}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* PDF Conversion Notice */}
-          {uploadStatus !== 'success' && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 max-w-md">
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  <AlertCircle className="h-5 w-5 text-orange-400" />
-                </div>
-                <div className="ml-3">
-                  <h4 className="text-sm font-medium text-orange-800 mb-2">
-                    Have a PDF resume?
-                  </h4>
-                  <p className="text-sm text-orange-700 mb-3">
-                    Convert your PDF to DOCX format for best results and accurate text extraction.
-                  </p>
-                  <a
-                    href="https://www.adobe.com/acrobat/online/pdf-to-word.html"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center px-3 py-2 bg-orange-600 text-white text-sm font-medium rounded-md hover:bg-orange-700 transition-colors duration-200"
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Convert PDF to DOCX
-                  </a>
-                </div>
-              </div>
-            </div>
-           )}
-
-
-          {uploadStatus === 'error' && (
-            <div className="text-sm text-red-600 bg-red-50 p-4 rounded-lg mt-4 max-w-md">
-              <p className="font-medium mb-2">Upload Requirements:</p>
-              <ul className="text-xs space-y-1 list-disc list-inside">
-                <li>File must be in Microsoft Word (.docx) format</li>
-                <li>File size must be less than 10MB</li>
-                <li>Resume should contain clear text (not just images)</li>
-                <li>Name and email should be visible at the top</li>
-              </ul>
-              <div className="mt-3 pt-3 border-t border-red-200">
-                <p className="font-medium mb-1">Need to convert a PDF?</p>
-                <a
-                  href="https://www.adobe.com/acrobat/online/pdf-to-word.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-red-700 hover:text-red-800 text-xs"
-                >
-                  <ExternalLink className="h-3 w-3 mr-1" />
-                  Use Adobe's free PDF to Word converter
-                </a>
-              </div>
-            </div>
-           )}
+        {/* DOCX File Button */}
+        <div className="flex items-center justify-center space-x-2 mb-4">
+          <button
+            {...getRootProps({
+              className:
+                'flex items-center px-3 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500',
+            })}
+          >
+            <input {...getInputProps()} />
+            <FileText className="h-4 w-4 mr-2" />
+            DOCX Only
+          </button>
         </div>
-
-        {/* Upload Progress Animation */}
-        {isUploading && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 rounded-b-xl overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-teal-500 to-blue-500 animate-pulse"></div>
-          </div>
-        )}
       </div>
+
+      {/* PDF Conversion Notice */}
+      {uploadStatus !== 'success' && (
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 max-w-md">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <AlertCircle className="h-5 w-5 text-orange-400" />
+            </div>
+            <div className="ml-3">
+              <h4 className="text-sm font-medium text-orange-800 mb-2">Have a PDF resume?</h4>
+              <p className="text-sm text-orange-700 mb-3">
+                Convert your PDF to DOCX format for best results and accurate text extraction.
+              </p>
+              <a
+                href="https://www.adobe.com/acrobat/online/pdf-to-word.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-3 py-2 bg-orange-600 text-white text-sm font-medium rounded-md hover:bg-orange-700 transition-colors duration-200"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Convert PDF to DOCX
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* Upload Progress Animation */}
+    {isUploading && (
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 rounded-b-xl overflow-hidden">
+        <div className="h-full bg-gradient-to-r from-teal-500 to-blue-500 animate-pulse"></div>
+      </div>
+    )}
+  </div>
+</div>
+
 
       {/* Why DOCX Notice */}
       <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
