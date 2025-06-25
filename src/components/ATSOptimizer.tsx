@@ -742,7 +742,21 @@ Preferred Qualifications:
                   </div>
                 </div>
               </div>
-
+{/* Grammar and Spelling Check */}
+<div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+  <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+    <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
+    Grammar and Spelling Check
+  </h4>
+  <p className="text-sm text-gray-700">
+    <strong>Errors Found:</strong> {analysisResult.grammarIssues.length}
+  </p>
+  <ul className="list-disc list-inside text-sm text-red-700">
+    {analysisResult.grammarIssues.map((issue, index) => (
+      <li key={index}>{issue}</li>
+    ))}
+  </ul>
+</div>
               {/* Recommendations */}
               <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
                 <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
