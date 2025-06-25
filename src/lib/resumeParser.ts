@@ -215,27 +215,13 @@ const parseTextToResume = (text: string): ParsedResume => {
     }
     resume.summary = summaryLines.join(' ');
   }
+// GENERALIZED SKILLS EXTRACTION
 
-  // Extract skills
-  const skillsIndex = lines.findIndex(line => 
-    /skills|technologies|competencies|expertise/i.test(line)
-  );
-  if (skillsIndex !== -1) {
-    const skillsSection = lines.slice(skillsIndex + 1, skillsIndex + 10).join(' ');
-    const skillsArray = skillsSection.split(/[,;|•·]/).map(skill => skill.trim()).filter(skill => skill.length > 0);
-    
-    // Categorize skills (basic categorization)
-    const technicalKeywords = ['javascript', 'python', 'java', 'react', 'node', 'sql', 'html', 'css', 'aws', 'docker', 'git'];
-    const technical = skillsArray.filter(skill => 
-      technicalKeywords.some(keyword => skill.toLowerCase().includes(keyword))
-    );
-    const soft = skillsArray.filter(skill => 
-      !technicalKeywords.some(keyword => skill.toLowerCase().includes(keyword))
-    );
-    
-    resume.skills.technical = technical.slice(0, 10);
-    resume.skills.soft = soft.slice(0, 8);
-  }
+  const skillsData = extractSkills(lines, text);
+
+  resume.skills.technical = skillsData.technical;
+
+  resume.skills.soft = skillsData.soft;
 
   // Extract experience
   const experienceIndex = lines.findIndex(line => 
@@ -308,6 +294,312 @@ export const validateResumeFile = (file: File): { valid: boolean; error?: string
   if (!allowedTypes.includes(file.type)) {
     return { valid: false, error: 'Only PDF, DOCX, and TXT files are supported' };
   }
+// Generalized skills extraction function for all industries
+const extractSkills = (lines: string[], fullText: string) => {
+  // Technical/Hard Skills Keywords (Industry-Agnostic)
+  const technicalKeywords = [
+    // Technology & Software (Basic)
+    'microsoft office', 'excel', 'word', 'powerpoint', 'outlook', 'google workspace', 'google sheets', 'google docs',
+    'adobe creative suite', 'photoshop', 'illustrator', 'indesign', 'premiere pro', 'after effects',
+    'autocad', 'solidworks', 'revit', 'sketchup', 'archicad', 'maya', '3ds max', 'blender',
+    'salesforce', 'hubspot', 'crm', 'erp', 'sap', 'oracle', 'quickbooks', 'sage', 'xero',
+    
+    // Programming & Development
+    'programming', 'coding', 'software development', 'web development', 'mobile development',
+    'javascript', 'python', 'java', 'html', 'css', 'sql', 'c++', 'c#', 'php', 'ruby',
+    
+    // Data & Analytics
+    'data analysis', 'statistical analysis', 'tableau', 'power bi', 'spss', 'r', 'stata',
+    'data visualization', 'business intelligence', 'reporting', 'dashboards',
+    
+    // Digital Marketing & Social Media
+    'digital marketing', 'social media marketing', 'seo', 'sem', 'google analytics', 'google ads',
+    'facebook ads', 'instagram marketing', 'linkedin marketing', 'email marketing', 'content marketing',
+    'mailchimp', 'hootsuite', 'buffer', 'sprout social',
+    
+    // Design & Creative
+    'graphic design', 'web design', 'ui/ux design', 'branding', 'typography', 'color theory',
+    'wireframing', 'prototyping', 'figma', 'sketch', 'canva',
+    
+    // Finance & Accounting
+    'financial analysis', 'budgeting', 'forecasting', 'financial modeling', 'cost accounting',
+    'tax preparation', 'auditing', 'accounts payable', 'accounts receivable', 'payroll',
+    'gaap', 'ifrs', 'financial reporting',
+    
+    // Healthcare & Medical
+    'medical terminology', 'patient care', 'medical records', 'hipaa', 'electronic health records',
+    'medical coding', 'icd-10', 'cpt coding', 'medical billing', 'phlebotomy', 'vital signs',
+    'medication administration', 'clinical research',
+    
+    // Manufacturing & Engineering
+    'quality control', 'quality assurance', 'lean manufacturing', 'six sigma', 'iso 9001',
+    'process improvement', 'root cause analysis', 'statistical process control',
+    'machine operation', 'equipment maintenance', 'safety protocols',
+    
+    // Sales & Business Development
+    'sales forecasting', 'lead generation', 'cold calling', 'prospecting', 'territory management',
+    'account management', 'relationship building', 'contract negotiation', 'closing deals',
+    
+    // Legal & Compliance
+    'legal research', 'contract review', 'compliance monitoring', 'regulatory knowledge',
+    'litigation support', 'document review', 'paralegal skills',
+    
+    // Human Resources
+    'recruitment', 'talent acquisition', 'employee relations', 'performance management',
+    'training and development', 'compensation analysis', 'benefits administration',
+    'hr information systems', 'onboarding', 'exit interviews',
+    
+    // Education & Training
+    'curriculum development', 'lesson planning', 'classroom management', 'educational technology',
+    'student assessment', 'learning management systems', 'instructional design',
+    
+    // Languages
+    'bilingual', 'multilingual', 'spanish', 'french', 'german', 'mandarin', 'japanese',
+    'translation', 'interpretation', 'language proficiency',
+    
+    // Certifications & Licenses
+    'certified', 'licensed', 'accredited', 'pmp', 'cpa', 'cfa', 'frm', 'cissp', 'comptia',
+    'aws certified', 'google certified', 'microsoft certified', 'cisco certified',
+    
+    // Industry-Specific Tools
+    'pos systems', 'inventory management', 'supply chain management', 'logistics',
+    'warehouse management', 'shipping', 'receiving', 'forklift operation',
+    'food safety', 'servsafe', 'haccp', 'restaurant management',
+    'retail management', 'visual merchandising', 'cash handling'
+  ];
 
+  // Soft Skills Keywords (Universal)
+  const softKeywords = [
+    // Communication Skills
+    'communication', 'verbal communication', 'written communication', 'presentation skills',
+    'public speaking', 'storytelling', 'active listening', 'interpersonal skills',
+    'client communication', 'customer service', 'phone etiquette', 'email communication',
+    
+    // Leadership & Management
+    'leadership', 'team leadership', 'project management', 'people management',
+    'mentoring', 'coaching', 'delegation', 'supervision', 'training staff',
+    'conflict resolution', 'decision making', 'strategic thinking', 'vision setting',
+    
+    // Teamwork & Collaboration
+    'teamwork', 'collaboration', 'cross-functional collaboration', 'team player',
+    'cooperative', 'supportive', 'relationship building', 'networking',
+    'stakeholder management', 'partnership development',
+    
+    // Problem-Solving & Analysis
+    'problem solving', 'analytical thinking', 'critical thinking', 'troubleshooting',
+    'research skills', 'attention to detail', 'quality focus', 'process improvement',
+    'innovation', 'creative thinking', 'solution-oriented',
+    
+    // Adaptability & Learning
+    'adaptability', 'flexibility', 'learning agility', 'continuous learning',
+    'open-mindedness', 'curiosity', 'self-directed learning', 'resilience',
+    'change management', 'embracing change', 'growth mindset',
+    
+    // Organization & Planning
+    'organization', 'time management', 'prioritization', 'planning', 'scheduling',
+    'multitasking', 'efficiency', 'productivity', 'goal setting', 'deadline management',
+    'resource management', 'workflow optimization',
+    
+    // Personal Qualities
+    'reliability', 'dependability', 'accountability', 'responsibility', 'integrity',
+    'professionalism', 'work ethic', 'persistence', 'patience', 'empathy',
+    'emotional intelligence', 'cultural sensitivity', 'diversity awareness',
+    
+    // Customer & Service Focus
+    'customer focus', 'service orientation', 'client relations', 'hospitality',
+    'patient care', 'bedside manner', 'compassion', 'understanding',
+    
+    // Sales & Persuasion
+    'persuasion', 'negotiation', 'sales skills', 'influencing', 'relationship selling',
+    'consultative selling', 'closing skills', 'objection handling',
+    
+    // Work Style
+    'self-motivated', 'independent', 'autonomous', 'proactive', 'initiative',
+    'results-oriented', 'detail-oriented', 'big picture thinking', 'strategic mindset',
+    'hands-on', 'practical', 'methodical', 'systematic'
+  ];
+
+  // Major section headers that indicate end of skills section
+  const majorSectionHeaders = [
+    'experience', 'work experience', 'professional experience', 'employment', 'career history', 'work history',
+    'education', 'academic background', 'academic history', 'qualifications',
+    'certifications', 'certificates', 'licenses', 'credentials',
+    'projects', 'portfolio', 'achievements', 'accomplishments', 'awards',
+    'publications', 'research', 'patents',
+    'volunteer', 'volunteering', 'community service', 'volunteer experience',
+    'interests', 'hobbies', 'personal interests', 'activities',
+    'references', 'contact references', 'professional references'
+  ];
+
+  // Find skills section
+  const skillsIndex = lines.findIndex(line => 
+    /^(skills|technical skills|core competencies|technologies|expertise|competencies|proficiencies|capabilities|key skills|areas of expertise)$/i.test(line.trim())
+  );
+
+  if (skillsIndex === -1) {
+    // Fallback: look for skills mentioned anywhere in the text
+    return extractSkillsFromFullText(fullText, technicalKeywords, softKeywords);
+  }
+
+  // Find the end of skills section
+  let skillsEndIndex = lines.length;
+  for (let i = skillsIndex + 1; i < lines.length; i++) {
+    const line = lines[i].trim().toLowerCase();
+    if (majorSectionHeaders.some(header => line === header || line.startsWith(header))) {
+      skillsEndIndex = i;
+      break;
+    }
+  }
+
+  // Extract skills from the identified section
+  const skillsLines = lines.slice(skillsIndex + 1, skillsEndIndex);
+  const skillsText = skillsLines.join(' ');
+
+  return parseSkillsFromText(skillsText, technicalKeywords, softKeywords);
+};
+
+// Parse skills from text with various delimiters and formats
+const parseSkillsFromText = (text: string, technicalKeywords: string[], softKeywords: string[]) => {
+  // Handle various skill formats and delimiters
+  const skillDelimiters = /[,;|•·\n\t]/g;
+  
+  // First, try to extract skills with common delimiters
+  let skillsArray = text.split(skillDelimiters)
+    .map(skill => skill.trim())
+    .filter(skill => skill.length > 1 && skill.length < 60);
+
+  // If no clear delimiters found, try to extract from continuous text
+  if (skillsArray.length < 3) {
+    // Look for skill patterns in continuous text
+    const skillPatterns = [...technicalKeywords, ...softKeywords];
+    skillsArray = [];
+    
+    skillPatterns.forEach(pattern => {
+      const regex = new RegExp(`\\b${pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+      const matches = text.match(regex);
+      if (matches) {
+        skillsArray.push(...matches);
+      }
+    });
+  }
+
+  // Clean and deduplicate skills
+  skillsArray = [...new Set(skillsArray.map(skill => 
+    skill.replace(/[^\w\s.#+-]/g, '').trim()
+  ))].filter(skill => skill.length > 1);
+
+  // Categorize skills with improved matching
+  const technical: string[] = [];
+  const soft: string[] = [];
+
+  skillsArray.forEach(skill => {
+    const skillLower = skill.toLowerCase();
+    
+    // Check for technical skills
+    const isTechnical = technicalKeywords.some(keyword => {
+      const keywordLower = keyword.toLowerCase();
+      return skillLower.includes(keywordLower) || 
+             keywordLower.includes(skillLower) ||
+             // Exact match for shorter skills
+             (skillLower.length <= 15 && keywordLower === skillLower);
+    });
+    
+    // Check for soft skills
+    const isSoft = softKeywords.some(keyword => {
+      const keywordLower = keyword.toLowerCase();
+      return skillLower.includes(keywordLower) || 
+             keywordLower.includes(skillLower) ||
+             // Exact match for shorter skills
+             (skillLower.length <= 20 && keywordLower === skillLower);
+    });
+
+    if (isTechnical && !technical.some(t => t.toLowerCase() === skillLower)) {
+      technical.push(skill);
+    } else if (isSoft && !soft.some(s => s.toLowerCase() === skillLower)) {
+      soft.push(skill);
+    } else if (!isTechnical && !isSoft && skill.length > 2) {
+      // Smart categorization for unrecognized skills
+      if (isLikelyTechnicalSkill(skillLower)) {
+        if (!technical.some(t => t.toLowerCase() === skillLower)) {
+          technical.push(skill);
+        }
+      } else if (isLikelySoftSkill(skillLower)) {
+        if (!soft.some(s => s.toLowerCase() === skillLower)) {
+          soft.push(skill);
+        }
+      }
+    }
+  });
+
+  return {
+    technical: technical.slice(0, 15), // Limit to prevent overwhelming lists
+    soft: soft.slice(0, 12)
+  };
+};
+
+// Helper function to identify likely technical skills
+const isLikelyTechnicalSkill = (skill: string): boolean => {
+  const technicalPatterns = [
+    /software$/i, /system$/i, /platform$/i, /tool$/i, /application$/i,
+    /analysis$/i, /management$/i, /administration$/i, /operation$/i,
+    /certified$/i, /certification$/i, /license$/i, /proficiency$/i,
+    /\d+\.\d+/i, // Version numbers
+    /microsoft|adobe|google|apple|oracle|sap|salesforce/i,
+    /operating|maintenance|installation|configuration/i,
+    /machine|equipment|technical|medical|legal|financial/i
+  ];
+  
+  return technicalPatterns.some(pattern => pattern.test(skill));
+};
+
+// Helper function to identify likely soft skills
+const isLikelySoftSkill = (skill: string): boolean => {
+  const softPatterns = [
+    /skills?$/i, /ability$/i, /oriented$/i, /focused$/i, /minded$/i,
+    /management$/i, /building$/i, /development$/i, /resolution$/i,
+    /strong|excellent|outstanding|superior|exceptional/i,
+    /work|team|client|customer|people|relationship/i,
+    /creative|innovative|strategic|analytical|detail/i
+  ];
+  
+  return softPatterns.some(pattern => pattern.test(skill));
+};
+
+// Fallback function to extract skills from full text when no clear skills section exists
+const extractSkillsFromFullText = (fullText: string, technicalKeywords: string[], softKeywords: string[]) => {
+  const technical: string[] = [];
+  const soft: string[] = [];
+
+  // Extract technical skills with higher confidence threshold
+  const commonTechnicalSkills = technicalKeywords.filter(keyword => 
+    keyword.split(' ').length <= 3 && keyword.length >= 3
+  );
+
+  commonTechnicalSkills.forEach(keyword => {
+    const regex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+    if (regex.test(fullText)) {
+      technical.push(keyword);
+    }
+  });
+
+  // Extract soft skills with higher confidence threshold
+  const commonSoftSkills = [
+    'leadership', 'communication', 'teamwork', 'problem solving', 'customer service',
+    'time management', 'project management', 'analytical thinking', 'attention to detail',
+    'adaptability', 'creativity', 'organization', 'multitasking', 'negotiation'
+  ];
+
+  commonSoftSkills.forEach(keyword => {
+    const regex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+    if (regex.test(fullText)) {
+      soft.push(keyword);
+    }
+  });
+
+  return {
+    technical: [...new Set(technical)].slice(0, 10),
+    soft: [...new Set(soft)].slice(0, 8)
+  };
+};
   return { valid: true };
 };
