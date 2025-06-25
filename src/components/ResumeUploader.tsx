@@ -145,45 +145,25 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
                 : 'Only Microsoft Word documents (.docx) are supported for best results'
               }
             </p>
-
-            {/* DOCX File Icon */}
-            {!isUploading && uploadStatus !== 'success' && (
-              <div className="flex items-center justify-center space-x-2 mb-4">
-                <div className="flex items-center px-3 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                  <FileText className="h-4 w-4 mr-2" />
-                  DOCX Only
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* PDF Conversion Notice */}
-          {uploadStatus !== 'success' && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 max-w-md">
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  <AlertCircle className="h-5 w-5 text-orange-400" />
-                </div>
-                <div className="ml-3">
-                  <h4 className="text-sm font-medium text-orange-800 mb-2">
-                    Have a PDF resume?
-                  </h4>
-                  <p className="text-sm text-orange-700 mb-3">
-                    Convert your PDF to DOCX format for best results and accurate text extraction.
-                  </p>
-                  <a
-                    href="https://www.adobe.com/acrobat/online/pdf-to-word.html"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center px-3 py-2 bg-orange-600 text-white text-sm font-medium rounded-md hover:bg-orange-700 transition-colors duration-200"
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Convert PDF to DOCX
-                  </a>
-                </div>
-              </div>
-            </div>
-           )}
+{/* DOCX File Icon */}
+{!isUploading && uploadStatus !== 'success' && (
+  <div className="flex items-center justify-center space-x-2 mb-4">
+    <button
+      onClick={() => document.getElementById("file-upload").click()}
+      className="flex items-center px-3 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+    >
+      <FileText className="h-4 w-4 mr-2" />
+      DOCX Only
+    </button>
+    <input
+      id="file-upload"
+      type="file"
+      accept=".docx"
+      style={{ display: "none" }}
+      onChange={(e) => handleFileUpload(e.target.files[0])}
+    />
+  </div>
+)}
 
           {uploadStatus === 'error' && (
             <div className="text-sm text-red-600 bg-red-50 p-4 rounded-lg mt-4 max-w-md">
