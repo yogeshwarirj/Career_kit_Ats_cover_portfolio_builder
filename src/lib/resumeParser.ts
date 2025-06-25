@@ -216,13 +216,26 @@ const parseTextToResume = (text: string): ParsedResume => {
     resume.summary = summaryLines.join(' ');
   }
 
-    // ENHANCED SKILLS EXTRACTION
-
-  const skillsData = extractSkills(lines, text);
-
-  resume.skills.technical = skillsData.technical;
-
-  resume.skills.soft = skillsData.soft;
+  // Extract skills
+  const skillsIndex = lines.findIndex(line => 
+    /skills|technologies|competencies|expertise/i.test(line)
+  );
+  if (skillsIndex !== -1) {
+    const skillsSection = lines.slice(skillsIndex + 1, skillsIndex + 10).join(' ');
+    const skillsArray = skillsSection.split(/[,;|•·]/).map(skill => skill.trim()).filter(skill => skill.length > 0);
+    
+    // Categorize skills (basic categorization)
+    const technicalKeywords = ['javascript', 'python', 'java', 'react', 'node', 'sql', 'html', 'css', 'aws', 'docker', 'git'];
+    const technical = skillsArray.filter(skill => 
+      technicalKeywords.some(keyword => skill.toLowerCase().includes(keyword))
+    );
+    const soft = skillsArray.filter(skill => 
+      !technicalKeywords.some(keyword => skill.toLowerCase().includes(keyword))
+    );
+    
+    resume.skills.technical = technical.slice(0, 10);
+    resume.skills.soft = soft.slice(0, 8);
+  }
 
   // Extract experience
   const experienceIndex = lines.findIndex(line => 
@@ -280,406 +293,21 @@ const parseTextToResume = (text: string): ParsedResume => {
   return resume;
 };
 
-// Enhanced skills extraction function
-
-const extractSkills = (lines: string[], fullText: string) => {
-
-  // Comprehensive technical skills keywords
-
-  const technicalKeywords = [
-
-    // Programming Languages
-
-    'javascript', 'typescript', 'python', 'java', 'c++', 'c#', 'php', 'ruby', 'go', 'rust', 'swift', 'kotlin', 'scala', 'r', 'matlab', 'perl', 'lua', 'dart', 'objective-c', 'vb.net', 'f#', 'haskell', 'clojure', 'erlang', 'elixir',
-
-    
-
-    // Web Technologies
-
-    'html', 'css', 'sass', 'scss', 'less', 'react', 'angular', 'vue', 'svelte', 'next.js', 'nuxt.js', 'gatsby', 'webpack', 'vite', 'parcel', 'rollup', 'babel', 'postcss', 'tailwind', 'bootstrap', 'material-ui', 'chakra-ui',
-
-    
-
-    // Backend & Frameworks
-
-    'node.js', 'express', 'fastify', 'django', 'flask', 'fastapi', 'spring', 'spring boot', 'laravel', 'symfony', 'codeigniter', 'ruby on rails', 'asp.net', 'gin', 'fiber', 'echo', 'nest.js', 'koa.js',
-
-    
-
-    // Databases
-
-    'mysql', 'postgresql', 'sqlite', 'mongodb', 'redis', 'elasticsearch', 'cassandra', 'dynamodb', 'firebase', 'supabase', 'mariadb', 'oracle', 'sql server', 'couchdb', 'neo4j', 'influxdb',
-
-    
-
-    // Cloud & DevOps
-
-    'aws', 'azure', 'gcp', 'google cloud', 'docker', 'kubernetes', 'jenkins', 'github actions', 'gitlab ci', 'circleci', 'travis ci', 'terraform', 'ansible', 'puppet', 'chef', 'vagrant', 'nginx', 'apache', 'cloudflare',
-
-    
-
-    // Mobile Development
-
-    'react native', 'flutter', 'ionic', 'xamarin', 'cordova', 'phonegap', 'android studio', 'xcode', 'unity', 'unreal engine',
-    
-
-    // Data Science & ML
-
-    'pandas', 'numpy', 'scikit-learn', 'tensorflow', 'pytorch', 'keras', 'opencv', 'matplotlib', 'seaborn', 'plotly', 'jupyter', 'anaconda', 'spark', 'hadoop', 'tableau', 'power bi', 'qlik',
-
-    
-
-    // Version Control & Tools
-
-    'git', 'github', 'gitlab', 'bitbucket', 'svn', 'mercurial', 'npm', 'yarn', 'pip', 'composer', 'maven', 'gradle', 'cmake', 'make',
-
-    
-
-    // Testing
-
-    'jest', 'mocha', 'chai', 'jasmine', 'cypress', 'selenium', 'playwright', 'puppeteer', 'junit', 'pytest', 'rspec', 'phpunit',
-
-    
-
-    // Other Technologies
-
-    'graphql', 'rest api', 'soap', 'xml', 'json', 'yaml', 'grpc', 'websockets', 'oauth', 'jwt', 'microservices', 'serverless', 'lambda', 'api gateway', 'cdn', 'load balancer'
+export const validateResumeFile = (file: File): { valid: boolean; error?: string } => {
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  const allowedTypes = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain'
   ];
 
-// Comprehensive soft skills keywords
-
-  const softKeywords = [
-
-    // Communication
-
-    'communication', 'verbal communication', 'written communication', 'presentation', 'public speaking', 'storytelling', 'negotiation', 'persuasion', 'active listening', 'interpersonal skills',
-
-    
-
-    // Leadership & Management
-
-    'leadership', 'team leadership', 'project management', 'people management', 'mentoring', 'coaching', 'delegation', 'conflict resolution', 'decision making', 'strategic thinking',
-
-    
-
-    // Collaboration & Teamwork
-
-    'teamwork', 'collaboration', 'cross-functional', 'stakeholder management', 'client relations', 'customer service', 'relationship building', 'networking', 'partnership development',
-
-    
-
-    // Problem-Solving & Analysis
-
-    'problem solving', 'analytical thinking', 'critical thinking', 'troubleshooting', 'debugging', 'research', 'data analysis', 'attention to detail', 'quality assurance',
-
-    
-
-    // Adaptability & Learning
-
-    'adaptability', 'flexibility', 'learning agility', 'continuous learning', 'innovation', 'creativity', 'open-mindedness', 'curiosity', 'self-directed learning',
-
-    
-
-    // Organization & Planning
-
-    'organization', 'time management', 'prioritization', 'planning', 'scheduling', 'multitasking', 'efficiency', 'productivity', 'goal setting', 'resource management',
-
-    
-
-    // Personal Qualities
-
-    'reliability', 'dependability', 'accountability', 'responsibility', 'integrity', 'ethics', 'professionalism', 'work ethic', 'persistence', 'resilience', 'patience', 'empathy'
-
-  ];
-
-
-
-  // Major section headers that indicate end of skills section
-
-  const majorSectionHeaders = [
-
-    'experience', 'work experience', 'professional experience', 'employment', 'career history', 'work history',
-
-    'education', 'academic background', 'academic history', 'qualifications',
-
-    'certifications', 'certificates', 'licenses',
-
-    'projects', 'portfolio', 'achievements', 'accomplishments', 'awards',
-
-    'publications', 'research', 'patents',
-
-    'volunteer', 'volunteering', 'community service',
-
-    'interests', 'hobbies', 'personal interests',
-
-    'references', 'contact references'
-
-  ];
-
-
-
-  // Find skills section
-
-  const skillsIndex = lines.findIndex(line => 
-
-    /^(skills|technical skills|core competencies|technologies|expertise|competencies|proficiencies|capabilities)$/i.test(line.trim())
-
-  );
-
-
-
-  if (skillsIndex === -1) {
-
-    // Fallback: look for skills mentioned anywhere in the text
-
-    return extractSkillsFromFullText(fullText, technicalKeywords, softKeywords);
+  if (file.size > maxSize) {
+    return { valid: false, error: 'File size must be less than 10MB' };
   }
 
-  // Find the end of skills section
-
-  let skillsEndIndex = lines.length;
-
-  for (let i = skillsIndex + 1; i < lines.length; i++) {
-
-    const line = lines[i].trim().toLowerCase();
-
-    if (majorSectionHeaders.some(header => line === header || line.startsWith(header))) {
-
-      skillsEndIndex = i;
-
-      break;
-
-    }
-    
+  if (!allowedTypes.includes(file.type)) {
+    return { valid: false, error: 'Only PDF, DOCX, and TXT files are supported' };
   }
 
-  return  // Extract skills from the identified section
-
-  const skillsLines = lines.slice(skillsIndex + 1, skillsEndIndex);
-
-  const skillsText = skillsLines.join(' ');
-
-
-
-  return parseSkillsFromText(skillsText, technicalKeywords, softKeywords);
-
-};
-
-
-
-// Parse skills from text with various delimiters and formats
-
-const parseSkillsFromText = (text: string, technicalKeywords: string[], softKeywords: string[]) => {
-
-  // Handle various skill formats and delimiters
-
-  const skillDelimiters = /[,;|•·\n\t]/g;
-
-  
-
-  // First, try to extract skills with common delimiters
-
-  let skillsArray = text.split(skillDelimiters)
-
-    .map(skill => skill.trim())
-
-    .filter(skill => skill.length > 1 && skill.length < 50);
-
-
-
-  // If no clear delimiters found, try to extract from continuous text
-
-  if (skillsArray.length < 3) {
-
-    // Look for skill patterns in continuous text
-
-    const skillPatterns = [...technicalKeywords, ...softKeywords];
-
-    skillsArray = [];
-
-    
-
-    skillPatterns.forEach(pattern => {
-
-      const regex = new RegExp(`\\b${pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-
-      const matches = text.match(regex);
-
-      if (matches) {
-
-        skillsArray.push(...matches);
-
-      }
-
-    });
-
-  }
-
-
-
-  // Clean and deduplicate skills
-
-  skillsArray = [...new Set(skillsArray.map(skill => 
-
-    skill.replace(/[^\w\s.#+-]/g, '').trim()
-
-  ))].filter(skill => skill.length > 1);
-
-
-
-  // Categorize skills with improved matching
-
-  const technical: string[] = [];
-
-  const soft: string[] = [];
-
-
-
-  skillsArray.forEach(skill => {
-
-    const skillLower = skill.toLowerCase();
-
-    
-
-    const isTechnical = technicalKeywords.some(keyword => 
-
-      skillLower.includes(keyword.toLowerCase()) || 
-
-      keyword.toLowerCase().includes(skillLower)
-
-    );
-
-    
-
-    const isSoft = softKeywords.some(keyword => 
-
-      skillLower.includes(keyword.toLowerCase()) || 
-
-      keyword.toLowerCase().includes(skillLower)
-
-    );
-
-
-
-    if (isTechnical && !technical.some(t => t.toLowerCase() === skillLower)) {
-
-      technical.push(skill);
-
-    } else if (isSoft && !soft.some(s => s.toLowerCase() === skillLower)) {
-
-      soft.push(skill);
-
-    } else if (!isTechnical && !isSoft) {
-
-      // If uncertain, make an educated guess based on common patterns
-
-      if (skillLower.match(/\.(js|py|java|cpp|cs|php|rb|go|rs|swift|kt)$/) || 
-
-          skillLower.includes('programming') || 
-
-          skillLower.includes('development') ||
-
-          skillLower.includes('coding') ||
-
-          skillLower.includes('database') ||
-
-          skillLower.includes('framework') ||
-
-          skillLower.includes('library')) {
-
-        technical.push(skill);
-
-      } else if (skillLower.includes('management') || 
-
-                 skillLower.includes('leadership') || 
-
-                 skillLower.includes('communication') ||
-
-                 skillLower.includes('teamwork') ||
-
-                 skillLower.includes('problem') ||
-
-                 skillLower.includes('organization')) {
-
-        soft.push(skill);
-
-      }
-
-    }
-
-  });
-
-
-
-  return {
-
-    technical: technical.slice(0, 15), // Limit to prevent overwhelming lists
-
-    soft: soft.slice(0, 12)
-
-  };
-
-};
-
-
-
-// Fallback function to extract skills from full text when no clear skills section exists
-
-const extractSkillsFromFullText = (fullText: string, technicalKeywords: string[], softKeywords: string[]) => {
-
-  const technical: string[] = [];
-
-  const soft: string[] = [];
-
-
-
-  // Extract technical skills
-
-  technicalKeywords.forEach(keyword => {
-
-    const regex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-
-    if (regex.test(fullText)) {
-
-      technical.push(keyword);
-
-    }
-
-  });
-
-
-
-  // Extract soft skills (be more conservative with full text extraction)
-
-  const commonSoftSkills = [
-
-    'leadership', 'communication', 'teamwork', 'problem solving', 'project management',
-
-    'analytical thinking', 'creativity', 'adaptability', 'time management', 'customer service'
-
-  ];
-
-
-
-  commonSoftSkills.forEach(keyword => {
-
-    const regex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-
-    if (regex.test(fullText)) {
-
-      soft.push(keyword);
-
-    }
-
-  });
-
-
-
-  return {
-
-    technical: [...new Set(technical)].slice(0, 10),
-
-    soft: [...new Set(soft)].slice(0, 8)
-
-  };
+  return { valid: true };
 };
