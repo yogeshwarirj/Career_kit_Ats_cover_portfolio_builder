@@ -720,7 +720,7 @@ Preferred Qualifications:
                       Found Keywords ({analysisResult.keywords.found.length})
                     </h5>
                     <div className="flex flex-wrap gap-2">
-                      {analysisResult.keywords.found.slice(0, 10).map((keyword, index) => (
+                      {analysisResult.keywords.found.map((keyword, index) => (
                         <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded-full">
                           {keyword}
                         </span>
@@ -739,7 +739,7 @@ Preferred Qualifications:
                       Missing Keywords ({analysisResult.keywords.missing.length})
                     </h5>
                     <div className="flex flex-wrap gap-2">
-                      {analysisResult.keywords.missing.slice(0, 8).map((keyword, index) => (
+                      {analysisResult.keywords.missing.map((keyword, index) => (
                         <span key={index} className="px-2 py-1 bg-red-100 text-red-800 text-sm rounded-full">
                           {keyword}
                         </span>
@@ -762,7 +762,7 @@ Preferred Qualifications:
                 </h4>
                 
                 <div className="space-y-3">
-                  {analysisResult.recommendations.slice(0, 6).map((rec, index) => (
+                  {analysisResult.recommendations.map((rec, index) => (
                     <div key={index} className="flex items-start">
                       <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
                       <p className="text-sm text-gray-700">{rec}</p>
