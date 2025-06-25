@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Upload, FileText, User, Briefcase, Palette, Eye, Download, Share2, Settings, Crown, Zap, Shield, CheckCircle, Star, Award, Users, Target, Edit3, Layout, BookOpen, Mail, Phone, MapPin, Globe, Linkedin, Github, Twitter, Sparkles, ArrowRight, Play, Code, Monitor, Smartphone, Plus, Calendar, ExternalLink, Image, Tag, Trophy, Camera, Link as LinkIcon, Save, X } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, User, Briefcase, Palette, Eye, Download, Share2, Settings, Crown, Zap, Shield, CheckCircle, Star, Award, Users, Target, Edit3, Layout, BookOpen, Mail, Phone, MapPin, Globe, Linkedin, Github, Twitter, Sparkles, ArrowRight, Play, Code, Monitor, Smartphone, Plus, Calendar, ExternalLink, Image, Tag, Trophy, Camera, Link as LinkIcon, Save, X, Search, BarChart, Copy } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { ResumeUploader } from '../components/ResumeUploader';
 import { ParsedResume } from '../lib/resumeParser';
