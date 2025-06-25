@@ -34,10 +34,10 @@ const Hero: React.FC = () => {
 
           {/* CTA Button */}
           <div className="flex justify-center animate-fade-in-up delay-400">
-         
+          
               Get Started with CareerKit
              
-            </a>
+         
           </div>
         </div>
       </div>
