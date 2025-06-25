@@ -428,7 +428,7 @@ Preferred Qualifications:
                   <Download className="h-6 w-6 text-white" />
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-2">Multiple Formats</h3>
-                <p className="text-sm text-gray-600">Export your optimized resume in various ATS-friendly formats</p>
+                <p className="text-sm text-gray-600">Export your optimized resume in txt ATS-friendly formats</p>
               </div>
             </div>
           </div>
