@@ -20,6 +20,7 @@ interface ATSAnalysis {
     strengths: string[];
     improvements: string[];
   };
+  grammarIssues: [], // Array of grammar or spelling issues
 }
 
 interface ATSCheckerProps {
