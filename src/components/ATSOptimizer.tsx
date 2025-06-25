@@ -497,16 +497,7 @@ Preferred Qualifications:
                   <div className="text-sm text-gray-600">Copy and paste the job description</div>
                 </button>
                 
-                <button
-                  onClick={() => setInputMethod('url')}
-                  className={`flex-1 p-4 rounded-lg border-2 transition-all duration-200 ${
-                    inputMethod === 'url'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                >
-                
-                </button>
+            
               </div>
             </div>
 
