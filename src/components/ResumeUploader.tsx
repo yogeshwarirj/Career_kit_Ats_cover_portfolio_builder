@@ -141,15 +141,25 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
         {/* DOCX File Button */}
         <div className="flex items-center justify-center space-x-2 mb-4">
           <button
-            {...getRootProps({
-              className:
-                'flex items-center px-3 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500',
-            })}
+            type="button"
+            onClick={() => document.getElementById('docx-upload-input').click()}
+            className="flex items-center px-3 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <input {...getInputProps()} />
             <FileText className="h-4 w-4 mr-2" />
             DOCX Only
           </button>
+          <input
+            id="docx-upload-input"
+            type="file"
+            accept=".docx"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                handleFileUpload(file); // Replace with your file handling logic
+              }
+            }}
+            style={{ display: 'none' }}
+          />
         </div>
       </div>
 
@@ -188,6 +198,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
     )}
   </div>
 </div>
+
 
 
       {/* Why DOCX Notice */}
