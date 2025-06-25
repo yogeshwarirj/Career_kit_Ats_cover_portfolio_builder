@@ -37,7 +37,7 @@ const Hero: React.FC = () => {
             <a className="group bg-teal-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-teal-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center">
               Get Started with CareerKit
              
-         
+            </a>
           </div>
         </div>
       </div>
