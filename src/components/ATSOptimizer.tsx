@@ -818,30 +818,47 @@ Preferred Qualifications:
             </div>
           )}
 
-          {/* Optimized Resume Preview */}
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900 flex items-center">
-                <FileText className="h-6 w-6 text-green-600 mr-2" />
-                ATS-Optimized Resume Preview
-              </h3>
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => setEditingOptimized(!editingOptimized)}
-                  className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
-                >
-                  {editingOptimized ? <Eye className="h-4 w-4 mr-2" /> : <Edit3 className="h-4 w-4 mr-2" />}
-                  {editingOptimized ? 'Preview' : 'Edit'}
-                </button>
-                <button
-                  onClick={handleDownloadOptimized}
-                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </button>
-              </div>
-            </div>
+        {/* Optimized Resume Preview */}
+<div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
+  <div className="flex items-center justify-between mb-6">
+    <h3 className="text-xl font-semibold text-gray-900 flex items-center">
+      <FileText className="h-6 w-6 text-green-600 mr-2" />
+      ATS-Optimized Resume Preview
+    </h3>
+    <div className="flex space-x-3">
+      <button
+        onClick={() => setEditingOptimized(!editingOptimized)}
+        className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+      >
+        {editingOptimized ? <Eye className="h-4 w-4 mr-2" /> : <Edit3 className="h-4 w-4 mr-2" />}
+        {editingOptimized ? 'Preview' : 'Edit'}
+      </button>
+      <button
+        onClick={handleDownloadOptimized}
+        className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+      >
+        <Download className="h-4 w-4 mr-2" />
+        Download
+      </button>
+    </div>
+  </div>
+  {editingOptimized ? (
+    // Edit Mode
+    <textarea
+      value={resumeContent}
+      onChange={(e) => setResumeContent(e.target.value)}
+      className="w-full h-96 border border-gray-300 rounded-lg p-4 text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-green-600"
+    />
+  ) : (
+    // Preview Mode
+    <div className="prose max-w-none text-gray-700">
+      {resumeContent.split('\n').map((line, index) => (
+        <p key={index}>{line}</p>
+      ))}
+    </div>
+  )}
+</div>
+
 
             {optimizedResult.optimizedResume && (
               <div className="prose max-w-none">
