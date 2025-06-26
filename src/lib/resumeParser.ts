@@ -215,85 +215,6 @@ const parseTextToResume = (text: string): ParsedResume => {
     }
     resume.summary = summaryLines.join(' ');
   }
-// GENERALIZED SKILLS EXTRACTION
-
-  const skillsData = extractSkills(lines, text);
-
-  resume.skills.technical = skillsData.technical;
-
-  resume.skills.soft = skillsData.soft;
-
-  // Extract experience
-  const experienceIndex = lines.findIndex(line => 
-    /experience|employment|work|career/i.test(line)
-  );
-  if (experienceIndex !== -1) {
-    // Basic experience extraction - look for patterns like job titles and companies
-    const experienceLines = lines.slice(experienceIndex + 1, Math.min(experienceIndex + 20, lines.length));
-    let currentJob: any = null;
-    
-    experienceLines.forEach((line, index) => {
-      // Look for date patterns to identify job entries
-      if (line.match(/\d{4}|\d{1,2}\/\d{4}/)) {
-        if (currentJob) {
-          resume.experience.push(currentJob);
-        }
-        currentJob = {
-          id: Date.now().toString() + index,
-          title: experienceLines[Math.max(0, index - 1)] || 'Position',
-          company: 'Company',
-          startDate: line.split('-')[0]?.trim() || '',
-          endDate: line.split('-')[1]?.trim() || 'Present',
-          description: '',
-          current: line.toLowerCase().includes('present') || line.toLowerCase().includes('current')
-        };
-      } else if (currentJob && line.length > 10) {
-        currentJob.description += (currentJob.description ? ' ' : '') + line;
-      }
-    });
-    
-    if (currentJob) {
-      resume.experience.push(currentJob);
-    }
-  }
-
-  // Extract education
-  const educationIndex = lines.findIndex(line => 
-    /education|academic|degree|university|college/i.test(line)
-  );
-  if (educationIndex !== -1) {
-    const educationLines = lines.slice(educationIndex + 1, Math.min(educationIndex + 10, lines.length));
-    educationLines.forEach((line, index) => {
-      if (line.match(/\d{4}/) && (line.toLowerCase().includes('bachelor') || line.toLowerCase().includes('master') || line.toLowerCase().includes('degree'))) {
-        resume.education.push({
-          id: Date.now().toString() + index,
-          degree: line.split(/\d{4}/)[0]?.trim() || line,
-          school: 'University',
-          graduationYear: line.match(/\d{4}/)?.[0] || '',
-          gpa: ''
-        });
-      }
-    });
-  }
-
-  return resume;
-};
-
-export const validateResumeFile = (file: File): { valid: boolean; error?: string } => {
-  const maxSize = 10 * 1024 * 1024; // 10MB
-  const allowedTypes = [
-    'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'text/plain'
-  ];
-
-  if (file.size > maxSize) {
-    return { valid: false, error: 'File size must be less than 10MB' };
-  }
-
-  if (!allowedTypes.includes(file.type)) {
-    return { valid: false, error: 'Only PDF, DOCX, and TXT files are supported' };
-  }
 // Generalized skills extraction function for all industries
 const extractSkills = (lines: string[], fullText: string) => {
   // Technical/Hard Skills Keywords (Industry-Agnostic)
@@ -601,5 +522,85 @@ const extractSkillsFromFullText = (fullText: string, technicalKeywords: string[]
     soft: [...new Set(soft)].slice(0, 8)
   };
 };
+
+// GENERALIZED SKILLS EXTRACTION
+
+  const skillsData = extractSkills(lines, text);
+
+  resume.skills.technical = skillsData.technical;
+
+  resume.skills.soft = skillsData.soft;
+
+  // Extract experience
+  const experienceIndex = lines.findIndex(line => 
+    /experience|employment|work|career/i.test(line)
+  );
+  if (experienceIndex !== -1) {
+    // Basic experience extraction - look for patterns like job titles and companies
+    const experienceLines = lines.slice(experienceIndex + 1, Math.min(experienceIndex + 20, lines.length));
+    let currentJob: any = null;
+    
+    experienceLines.forEach((line, index) => {
+      // Look for date patterns to identify job entries
+      if (line.match(/\d{4}|\d{1,2}\/\d{4}/)) {
+        if (currentJob) {
+          resume.experience.push(currentJob);
+        }
+        currentJob = {
+          id: Date.now().toString() + index,
+          title: experienceLines[Math.max(0, index - 1)] || 'Position',
+          company: 'Company',
+          startDate: line.split('-')[0]?.trim() || '',
+          endDate: line.split('-')[1]?.trim() || 'Present',
+          description: '',
+          current: line.toLowerCase().includes('present') || line.toLowerCase().includes('current')
+        };
+      } else if (currentJob && line.length > 10) {
+        currentJob.description += (currentJob.description ? ' ' : '') + line;
+      }
+    });
+    
+    if (currentJob) {
+      resume.experience.push(currentJob);
+    }
+  }
+
+  // Extract education
+  const educationIndex = lines.findIndex(line => 
+    /education|academic|degree|university|college/i.test(line)
+  );
+  if (educationIndex !== -1) {
+    const educationLines = lines.slice(educationIndex + 1, Math.min(educationIndex + 10, lines.length));
+    educationLines.forEach((line, index) => {
+      if (line.match(/\d{4}/) && (line.toLowerCase().includes('bachelor') || line.toLowerCase().includes('master') || line.toLowerCase().includes('degree'))) {
+        resume.education.push({
+          id: Date.now().toString() + index,
+          degree: line.split(/\d{4}/)[0]?.trim() || line,
+          school: 'University',
+          graduationYear: line.match(/\d{4}/)?.[0] || '',
+          gpa: ''
+        });
+      }
+    });
+  }
+
+  return resume;
+};
+
+export const validateResumeFile = (file: File): { valid: boolean; error?: string } => {
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  const allowedTypes = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain'
+  ];
+
+  if (file.size > maxSize) {
+    return { valid: false, error: 'File size must be less than 10MB' };
+  }
+
+  if (!allowedTypes.includes(file.type)) {
+    return { valid: false, error: 'Only PDF, DOCX, and TXT files are supported' };
+  }
   return { valid: true };
 };
