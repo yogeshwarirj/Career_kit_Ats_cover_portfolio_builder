@@ -659,33 +659,16 @@ export class PortfolioGenerator {
         </section>
 
         <!-- Experience Section -->
-        ${sections.experience.length ? `
+        ${(sections.experience && sections.experience.length > 0) || (sections.workExperience && sections.workExperience.length > 0) ? `
         <section id="experience" class="section">
             <div class="container">
                 <h2 class="section-title">Experience</h2>
-                ${sections.experience.map(exp => `
+                ${(sections.experience || sections.workExperience || []).map(exp => `
                 <div class="card">
-                    <h3 style="color: var(--color-primary); margin-bottom: 0.5rem;">${exp.title}</h3>
-                    <p style="font-weight: 500; margin-bottom: 0.5rem;">${exp.company}</p>
-                    <p style="color: var(--color-muted); margin-bottom: 1rem;">${exp.startDate} - ${exp.endDate}</p>
-                    <p>${exp.description}</p>
-                </div>
-                `).join('')}
-            </div>
-        </section>
-        ` : ''}
-
-        <!-- Work Experience Section (Alternative naming) -->
-        ${sections.workExperience && sections.workExperience.length ? `
-        <section id="work-experience" class="section">
-            <div class="container">
-                <h2 class="section-title">Work Experience</h2>
-                ${sections.workExperience.map(exp => `
-                <div class="card">
-                    <h3 style="color: var(--color-primary); margin-bottom: 0.5rem;">${exp.title || exp.position}</h3>
-                    <p style="font-weight: 500; margin-bottom: 0.5rem;">${exp.company}</p>
-                    <p style="color: var(--color-muted); margin-bottom: 1rem;">${exp.startDate} - ${exp.endDate || exp.current ? 'Present' : ''}</p>
-                    <p>${exp.description}</p>
+                    <h3 style="color: var(--color-primary); margin-bottom: 0.5rem;">${exp.title || exp.position || 'Position'}</h3>
+                    <p style="font-weight: 500; margin-bottom: 0.5rem;">${exp.company || 'Company'}</p>
+                    <p style="color: var(--color-muted); margin-bottom: 1rem;">${exp.startDate || ''} - ${exp.endDate || (exp.current ? 'Present' : '')}</p>
+                    <p>${exp.description || ''}</p>
                 </div>
                 `).join('')}
             </div>
@@ -709,6 +692,39 @@ export class PortfolioGenerator {
                         ${project.liveUrl ? `<a href="${project.liveUrl}" target="_blank" class="btn" style="font-size: 0.875rem; padding: 0.5rem 1rem;">Live Demo</a>` : ''}
                         ${project.githubUrl ? `<a href="${project.githubUrl}" target="_blank" class="btn" style="font-size: 0.875rem; padding: 0.5rem 1rem; background: var(--color-secondary);">GitHub</a>` : ''}
                     </div>
+                </div>
+                `).join('')}
+            </div>
+        </section>
+        ` : ''}
+
+        <!-- Education Section -->
+        ${sections.education && sections.education.length > 0 ? `
+        <section id="education" class="section">
+            <div class="container">
+                <h2 class="section-title">Education</h2>
+                ${sections.education.map(edu => `
+                <div class="card">
+                    <h3 style="color: var(--color-primary); margin-bottom: 0.5rem;">${edu.degree || 'Degree'}</h3>
+                    <p style="font-weight: 500; margin-bottom: 0.5rem;">${edu.school || 'Institution'}</p>
+                    <p style="color: var(--color-muted); margin-bottom: 1rem;">${edu.graduationYear || ''}</p>
+                    ${edu.gpa ? `<p>GPA: ${edu.gpa}</p>` : ''}
+                </div>
+                `).join('')}
+            </div>
+        </section>
+        ` : ''}
+
+        <!-- Certifications Section -->
+        ${sections.certifications && sections.certifications.length > 0 ? `
+        <section id="certifications" class="section">
+            <div class="container">
+                <h2 class="section-title">Certifications</h2>
+                ${sections.certifications.map(cert => `
+                <div class="card">
+                    <h3 style="color: var(--color-primary); margin-bottom: 0.5rem;">${cert.name || 'Certification'}</h3>
+                    <p style="font-weight: 500; margin-bottom: 0.5rem;">${cert.issuer || 'Issuer'}</p>
+                    <p style="color: var(--color-muted); margin-bottom: 1rem;">${cert.date || ''}</p>
                 </div>
                 `).join('')}
             </div>
@@ -964,7 +980,6 @@ export const defaultPortfolioData: PortfolioData = {
   sections: {
     about: '',
     experience: [],
-    workExperience: [],
     projects: [],
     skills: {
       technical: [],
