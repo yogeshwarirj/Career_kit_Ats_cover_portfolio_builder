@@ -60,7 +60,9 @@ export interface PortfolioData {
     };
     education: any[];
     certifications: any[];
-    testimonials?: any[];
+    testimonials: any[];
+    blogPosts: any[];
+    achievements: any[];
     contact: any;
   };
   customizations: {
@@ -667,6 +669,69 @@ export class PortfolioGenerator {
                     <p style="font-weight: 500; margin-bottom: 0.5rem;">${exp.company}</p>
                     <p style="color: var(--color-muted); margin-bottom: 1rem;">${exp.startDate} - ${exp.endDate}</p>
                     <p>${exp.description}</p>
+                </div>
+                `).join('')}
+            </div>
+        </section>
+        ` : ''}
+        ${sections.projects && sections.projects.length > 0 ? `
+        <section id="projects" class="section">
+            <div class="container">
+                <h2 class="section-title">Projects</h2>
+                ${sections.projects.map(project => `
+                <div class="card">
+                    <h3 style="color: var(--color-primary); margin-bottom: 0.5rem;">${project.title}</h3>
+                    <p style="margin-bottom: 1rem;">${project.description}</p>
+                    ${project.technologies ? `
+                    <div style="margin-bottom: 1rem;">
+                        <strong>Technologies:</strong> ${Array.isArray(project.technologies) ? project.technologies.join(', ') : project.technologies}
+                    </div>
+                    ` : ''}
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        ${project.liveUrl ? `<a href="${project.liveUrl}" target="_blank" class="btn" style="font-size: 0.875rem; padding: 0.5rem 1rem;">Live Demo</a>` : ''}
+                        ${project.githubUrl ? `<a href="${project.githubUrl}" target="_blank" class="btn" style="font-size: 0.875rem; padding: 0.5rem 1rem; background: var(--color-secondary);">GitHub</a>` : ''}
+                    </div>
+                </div>
+                `).join('')}
+            </div>
+        </section>
+        ` : ''}
+
+        <!-- Blog Posts Section -->
+        ${sections.blogPosts && sections.blogPosts.length > 0 ? `
+        <section id="blog" class="section" style="background: var(--color-surface);">
+            <div class="container">
+                <h2 class="section-title">Latest Blog Posts</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                    ${sections.blogPosts.map(post => `
+                    <div class="card">
+                        <h3 style="color: var(--color-primary); margin-bottom: 0.5rem;">${post.title}</h3>
+                        <p style="color: var(--color-muted); font-size: 0.875rem; margin-bottom: 1rem;">${post.date}</p>
+                        <p style="margin-bottom: 1rem;">${post.excerpt || post.content?.substring(0, 150) + '...' || ''}</p>
+                        ${post.tags && post.tags.length > 0 ? `
+                        <div style="margin-bottom: 1rem;">
+                            ${post.tags.map(tag => `<span style="background: var(--color-primary); color: white; padding: 0.25rem 0.5rem; border-radius: 1rem; font-size: 0.75rem; margin-right: 0.5rem;">${tag}</span>`).join('')}
+                        </div>
+                        ` : ''}
+                        ${post.url ? `<a href="${post.url}" target="_blank" class="btn" style="font-size: 0.875rem; padding: 0.5rem 1rem;">Read More</a>` : ''}
+                    </div>
+                    `).join('')}
+                </div>
+            </div>
+        </section>
+        ` : ''}
+
+        <!-- Achievements Section -->
+        ${sections.achievements && sections.achievements.length > 0 ? `
+        <section id="achievements" class="section">
+            <div class="container">
+                <h2 class="section-title">Achievements & Awards</h2>
+                ${sections.achievements.map(achievement => `
+                <div class="card">
+                    <h3 style="color: var(--color-primary); margin-bottom: 0.5rem;">${achievement.title}</h3>
+                    <p style="font-weight: 500; margin-bottom: 0.5rem;">${achievement.organization || achievement.issuer || ''}</p>
+                    <p style="color: var(--color-muted); margin-bottom: 1rem;">${achievement.date}</p>
+                    <p>${achievement.description}</p>
                 </div>
                 `).join('')}
             </div>
