@@ -406,7 +406,7 @@ const parseSkillsFromText = (text: string, technicalKeywords: string[], softKeyw
 
   // Clean and deduplicate skills
   skillsArray = [...new Set(skillsArray.map(skill => 
-    skill.replace(/[^\w\s.#+-]/g, '').trim()
+    skill.replace(/[^\w\s.#+-/&(),]/g, '').trim()
   ))].filter(skill => skill.length > 1);
 
   // Categorize skills with improved matching
@@ -467,7 +467,8 @@ const isLikelyTechnicalSkill = (skill: string): boolean => {
     /\d+\.\d+/i, // Version numbers
     /microsoft|adobe|google|apple|oracle|sap|salesforce/i,
     /operating|maintenance|installation|configuration/i,
-    /machine|equipment|technical|medical|legal|financial/i
+    /machine|equipment|technical|medical|legal|financial/i,
+    /programming|development|engineering|testing/i
   ];
   
   return technicalPatterns.some(pattern => pattern.test(skill));
@@ -480,7 +481,8 @@ const isLikelySoftSkill = (skill: string): boolean => {
     /management$/i, /building$/i, /development$/i, /resolution$/i,
     /strong|excellent|outstanding|superior|exceptional/i,
     /work|team|client|customer|people|relationship/i,
-    /creative|innovative|strategic|analytical|detail/i
+    /creative|innovative|strategic|analytical|detail/i,
+    /communication|leadership|problem solving|time management/i
   ];
   
   return softPatterns.some(pattern => pattern.test(skill));
@@ -507,7 +509,8 @@ const extractSkillsFromFullText = (fullText: string, technicalKeywords: string[]
   const commonSoftSkills = [
     'leadership', 'communication', 'teamwork', 'problem solving', 'customer service',
     'time management', 'project management', 'analytical thinking', 'attention to detail',
-    'adaptability', 'creativity', 'organization', 'multitasking', 'negotiation'
+    'adaptability', 'creativity', 'organization', 'multitasking', 'negotiation',
+    'critical thinking', 'decision making', 'conflict resolution', 'public speaking'
   ];
 
   commonSoftSkills.forEach(keyword => {
