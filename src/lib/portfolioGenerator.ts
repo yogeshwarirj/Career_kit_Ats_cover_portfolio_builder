@@ -925,3 +925,65 @@ export class PortfolioGenerator {
 
 // Export singleton instance
 export const portfolioGenerator = PortfolioGenerator.getInstance();
+
+// Default portfolio data to prevent undefined errors
+export const defaultPortfolioData: PortfolioData = {
+  id: '',
+  title: '',
+  slug: '',
+  template: 'modern-professional',
+  theme: 'light',
+  personalInfo: {
+    name: '',
+    email: '',
+    phone: '',
+    location: '',
+    website: '',
+    linkedin: '',
+    github: '',
+    twitter: ''
+  },
+  sections: {
+    about: '',
+    experience: [],
+    projects: [],
+    skills: {
+      technical: [],
+      soft: []
+    },
+    education: [],
+    certifications: [],
+    testimonials: [],
+    blogPosts: [],
+    achievements: [],
+    contact: {}
+  },
+  customizations: {
+    colors: {
+      primary: '#2563eb',
+      secondary: '#64748b',
+      accent: '#0ea5e9'
+    },
+    fonts: {
+      heading: 'Inter',
+      body: 'Inter'
+    },
+    layout: 'modern',
+    animations: true,
+    darkMode: false
+  },
+  seo: {
+    title: '',
+    description: '',
+    keywords: []
+  },
+  analytics: {
+    googleAnalytics: '',
+    facebookPixel: ''
+  },
+  isPublished: false,
+  publishedUrl: '',
+  editCount: 0,
+  createdAt: new Date().toISOString(),
+  lastModified: new Date().toISOString()
+};
