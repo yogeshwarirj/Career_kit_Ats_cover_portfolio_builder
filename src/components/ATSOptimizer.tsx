@@ -654,29 +654,7 @@ Preferred Qualifications:
               )}
             </button>
             
-            <button
-              onClick={() => {
-                const reportData = {
-                  score: analysisResult.overallScore,
-                  analysis: analysisResult,
-                  timestamp: new Date().toISOString()
-                };
-                const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `ats-analysis-report-${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                toast.success('Report downloaded successfully!');
-              }}
-              className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-50 transition-all duration-300 flex items-center justify-center"
-            >
-              <Download className="mr-2 h-5 w-5" />
-              Download Analysis Report
-            </button>
+           
           </div>
 
           {/* Detailed Analysis Toggle */}
