@@ -674,6 +674,24 @@ export class PortfolioGenerator {
             </div>
         </section>
         ` : ''}
+
+        <!-- Work Experience Section (Alternative naming) -->
+        ${sections.workExperience && sections.workExperience.length ? `
+        <section id="work-experience" class="section">
+            <div class="container">
+                <h2 class="section-title">Work Experience</h2>
+                ${sections.workExperience.map(exp => `
+                <div class="card">
+                    <h3 style="color: var(--color-primary); margin-bottom: 0.5rem;">${exp.title || exp.position}</h3>
+                    <p style="font-weight: 500; margin-bottom: 0.5rem;">${exp.company}</p>
+                    <p style="color: var(--color-muted); margin-bottom: 1rem;">${exp.startDate} - ${exp.endDate || exp.current ? 'Present' : ''}</p>
+                    <p>${exp.description}</p>
+                </div>
+                `).join('')}
+            </div>
+        </section>
+        ` : ''}
+
         ${sections.projects && sections.projects.length > 0 ? `
         <section id="projects" class="section">
             <div class="container">
@@ -946,6 +964,7 @@ export const defaultPortfolioData: PortfolioData = {
   sections: {
     about: '',
     experience: [],
+    workExperience: [],
     projects: [],
     skills: {
       technical: [],
