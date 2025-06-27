@@ -156,7 +156,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
               </div>
             )}
           </div>
-
+          )
           {/* PDF Conversion Notice */}
           {uploadStatus !== 'success' && (
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 max-w-md">
@@ -183,7 +183,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
                 </div>
               </div>
             </div>
-           )}
+           }
 
 
           {uploadStatus === 'error' && (
