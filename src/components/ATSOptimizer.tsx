@@ -5,6 +5,8 @@ import { ATSAnalyzer, ATSAnalysisResult } from '../lib/atsAnalyzer';
 import { ResumeUploader } from './ResumeUploader';
 import { ParsedResume } from '../lib/resumeParser';
 import toast from 'react-hot-toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface ATSOptimizerProps {
   onClose?: () => void;
@@ -158,17 +160,83 @@ Preferred Qualifications:
   const handleDownloadOptimized = () => {
     if (!optimizedResult?.optimizedResume) return;
 
-    const resumeText = generateResumeText(optimizedResult.optimizedResume);
-    const blob = new Blob([resumeText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `optimized-resume-${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success('Optimized resume downloaded!');
+    const element = document.getElementById('optimized-resume-content');
+    if (!element) {
+      toast.error('Resume content not found. Please try again.');
+      return;
+    }
+
+    toast.loading('Generating PDF...', { id: 'pdf-generation' });
+
+    html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff'
+    }).then(canvas => {
+      try {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+        const imgX = (pdfWidth - imgWidth * ratio) / 2;
+        const imgY = 0;
+        
+        // Calculate if content needs multiple pages
+        const scaledHeight = imgHeight * ratio;
+        
+        if (scaledHeight <= pdfHeight) {
+          // Single page
+          pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, scaledHeight);
+        } else {
+          // Multiple pages
+          let position = 0;
+          const pageHeight = pdfHeight;
+          
+          while (position < scaledHeight) {
+            const remainingHeight = scaledHeight - position;
+            const currentPageHeight = Math.min(pageHeight, remainingHeight);
+            
+            // Create a temporary canvas for this page section
+            const pageCanvas = document.createElement('canvas');
+            const pageCtx = pageCanvas.getContext('2d');
+            const sourceY = (position / ratio);
+            const sourceHeight = (currentPageHeight / ratio);
+            
+            pageCanvas.width = imgWidth;
+            pageCanvas.height = sourceHeight;
+            
+            if (pageCtx) {
+              pageCtx.drawImage(canvas, 0, sourceY, imgWidth, sourceHeight, 0, 0, imgWidth, sourceHeight);
+              const pageImgData = pageCanvas.toDataURL('image/png');
+              
+              if (position > 0) {
+                pdf.addPage();
+              }
+              
+              pdf.addImage(pageImgData, 'PNG', imgX, 0, imgWidth * ratio, currentPageHeight);
+            }
+            
+            position += pageHeight;
+          }
+        }
+        
+        const fileName = `optimized-resume-${new Date().toISOString().split('T')[0]}.pdf`;
+        pdf.save(fileName);
+        
+        toast.success('Optimized resume downloaded as PDF!', { id: 'pdf-generation' });
+      } catch (error) {
+        console.error('PDF generation error:', error);
+        toast.error('Failed to generate PDF. Please try again.', { id: 'pdf-generation' });
+      }
+    }).catch(error => {
+      console.error('Canvas generation error:', error);
+      toast.error('Failed to generate PDF. Please try again.', { id: 'pdf-generation' });
+    });
   };
 
   const generateResumeText = (resume: ResumeData): string => {
@@ -823,7 +891,7 @@ Preferred Qualifications:
 
             {optimizedResult.optimizedResume && (
               <div className="prose max-w-none">
-                <div className="bg-gray-50 p-6 rounded-lg">
+                <div id="optimized-resume-content" className="bg-gray-50 p-6 rounded-lg">
                   <div className="text-center mb-6">
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">
                       {optimizedResult.optimizedResume.personalInfo.name}

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, FileText, User, Building, Briefcase, Sparkles, Download, Copy, Eye, EyeOff, Save, Clock, Crown, Shield, Zap, CheckCircle, Star, Award, Users, Target, Edit3, Palette, Layout, BookOpen, Mail, Phone, MapPin, Globe, Linkedin } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface CoverLetterData {
   id: string;
@@ -246,15 +248,101 @@ ${personalInfo.name}`
   const downloadLetter = () => {
     if (!currentLetter) return;
     
-    const element = document.createElement('a');
-    const file = new Blob([currentLetter.generatedLetter], { type: 'text/plain' });
-    element.href = URL.createObjectURL(file);
-    element.download = `${currentLetter.companyName}_${currentLetter.jobTitle}_Cover_Letter.txt`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
+    toast.loading('Generating PDF...', { id: 'pdf-generation' });
     
-    toast.success('Cover letter downloaded successfully!');
+    // Create a temporary div for PDF generation
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.top = '0';
+    tempDiv.style.width = '210mm'; // A4 width
+    tempDiv.style.padding = '20mm';
+    tempDiv.style.fontFamily = 'Arial, sans-serif';
+    tempDiv.style.fontSize = '12pt';
+    tempDiv.style.lineHeight = '1.6';
+    tempDiv.style.color = '#000000';
+    tempDiv.style.backgroundColor = '#ffffff';
+    tempDiv.style.whiteSpace = 'pre-wrap';
+    tempDiv.innerHTML = currentLetter.generatedLetter.replace(/\n/g, '<br>');
+    
+    document.body.appendChild(tempDiv);
+    
+    html2canvas(tempDiv, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      width: tempDiv.offsetWidth,
+      height: tempDiv.offsetHeight
+    }).then(canvas => {
+      try {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+        const imgX = (pdfWidth - imgWidth * ratio) / 2;
+        const imgY = 0;
+        
+        // Calculate if content needs multiple pages
+        const scaledHeight = imgHeight * ratio;
+        
+        if (scaledHeight <= pdfHeight) {
+          // Single page
+          pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, scaledHeight);
+        } else {
+          // Multiple pages
+          let position = 0;
+          const pageHeight = pdfHeight;
+          
+          while (position < scaledHeight) {
+            const remainingHeight = scaledHeight - position;
+            const currentPageHeight = Math.min(pageHeight, remainingHeight);
+            
+            // Create a temporary canvas for this page section
+            const pageCanvas = document.createElement('canvas');
+            const pageCtx = pageCanvas.getContext('2d');
+            const sourceY = (position / ratio);
+            const sourceHeight = (currentPageHeight / ratio);
+            
+            pageCanvas.width = imgWidth;
+            pageCanvas.height = sourceHeight;
+            
+            if (pageCtx) {
+              pageCtx.drawImage(canvas, 0, sourceY, imgWidth, sourceHeight, 0, 0, imgWidth, sourceHeight);
+              const pageImgData = pageCanvas.toDataURL('image/png');
+              
+              if (position > 0) {
+                pdf.addPage();
+              }
+              
+              pdf.addImage(pageImgData, 'PNG', imgX, 0, imgWidth * ratio, currentPageHeight);
+            }
+            
+            position += pageHeight;
+          }
+        }
+        
+        const fileName = `${currentLetter.companyName}_${currentLetter.jobTitle}_Cover_Letter.pdf`;
+        pdf.save(fileName);
+        
+        // Clean up
+        document.body.removeChild(tempDiv);
+        
+        toast.success('Cover letter downloaded as PDF!', { id: 'pdf-generation' });
+      } catch (error) {
+        console.error('PDF generation error:', error);
+        document.body.removeChild(tempDiv);
+        toast.error('Failed to generate PDF. Please try again.', { id: 'pdf-generation' });
+      }
+    }).catch(error => {
+      console.error('Canvas generation error:', error);
+      document.body.removeChild(tempDiv);
+      toast.error('Failed to generate PDF. Please try again.', { id: 'pdf-generation' });
+    });
   };
 
   const copyToClipboard = () => {
@@ -907,13 +995,10 @@ ${personalInfo.name}`
                       </button>
                       <button
                         onClick={() => {
-                          const element = document.createElement('a');
-                          const file = new Blob([letter.generatedLetter], { type: 'text/plain' });
-                          element.href = URL.createObjectURL(file);
-                          element.download = `${letter.companyName}_${letter.jobTitle}_Cover_Letter.txt`;
-                          document.body.appendChild(element);
-                          element.click();
-                          document.body.removeChild(element);
+                          // Create temporary letter for download
+                          const tempLetter = { ...letter };
+                          setCurrentLetter(tempLetter);
+                          setTimeout(() => downloadLetter(), 100);
                         }}
                         className="p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors duration-200"
                       >
