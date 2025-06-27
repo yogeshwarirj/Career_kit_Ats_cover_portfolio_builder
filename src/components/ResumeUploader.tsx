@@ -149,7 +149,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
             {/* DOCX File Icon */}
             {!isUploading && uploadStatus !== 'success' && (
               <div className="flex items-center justify-center space-x-2 mb-4">
-        <div className="flex items-center px-3 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                <div className="flex items-center px-3 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
                   <FileText className="h-4 w-4 mr-2" />
                   DOCX Only
                 </div>
@@ -171,35 +171,19 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
                   <p className="text-sm text-orange-700 mb-3">
                     Convert your PDF to DOCX format for best results and accurate text extraction.
                   </p>
-                   <button
-                    onClick={handleFileUpload}
+                  <a
+                    href="https://www.adobe.com/acrobat/online/pdf-to-word.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="inline-flex items-center px-3 py-2 bg-orange-600 text-white text-sm font-medium rounded-md hover:bg-orange-700 transition-colors duration-200"
                   >
                     <ExternalLink className="h-4 w-4 mr-2" />
                     Convert PDF to DOCX
-                  </button>
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    style={{ display: 'none' }}
-                    ref={fileInputRef}
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file) {
-                        console.log('Selected file:', file);
-                        // Handle file conversion or upload here
-                      }
-                    }}
-                  />
+                  </a>
                 </div>
               </div>
             </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
+           )}
 
 
           {uploadStatus === 'error' && (
