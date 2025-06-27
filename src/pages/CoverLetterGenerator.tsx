@@ -41,7 +41,7 @@ const CoverLetterGenerator: React.FC = () => {
   const [subscription, setSubscription] = useState<UserSubscription>({
     isSubscribed: false,
     freeLettersUsed: 0,
-    maxFreeLetters: 3,
+    maxFreeLetters: 30,
     subscriptionType: null,
     expiresAt: null
   });
