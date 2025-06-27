@@ -84,7 +84,7 @@ function App() {
                         <img 
                           src="/white_circle_360x360.png" 
                           alt="Built with Bolt.new" 
-                          className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full shadow-lg hover:shadow-xl transition-shadow duration-200"
+                          className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full shadow-lg hover:shadow-xl transition-shadow duration-200"
                         />
                       </a>
                     </div>
