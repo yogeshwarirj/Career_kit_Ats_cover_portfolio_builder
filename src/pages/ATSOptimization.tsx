@@ -148,11 +148,7 @@ const ATSOptimization: React.FC = () => {
                 <span className="ml-2 text-xl font-bold text-gray-900">ATS Optimizer</span>
               </Link>
             </div>
-            <div className="flex items-center space-x-4">
-              <button className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200">
-              
-              </button>
-            </div>
+           
           </div>
         </div>
       </header>
