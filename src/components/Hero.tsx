@@ -3,7 +3,7 @@ import { ArrowRight } from 'lucide-react';
 
 const Hero: React.FC = () => {
   return (
-    <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden -mt-16 pt-16">
+    <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden -mt-16 pt-16">
       {/* Animated Gradient Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-teal-50 via-white to-orange-50">
         <div className="absolute inset-0 bg-gradient-to-r from-teal-600/10 via-transparent to-orange-600/10 animate-pulse"></div>
