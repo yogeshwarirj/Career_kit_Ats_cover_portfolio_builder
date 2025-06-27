@@ -416,9 +416,7 @@ ${personalInfo.name}`
                   </>
                 ) : (
                   <>
-                    <span className="text-sm text-gray-600">
-                      {subscription.freeLettersUsed}/{subscription.maxFreeLetters} free letters used
-                    </span>
+                  
                   </>
                 )}
               </div>
