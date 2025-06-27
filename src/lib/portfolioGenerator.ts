@@ -1223,8 +1223,7 @@ export class PortfolioGenerator {
                         <li><a href="#experience">Experience</a></li>
                         ${sections.education && sections.education.length > 0 ? '<li><a href="#education">Education</a></li>' : ''}
                         ${sections.certifications && sections.certifications.length > 0 ? '<li><a href="#certifications">Certifications</a></li>' : ''}
-                        <li><a href="#achievements">Achievements</a></li>
-                        <li><a href="#blog">Blog</a></li>
+                     
                         <li><a href="#contact">Contact</a></li>
                     </ul>
                 </nav>
