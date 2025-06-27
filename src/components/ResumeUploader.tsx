@@ -124,7 +124,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
   return (
     <div className={`w-full ${className}`}>
       <div
-       /* {...getRootProps()}*/
+        {...getRootProps()}
         className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 ${getStatusColor()}`}
       >
         <input {...getInputProps()} />
