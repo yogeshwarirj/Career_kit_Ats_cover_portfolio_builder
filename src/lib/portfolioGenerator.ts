@@ -734,6 +734,118 @@ export class PortfolioGenerator {
             font-size: 0.9rem;
         }
 
+        /* Education Section */
+        .education-timeline {
+            position: relative;
+            margin-top: 3rem;
+        }
+
+        .education-timeline::before {
+            content: '';
+            position: absolute;
+            left: 2rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--color-secondary);
+        }
+
+        .education-item {
+            position: relative;
+            margin-bottom: 2rem;
+            margin-left: 4rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .education-item::before {
+            content: '';
+            position: absolute;
+            left: -3rem;
+            top: 1.5rem;
+            width: 1rem;
+            height: 1rem;
+            background: var(--color-secondary);
+            border-radius: 50%;
+            border: 3px solid white;
+        }
+
+        .education-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .education-degree {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--color-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .education-school {
+            font-weight: 500;
+            color: var(--color-text);
+            margin-bottom: 0.25rem;
+        }
+
+        .education-gpa {
+            font-size: 0.9rem;
+            color: var(--color-muted);
+        }
+
+        .education-year {
+            color: var(--color-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Certifications Section */
+        .certifications-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .certification-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+            border-left: 4px solid var(--color-accent);
+        }
+
+        .certification-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .certification-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .certification-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--color-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .certification-issuer {
+            color: var(--color-text);
+            margin-bottom: 0.5rem;
+        }
+
+        .certification-date {
+            color: var(--color-muted);
+            font-size: 0.9rem;
+        }
+
         /* Achievements Section */
         .achievements-grid {
             display: grid;
@@ -888,6 +1000,18 @@ export class PortfolioGenerator {
             .experience-item::before {
                 left: -2rem;
             }
+            
+            .education-timeline::before {
+                left: 1rem;
+            }
+            
+            .education-item {
+                margin-left: 2rem;
+            }
+            
+            .education-item::before {
+                left: -2rem;
+            }
         }
 
         /* Animations */
@@ -939,8 +1063,9 @@ export class PortfolioGenerator {
                         <li><a href="#achievements">Achievements</a></li>
                         <li><a href="#blog">Blog</a></li>
                         <li><a href="#contact">Contact</a></li>
-                    </ul>
-                </nav>
+              ${personalInfo.linkedin ? `<a href="${personalInfo.linkedin}" target="_blank" rel="noopener noreferrer" class="contact-item">💼 LinkedIn</a>` : ''}
+              ${personalInfo.github ? `<a href="${personalInfo.github}" target="_blank" rel="noopener noreferrer" class="contact-item">🔗 GitHub</a>` : ''}
+              ${personalInfo.website ? `<a href="${personalInfo.website}" target="_blank" rel="noopener noreferrer" class="contact-item">🌐 Portfolio</a>` : ''}
             </div>
         </header>
 
@@ -1061,7 +1186,7 @@ export class PortfolioGenerator {
             ` : ''}
 
             <!-- Experience Section -->
-            ${sections.experience.length > 0 ? `
+            ${sections.experience && sections.experience.length > 0 ? `
             <section id="experience" class="section">
                 <div class="container">
                     <div class="section-content">
@@ -1074,9 +1199,57 @@ export class PortfolioGenerator {
                                         <h3 class="experience-title">${exp.title}</h3>
                                         <p class="experience-company">${exp.company}</p>
                                     </div>
-                                    <span class="experience-date">${exp.startDate} - ${exp.endDate}</span>
+                                    <span class="experience-date">${exp.startDate} - ${exp.current ? 'Present' : exp.endDate}</span>
                                 </div>
                                 <p>${exp.description}</p>
+                            </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </section>
+            ` : ''}
+
+            <!-- Education Section -->
+            ${sections.education && sections.education.length > 0 ? `
+            <section id="education" class="section">
+                <div class="container">
+                    <div class="section-content">
+                        <h2>Education</h2>
+                        <div class="education-timeline">
+                            ${sections.education.map(edu => `
+                            <div class="education-item">
+                                <div class="education-header">
+                                    <div>
+                                        <h3 class="education-degree">${edu.degree}</h3>
+                                        <p class="education-school">${edu.school}</p>
+                                        ${edu.gpa ? `<p class="education-gpa">GPA: ${edu.gpa}</p>` : ''}
+                                    </div>
+                                    <span class="education-year">${edu.graduationYear}</span>
+                                </div>
+                            </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </section>
+            ` : ''}
+
+            <!-- Certifications Section -->
+            ${sections.certifications && sections.certifications.length > 0 ? `
+            <section id="certifications" class="section">
+                <div class="container">
+                    <div class="section-content">
+                        <h2>Certifications</h2>
+                        <div class="certifications-grid">
+                            ${sections.certifications.map(cert => `
+                            <div class="certification-card">
+                                <div class="certification-icon">
+                                    🏆
+                                </div>
+                                <h3 class="certification-name">${cert.name}</h3>
+                                <p class="certification-issuer">${cert.issuer}</p>
+                                <span class="certification-date">${cert.date}</span>
                             </div>
                             `).join('')}
                         </div>
