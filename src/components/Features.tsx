@@ -7,9 +7,9 @@ const Features: React.FC = () => {
       icon: <Briefcase className="h-8 w-8" />,
       title: "Portfolio Builder",
       description: "Showcase your work with stunning portfolio websites that highlight your skills and achievements.",
-      gradient: "from-purple-400 via-purple-500 to-purple-600",
-      shadowColor: "shadow-purple-500/25",
-      glowColor: "group-hover:shadow-purple-500/40"
+      gradient: "from-blue-400 via-blue-500 to-blue-600",
+      shadowColor: "shadow-blue-500/25",
+      glowColor: "group-hover:shadow-blue-500/40"
     },
     {
       icon: <Mail className="h-8 w-8" />,
