@@ -23,9 +23,9 @@ const Features: React.FC = () => {
       icon: <Target className="h-8 w-8" />,
       title: "ATS Score Optimizer",
       description: "Analyze and optimize your resume for Applicant Tracking Systems to maximize your chances of getting noticed.",
-      gradient: "from-purple-400 via-purple-500 to-purple-600",
-      shadowColor: "shadow-purple-500/25",
-      glowColor: "group-hover:shadow-purple-500/40"
+      gradient: "from-orange-300 via-orange-400 to-orange-500",
+      shadowColor: "shadow-orange-400/25",
+      glowColor: "group-hover:shadow-orange-400/40"
     }
   ];
 
