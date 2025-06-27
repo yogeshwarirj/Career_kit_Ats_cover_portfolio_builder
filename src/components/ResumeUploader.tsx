@@ -156,7 +156,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
               </div>
             )}
           </div>
-          )
+
           {/* PDF Conversion Notice */}
           {uploadStatus !== 'success' && (
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 max-w-md">
@@ -171,19 +171,35 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
                   <p className="text-sm text-orange-700 mb-3">
                     Convert your PDF to DOCX format for best results and accurate text extraction.
                   </p>
-                  <a
-                    href="https://www.adobe.com/acrobat/online/pdf-to-word.html"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                   <button
+                    onClick={handleFileUpload}
                     className="inline-flex items-center px-3 py-2 bg-orange-600 text-white text-sm font-medium rounded-md hover:bg-orange-700 transition-colors duration-200"
                   >
                     <ExternalLink className="h-4 w-4 mr-2" />
                     Convert PDF to DOCX
-                  </a>
+                  </button>
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    style={{ display: 'none' }}
+                    ref={fileInputRef}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        console.log('Selected file:', file);
+                        // Handle file conversion or upload here
+                      }
+                    }}
+                  />
                 </div>
               </div>
             </div>
-           },
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 
           {uploadStatus === 'error' && (
