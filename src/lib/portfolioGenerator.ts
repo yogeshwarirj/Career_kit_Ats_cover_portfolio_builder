@@ -467,8 +467,8 @@ export class PortfolioGenerator {
         }
 
         .section {
-            padding: 5rem 0;
-            min-height: 100vh;
+            padding: 2rem 0;
+            min-height: auto;
             display: flex;
             align-items: center;
         }
@@ -481,18 +481,18 @@ export class PortfolioGenerator {
             font-family: var(--font-heading);
             font-weight: 600;
             line-height: 1.2;
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
         }
 
         h1 {
             font-size: 3.5rem;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
         }
 
         h2 {
             font-size: 2.5rem;
             color: var(--color-primary);
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
             text-align: center;
             position: relative;
         }
@@ -547,8 +547,8 @@ export class PortfolioGenerator {
         .hero .contact-info {
             display: flex;
             justify-content: center;
-            gap: 2rem;
-            margin-top: 2rem;
+            gap: 1rem;
+            margin-top: 1rem;
             flex-wrap: wrap;
             position: relative;
             z-index: 1;
@@ -591,13 +591,13 @@ export class PortfolioGenerator {
         .skills-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 3rem;
-            margin-top: 3rem;
+            gap: 1rem;
+            margin-top: 1.5rem;
         }
 
         .skill-category {
             background: white;
-            padding: 2.5rem;
+            padding: 1rem;
             border-radius: 1rem;
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
             border: 1px solid rgba(0, 0, 0, 0.05);
@@ -612,7 +612,7 @@ export class PortfolioGenerator {
 
         .skill-category h3 {
             color: var(--color-primary);
-            margin-bottom: 2rem;
+            margin-bottom: 0.75rem;
             text-align: center;
             font-size: 1.5rem;
             font-weight: 700;
@@ -621,8 +621,8 @@ export class PortfolioGenerator {
         .skill-item {
             display: flex;
             align-items: center;
-            margin-bottom: 2rem;
-            padding: 1.5rem;
+            margin-bottom: 0.75rem;
+            padding: 0.75rem;
             background: var(--color-surface);
             border-radius: 1rem;
             transition: all 0.3s ease;
@@ -642,7 +642,7 @@ export class PortfolioGenerator {
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 1.5rem;
+            margin-right: 0.75rem;
             color: white;
             font-size: 1.2rem;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -654,7 +654,7 @@ export class PortfolioGenerator {
 
         .skill-name {
             font-weight: 700;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.25rem;
             font-size: 1.1rem;
             color: var(--color-text);
         }
@@ -662,7 +662,7 @@ export class PortfolioGenerator {
         .skill-description {
             color: var(--color-muted);
             font-size: 0.95rem;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.25rem;
             line-height: 1.5;
         }
 
@@ -686,8 +686,8 @@ export class PortfolioGenerator {
         .projects-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
+            gap: 1rem;
+            margin-top: 1.5rem;
         }
 
         .project-card {
@@ -728,19 +728,19 @@ export class PortfolioGenerator {
         }
 
         .project-content {
-            padding: 1.5rem;
+            padding: 1rem;
         }
 
         .project-title {
             font-size: 1.25rem;
             font-weight: 600;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
             color: var(--color-primary);
         }
 
         .project-description {
             color: var(--color-muted);
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
             line-height: 1.6;
         }
 
@@ -748,7 +748,7 @@ export class PortfolioGenerator {
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
         }
 
         .tech-tag {
@@ -770,7 +770,7 @@ export class PortfolioGenerator {
 
         .project-links {
             display: flex;
-            gap: 1rem;
+            gap: 0.75rem;
         }
 
         .project-link {
@@ -794,13 +794,13 @@ export class PortfolioGenerator {
         /* Experience Section */
         .experience-timeline {
             position: relative;
-            margin-top: 3rem;
+            margin-top: 1.5rem;
         }
 
         .experience-timeline::before {
             content: '';
             position: absolute;
-            left: 2rem;
+            left: 1.5rem;
             top: 0;
             bottom: 0;
             width: 2px;
@@ -810,10 +810,10 @@ export class PortfolioGenerator {
 
         .experience-item {
             position: relative;
-            margin-bottom: 3rem;
-            margin-left: 4rem;
+            margin-bottom: 1.5rem;
+            margin-left: 3rem;
             background: white;
-            padding: 2rem;
+            padding: 1rem;
             border-radius: 1rem;
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
             border: 1px solid rgba(0, 0, 0, 0.05);
@@ -828,8 +828,8 @@ export class PortfolioGenerator {
         .experience-item::before {
             content: '';
             position: absolute;
-            left: -3rem;
-            top: 2rem;
+            left: -2.25rem;
+            top: 1rem;
             width: 1rem;
             height: 1rem;
             background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
@@ -842,7 +842,7 @@ export class PortfolioGenerator {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
         }
 
         .experience-title {
@@ -868,13 +868,13 @@ export class PortfolioGenerator {
         /* Education Section */
         .education-timeline {
             position: relative;
-            margin-top: 3rem;
+            margin-top: 1.5rem;
         }
 
         .education-timeline::before {
             content: '';
             position: absolute;
-            left: 2rem;
+            left: 1.5rem;
             top: 0;
             bottom: 0;
             width: 2px;
@@ -883,10 +883,10 @@ export class PortfolioGenerator {
 
         .education-item {
             position: relative;
-            margin-bottom: 2rem;
-            margin-left: 4rem;
+            margin-bottom: 1rem;
+            margin-left: 3rem;
             background: white;
-            padding: 1.5rem;
+            padding: 1rem;
             border-radius: 1rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
@@ -894,8 +894,8 @@ export class PortfolioGenerator {
         .education-item::before {
             content: '';
             position: absolute;
-            left: -3rem;
-            top: 1.5rem;
+            left: -2.25rem;
+            top: 1rem;
             width: 1rem;
             height: 1rem;
             background: var(--color-secondary);
@@ -913,13 +913,13 @@ export class PortfolioGenerator {
             font-size: 1.1rem;
             font-weight: 600;
             color: var(--color-primary);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
         }
 
         .education-school {
             font-weight: 500;
             color: var(--color-text);
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.125rem;
         }
 
         .education-gpa {
@@ -937,13 +937,13 @@ export class PortfolioGenerator {
         .certifications-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
+            gap: 1rem;
+            margin-top: 1.5rem;
         }
 
         .certification-card {
             background: white;
-            padding: 2rem;
+            padding: 1rem;
             border-radius: 1rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             text-align: center;
@@ -957,19 +957,19 @@ export class PortfolioGenerator {
 
         .certification-icon {
             font-size: 2rem;
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
         }
 
         .certification-name {
             font-size: 1.1rem;
             font-weight: 600;
             color: var(--color-primary);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
         }
 
         .certification-issuer {
             color: var(--color-text);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
         }
 
         .certification-date {
@@ -981,13 +981,13 @@ export class PortfolioGenerator {
         .achievements-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
+            gap: 1rem;
+            margin-top: 1.5rem;
         }
 
         .achievement-card {
             background: white;
-            padding: 2rem;
+            padding: 1rem;
             border-radius: 1rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             text-align: center;
@@ -1006,7 +1006,7 @@ export class PortfolioGenerator {
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1rem;
+            margin: 0 auto 0.5rem;
             color: white;
             font-size: 1.5rem;
         }
@@ -1015,8 +1015,8 @@ export class PortfolioGenerator {
         .blog-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
+            gap: 1rem;
+            margin-top: 1.5rem;
         }
 
         .blog-card {
@@ -1032,19 +1032,19 @@ export class PortfolioGenerator {
         }
 
         .blog-content {
-            padding: 1.5rem;
+            padding: 1rem;
         }
 
         .blog-title {
             font-size: 1.25rem;
             font-weight: 600;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
             color: var(--color-primary);
         }
 
         .blog-excerpt {
             color: var(--color-muted);
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
             line-height: 1.6;
         }
 
@@ -1065,13 +1065,13 @@ export class PortfolioGenerator {
         .contact-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
+            gap: 1rem;
+            margin-top: 1.5rem;
         }
 
         .contact-card {
             background: white;
-            padding: 2rem;
+            padding: 1rem;
             border-radius: 1rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
@@ -1084,7 +1084,7 @@ export class PortfolioGenerator {
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1rem;
+            margin: 0 auto 0.5rem;
             color: white;
         }
 
@@ -1149,27 +1149,27 @@ export class PortfolioGenerator {
             }
             
             .experience-timeline::before {
-                left: 1rem;
+                left: 0.75rem;
             }
             
             .experience-item {
-                margin-left: 2rem;
+                margin-left: 1.5rem;
             }
             
             .experience-item::before {
-                left: -2rem;
+                left: -1.5rem;
             }
             
             .education-timeline::before {
-                left: 1rem;
+                left: 0.75rem;
             }
             
             .education-item {
-                margin-left: 2rem;
+                margin-left: 1.5rem;
             }
             
             .education-item::before {
-                left: -2rem;
+                left: -1.5rem;
             }
         }
 
