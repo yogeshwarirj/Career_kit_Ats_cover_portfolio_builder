@@ -362,11 +362,12 @@ export class PortfolioGenerator {
             top: 0;
             left: 0;
             right: 0;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
             z-index: 1000;
-            padding: 1rem 0;
+            padding: 0.75rem 0;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
         }
 
         .nav-container {
@@ -380,48 +381,83 @@ export class PortfolioGenerator {
 
         .logo {
             font-family: var(--font-heading);
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             font-weight: 700;
             color: var(--color-primary);
             text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: translateY(-1px);
+            color: var(--color-accent);
         }
 
         .nav-links {
             display: flex;
             list-style: none;
-            gap: 2rem;
+            gap: 1.5rem;
         }
 
         .nav-links a {
             text-decoration: none;
             color: var(--color-text);
-            font-weight: 500;
-            transition: color 0.3s ease;
+            font-weight: 400;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
             position: relative;
+            padding: 0.5rem 0;
         }
 
         .nav-links a:hover {
             color: var(--color-primary);
+            transform: translateY(-1px);
         }
 
         .nav-links a::after {
             content: '';
             position: absolute;
-            bottom: -5px;
+            bottom: 0;
             left: 0;
             width: 0;
             height: 2px;
-            background: var(--color-primary);
+            background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
             transition: width 0.3s ease;
+            border-radius: 1px;
         }
 
         .nav-links a:hover::after {
             width: 100%;
         }
 
+        .social-links {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .social-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--color-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 400;
+            transition: all 0.3s ease;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+        }
+
+        .social-link:hover {
+            color: var(--color-primary);
+            background: var(--color-surface);
+            transform: translateY(-1px);
+        }
+
         /* Main Content */
         .main-content {
-            margin-top: 80px;
+            margin-top: 70px;
         }
 
         .container {
@@ -431,7 +467,7 @@ export class PortfolioGenerator {
         }
 
         .section {
-            padding: 4rem 0;
+            padding: 5rem 0;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -458,6 +494,19 @@ export class PortfolioGenerator {
             color: var(--color-primary);
             margin-bottom: 2rem;
             text-align: center;
+            position: relative;
+        }
+
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: -0.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+            border-radius: 2px;
         }
 
         /* Hero Section */
@@ -465,17 +514,34 @@ export class PortfolioGenerator {
             background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
             color: white;
             text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
         }
 
         .hero h1 {
             color: white;
             margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
         }
 
         .hero .tagline {
             font-size: 1.5rem;
             margin-bottom: 2rem;
             opacity: 0.9;
+            position: relative;
+            z-index: 1;
         }
 
         .hero .contact-info {
@@ -484,6 +550,8 @@ export class PortfolioGenerator {
             gap: 2rem;
             margin-top: 2rem;
             flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
         }
 
         .contact-item {
@@ -493,11 +561,17 @@ export class PortfolioGenerator {
             color: white;
             text-decoration: none;
             opacity: 0.9;
-            transition: opacity 0.3s ease;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
         }
 
         .contact-item:hover {
             opacity: 1;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
         }
 
         /* About Section */
@@ -525,13 +599,21 @@ export class PortfolioGenerator {
             background: white;
             padding: 2rem;
             border-radius: 1rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .skill-category:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
         }
 
         .skill-category h3 {
             color: var(--color-primary);
             margin-bottom: 1.5rem;
             text-align: center;
+            font-size: 1.3rem;
         }
 
         .skill-item {
@@ -541,23 +623,26 @@ export class PortfolioGenerator {
             padding: 1rem;
             background: var(--color-surface);
             border-radius: 0.5rem;
-            transition: transform 0.3s ease;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 0, 0, 0.05);
         }
 
         .skill-item:hover {
-            transform: translateY(-2px);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
         }
 
         .skill-icon {
             width: 3rem;
             height: 3rem;
-            background: var(--color-primary);
+            background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
             border-radius: 0.5rem;
             display: flex;
             align-items: center;
             justify-content: center;
             margin-right: 1rem;
             color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
         .skill-info {
@@ -567,6 +652,7 @@ export class PortfolioGenerator {
         .skill-name {
             font-weight: 600;
             margin-bottom: 0.5rem;
+            color: var(--color-text);
         }
 
         .skill-description {
@@ -578,15 +664,16 @@ export class PortfolioGenerator {
         .skill-level {
             width: 100%;
             height: 4px;
-            background: #e5e7eb;
+            background: rgba(0, 0, 0, 0.1);
             border-radius: 2px;
             overflow: hidden;
         }
 
         .skill-level-fill {
             height: 100%;
-            background: var(--color-primary);
+            background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
             transition: width 0.5s ease;
+            border-radius: 2px;
         }
 
         /* Projects Section */
@@ -601,13 +688,14 @@ export class PortfolioGenerator {
             background: white;
             border-radius: 1rem;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 0, 0, 0.05);
         }
 
         .project-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
         }
 
         .project-image {
@@ -619,6 +707,18 @@ export class PortfolioGenerator {
             justify-content: center;
             color: white;
             font-size: 3rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .project-image::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="white" opacity="0.2"/></pattern></defs><rect width="100" height="100" fill="url(%23dots)"/></svg>');
         }
 
         .project-content {
@@ -646,12 +746,20 @@ export class PortfolioGenerator {
         }
 
         .tech-tag {
-            background: var(--color-surface);
+            background: linear-gradient(135deg, var(--color-surface), rgba(0, 0, 0, 0.02));
             color: var(--color-primary);
             padding: 0.25rem 0.75rem;
             border-radius: 1rem;
             font-size: 0.8rem;
             font-weight: 500;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .tech-tag:hover {
+            background: var(--color-primary);
+            color: white;
+            transform: translateY(-1px);
         }
 
         .project-links {
@@ -666,11 +774,15 @@ export class PortfolioGenerator {
             color: var(--color-primary);
             text-decoration: none;
             font-weight: 500;
-            transition: color 0.3s ease;
+            transition: all 0.3s ease;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
         }
 
         .project-link:hover {
             color: var(--color-accent);
+            background: var(--color-surface);
+            transform: translateY(-1px);
         }
 
         /* Experience Section */
@@ -686,7 +798,8 @@ export class PortfolioGenerator {
             top: 0;
             bottom: 0;
             width: 2px;
-            background: var(--color-primary);
+            background: linear-gradient(180deg, var(--color-primary), var(--color-accent));
+            border-radius: 1px;
         }
 
         .experience-item {
@@ -696,7 +809,14 @@ export class PortfolioGenerator {
             background: white;
             padding: 2rem;
             border-radius: 1rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .experience-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
         }
 
         .experience-item::before {
@@ -706,9 +826,10 @@ export class PortfolioGenerator {
             top: 2rem;
             width: 1rem;
             height: 1rem;
-            background: var(--color-primary);
+            background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
             border-radius: 50%;
             border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
 
         .experience-header {
@@ -732,6 +853,10 @@ export class PortfolioGenerator {
         .experience-date {
             color: var(--color-muted);
             font-size: 0.9rem;
+            background: var(--color-surface);
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(0, 0, 0, 0.05);
         }
 
         /* Education Section */
@@ -959,8 +1084,16 @@ export class PortfolioGenerator {
 
         /* Responsive Design */
         @media (max-width: 768px) {
-            .nav-links {
+            .nav-links, .social-links {
                 display: none;
+            }
+            
+            .header {
+                padding: 0.5rem 0;
+            }
+            
+            .main-content {
+                margin-top: 60px;
             }
             
             h1 {
@@ -985,7 +1118,7 @@ export class PortfolioGenerator {
             }
             
             .section {
-                padding: 3rem 0;
+                padding: 4rem 0;
                 min-height: auto;
             }
             
@@ -1060,12 +1193,19 @@ export class PortfolioGenerator {
                         <li><a href="#skills">Skills</a></li>
                         <li><a href="#projects">Projects</a></li>
                         <li><a href="#experience">Experience</a></li>
+                        ${sections.education && sections.education.length > 0 ? '<li><a href="#education">Education</a></li>' : ''}
+                        ${sections.certifications && sections.certifications.length > 0 ? '<li><a href="#certifications">Certifications</a></li>' : ''}
                         <li><a href="#achievements">Achievements</a></li>
                         <li><a href="#blog">Blog</a></li>
                         <li><a href="#contact">Contact</a></li>
-              ${personalInfo.linkedin ? `<a href="${personalInfo.linkedin}" target="_blank" rel="noopener noreferrer" class="contact-item">💼 LinkedIn</a>` : ''}
-              ${personalInfo.github ? `<a href="${personalInfo.github}" target="_blank" rel="noopener noreferrer" class="contact-item">🔗 GitHub</a>` : ''}
-              ${personalInfo.website ? `<a href="${personalInfo.website}" target="_blank" rel="noopener noreferrer" class="contact-item">🌐 Portfolio</a>` : ''}
+                    </ul>
+                </nav>
+                
+                <div class="social-links">
+                    ${personalInfo.linkedin ? `<a href="${personalInfo.linkedin}" target="_blank" rel="noopener noreferrer" class="social-link">💼 LinkedIn</a>` : ''}
+                    ${personalInfo.github ? `<a href="${personalInfo.github}" target="_blank" rel="noopener noreferrer" class="social-link">🔗 GitHub</a>` : ''}
+                    ${personalInfo.website ? `<a href="${personalInfo.website}" target="_blank" rel="noopener noreferrer" class="social-link">🌐 Portfolio</a>` : ''}
+                </div>
             </div>
         </header>
 
