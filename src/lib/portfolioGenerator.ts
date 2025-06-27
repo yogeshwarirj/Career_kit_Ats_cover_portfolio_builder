@@ -25,13 +25,41 @@ export interface PortfolioTheme {
   };
 }
 
-export interface PortfolioSection {
+export interface Skill {
   id: string;
   name: string;
-  type: 'text' | 'list' | 'grid' | 'timeline';
-  content: any;
-  visible: boolean;
-  order: number;
+  description?: string;
+  level?: number; // 1-100
+  icon?: string; // Lucide icon name
+}
+
+export interface Project {
+  id: string;
+  title: string;
+  description: string;
+  technologies: string[];
+  liveUrl?: string;
+  githubUrl?: string;
+  imageUrl?: string;
+  featured: boolean;
+}
+
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  organization?: string;
+  type: 'award' | 'certification' | 'recognition' | 'milestone';
+}
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  excerpt: string;
+  url: string;
+  publishDate: string;
+  tags: string[];
 }
 
 export interface PortfolioData {
@@ -49,20 +77,39 @@ export interface PortfolioData {
     linkedin?: string;
     github?: string;
     twitter?: string;
+    tagline?: string;
   };
   sections: {
     about: string;
-    experience: any[];
-    projects: any[];
+    experience: Array<{
+      id: string;
+      title: string;
+      company: string;
+      startDate: string;
+      endDate: string;
+      description: string;
+      current: boolean;
+    }>;
+    projects: Project[];
     skills: {
-      technical: string[];
-      soft: string[];
+      technical: Skill[];
+      soft: Skill[];
     };
-    education: any[];
-    certifications: any[];
-    testimonials: any[];
-    blogPosts: any[];
-    achievements: any[];
+    education: Array<{
+      id: string;
+      degree: string;
+      school: string;
+      graduationYear: string;
+      gpa?: string;
+    }>;
+    certifications: Array<{
+      id: string;
+      name: string;
+      issuer: string;
+      date: string;
+    }>;
+    achievements: Achievement[];
+    blogPosts: BlogPost[];
     contact: any;
   };
   customizations: {
@@ -162,32 +209,6 @@ export class PortfolioGenerator {
           accent: '#60a5fa'
         },
         layout: 'technical'
-      },
-      {
-        id: 'business-executive',
-        name: 'Business Executive',
-        description: 'Professional design for executives, consultants, and business leaders',
-        category: 'executive',
-        features: ['Professional Layout', 'Achievement Focus', 'Testimonials', 'Case Studies'],
-        colors: {
-          primary: '#dc2626',
-          secondary: '#991b1b',
-          accent: '#f87171'
-        },
-        layout: 'executive'
-      },
-      {
-        id: 'freelancer-showcase',
-        name: 'Freelancer Showcase',
-        description: 'Versatile design perfect for freelancers and independent professionals',
-        category: 'freelancer',
-        features: ['Service Showcase', 'Client Testimonials', 'Pricing Tables', 'Contact Forms'],
-        colors: {
-          primary: '#ea580c',
-          secondary: '#c2410c',
-          accent: '#fb923c'
-        },
-        layout: 'freelancer'
       }
     ];
 
@@ -213,28 +234,6 @@ export class PortfolioGenerator {
           text: '#f1f5f9',
           muted: '#94a3b8'
         }
-      },
-      {
-        id: 'corporate-blue',
-        name: 'Corporate Blue',
-        description: 'Professional blue theme',
-        colors: {
-          background: '#f8fafc',
-          surface: '#e2e8f0',
-          text: '#1e293b',
-          muted: '#475569'
-        }
-      },
-      {
-        id: 'creative-gradient',
-        name: 'Creative Gradient',
-        description: 'Vibrant gradient theme',
-        colors: {
-          background: '#fef7ff',
-          surface: '#f3e8ff',
-          text: '#581c87',
-          muted: '#7c3aed'
-        }
       }
     ];
   }
@@ -246,37 +245,31 @@ export class PortfolioGenerator {
     return PortfolioGenerator.instance;
   }
 
-  /**
-   * Get all available templates
-   */
   getTemplates(): PortfolioTemplate[] {
     return this.templates;
   }
 
-  /**
-   * Get all available themes
-   */
   getThemes(): PortfolioTheme[] {
     return this.themes;
   }
 
-  /**
-   * Get template by ID
-   */
   getTemplate(id: string): PortfolioTemplate | undefined {
     return this.templates.find(template => template.id === id);
   }
 
-  /**
-   * Get theme by ID
-   */
   getTheme(id: string): PortfolioTheme | undefined {
     return this.themes.find(theme => theme.id === id);
   }
 
-  /**
-   * Generate portfolio HTML from data
-   */
+  generateSlug(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim();
+  }
+
   generatePortfolioHTML(portfolioData: PortfolioData): string {
     const template = this.getTemplate(portfolioData.template);
     const theme = this.getTheme(portfolioData.theme);
@@ -288,73 +281,6 @@ export class PortfolioGenerator {
     return this.buildHTML(portfolioData, template, theme);
   }
 
-  /**
-   * Generate portfolio slug from name
-   */
-  generateSlug(name: string): string {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim();
-  }
-
-  /**
-   * Validate portfolio slug uniqueness
-   */
-  async validateSlug(slug: string, excludeId?: string): Promise<{ valid: boolean; suggestion?: string }> {
-    // Simulate server-side validation
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // In production, this would check against a database
-    const existingSlugs = ['john-doe', 'jane-smith', 'alex-johnson'];
-    
-    if (existingSlugs.includes(slug) && excludeId !== slug) {
-      return {
-        valid: false,
-        suggestion: `${slug}-${Math.floor(Math.random() * 1000)}`
-      };
-    }
-
-    return { valid: true };
-  }
-
-  /**
-   * Deploy portfolio to Netlify
-   */
-  async deployToNetlify(portfolioData: PortfolioData): Promise<NetlifyDeployment> {
-    // Simulate Netlify deployment
-    const deploymentId = Date.now().toString();
-    
-    // Generate HTML and assets
-    const html = this.generatePortfolioHTML(portfolioData);
-    const css = this.generateCSS(portfolioData);
-    
-    // Simulate deployment process
-    await new Promise(resolve => setTimeout(resolve, 3000));
-
-    const deployment: NetlifyDeployment = {
-      id: deploymentId,
-      url: `https://careerkit-portfolios.netlify.app/${portfolioData.slug}`,
-      deployUrl: `https://${deploymentId}--careerkit-portfolios.netlify.app`,
-      state: 'ready',
-      createdAt: new Date().toISOString(),
-      buildLog: [
-        'Starting build...',
-        'Generating HTML...',
-        'Optimizing assets...',
-        'Deploying to CDN...',
-        'Build complete!'
-      ]
-    };
-
-    return deployment;
-  }
-
-  /**
-   * Generate SEO-optimized HTML
-   */
   private buildHTML(portfolioData: PortfolioData, template: PortfolioTemplate, theme: PortfolioTheme): string {
     const { personalInfo, sections, customizations, seo } = portfolioData;
 
@@ -374,32 +300,16 @@ export class PortfolioGenerator {
     <meta property="og:type" content="website">
     <meta property="og:url" content="${portfolioData.publishedUrl}">
     
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="${seo.title || `${personalInfo.name} - Portfolio`}">
-    <meta name="twitter:description" content="${seo.description || sections.about}">
-    
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>${personalInfo.name.charAt(0)}</text></svg>">
     
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     
     <!-- Styles -->
     <style>
         ${this.generateCSS(portfolioData)}
     </style>
-    
-    ${portfolioData.analytics.googleAnalytics ? `
-    <!-- Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=${portfolioData.analytics.googleAnalytics}"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', '${portfolioData.analytics.googleAnalytics}');
-    </script>
-    ` : ''}
 </head>
 <body>
     ${this.generateBodyHTML(portfolioData, template, theme)}
@@ -412,9 +322,6 @@ export class PortfolioGenerator {
 </html>`;
   }
 
-  /**
-   * Generate CSS for portfolio
-   */
   private generateCSS(portfolioData: PortfolioData): string {
     const { customizations } = portfolioData;
     const theme = this.getTheme(portfolioData.theme);
@@ -438,11 +345,83 @@ export class PortfolioGenerator {
             box-sizing: border-box;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
             font-family: var(--font-body);
             background-color: var(--color-background);
             color: var(--color-text);
             line-height: 1.6;
+        }
+
+        /* Header & Navigation */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            padding: 1rem 0;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--color-primary);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--color-text);
+            font-weight: 500;
+            transition: color 0.3s ease;
+            position: relative;
+        }
+
+        .nav-links a:hover {
+            color: var(--color-primary);
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--color-primary);
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-top: 80px;
         }
 
         .container {
@@ -451,419 +430,874 @@ export class PortfolioGenerator {
             padding: 0 2rem;
         }
 
+        .section {
+            padding: 4rem 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-content {
+            width: 100%;
+        }
+
         h1, h2, h3, h4, h5, h6 {
             font-family: var(--font-heading);
             font-weight: 600;
             line-height: 1.2;
+            margin-bottom: 1rem;
         }
 
-        .hero {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            color: var(--color-primary);
+            margin-bottom: 2rem;
             text-align: center;
+        }
+
+        /* Hero Section */
+        .hero {
             background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
             color: white;
+            text-align: center;
         }
 
-        .section {
-            padding: 4rem 0;
+        .hero h1 {
+            color: white;
+            margin-bottom: 1rem;
         }
 
-        .section-title {
-            font-size: 2.5rem;
+        .hero .tagline {
+            font-size: 1.5rem;
             margin-bottom: 2rem;
-            color: var(--color-primary);
+            opacity: 0.9;
         }
 
-        .card {
+        .hero .contact-info {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: white;
+            text-decoration: none;
+            opacity: 0.9;
+            transition: opacity 0.3s ease;
+        }
+
+        .contact-item:hover {
+            opacity: 1;
+        }
+
+        /* About Section */
+        .about {
             background: var(--color-surface);
+        }
+
+        .about-content {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+            font-size: 1.2rem;
+            line-height: 1.8;
+        }
+
+        /* Skills Section */
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .skill-category {
+            background: white;
             padding: 2rem;
             border-radius: 1rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: 2rem;
         }
 
-        .skill-tag {
-            display: inline-block;
-            background: var(--color-primary);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 2rem;
-            margin: 0.25rem;
-            font-size: 0.875rem;
+        .skill-category h3 {
+            color: var(--color-primary);
+            margin-bottom: 1.5rem;
+            text-align: center;
         }
 
-        .btn {
-            display: inline-block;
-            background: var(--color-primary);
-            color: white;
-            padding: 1rem 2rem;
+        .skill-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--color-surface);
             border-radius: 0.5rem;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
+            transition: transform 0.3s ease;
         }
 
-        .btn:hover {
-            background: var(--color-secondary);
+        .skill-item:hover {
             transform: translateY(-2px);
         }
 
+        .skill-icon {
+            width: 3rem;
+            height: 3rem;
+            background: var(--color-primary);
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            color: white;
+        }
+
+        .skill-info {
+            flex: 1;
+        }
+
+        .skill-name {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .skill-description {
+            color: var(--color-muted);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .skill-level {
+            width: 100%;
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .skill-level-fill {
+            height: 100%;
+            background: var(--color-primary);
+            transition: width 0.5s ease;
+        }
+
+        /* Projects Section */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .project-card {
+            background: white;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .project-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+        }
+
+        .project-content {
+            padding: 1.5rem;
+        }
+
+        .project-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--color-primary);
+        }
+
+        .project-description {
+            color: var(--color-muted);
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .project-tech {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tech-tag {
+            background: var(--color-surface);
+            color: var(--color-primary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .project-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .project-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--color-primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .project-link:hover {
+            color: var(--color-accent);
+        }
+
+        /* Experience Section */
+        .experience-timeline {
+            position: relative;
+            margin-top: 3rem;
+        }
+
+        .experience-timeline::before {
+            content: '';
+            position: absolute;
+            left: 2rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--color-primary);
+        }
+
+        .experience-item {
+            position: relative;
+            margin-bottom: 3rem;
+            margin-left: 4rem;
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .experience-item::before {
+            content: '';
+            position: absolute;
+            left: -3rem;
+            top: 2rem;
+            width: 1rem;
+            height: 1rem;
+            background: var(--color-primary);
+            border-radius: 50%;
+            border: 3px solid white;
+        }
+
+        .experience-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .experience-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--color-primary);
+        }
+
+        .experience-company {
+            font-weight: 500;
+            color: var(--color-text);
+        }
+
+        .experience-date {
+            color: var(--color-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Achievements Section */
+        .achievements-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .achievement-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .achievement-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .achievement-icon {
+            width: 4rem;
+            height: 4rem;
+            background: var(--color-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        /* Blog Section */
+        .blog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .blog-card {
+            background: white;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .blog-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .blog-content {
+            padding: 1.5rem;
+        }
+
+        .blog-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--color-primary);
+        }
+
+        .blog-excerpt {
+            color: var(--color-muted);
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .blog-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: var(--color-muted);
+        }
+
+        /* Contact Section */
+        .contact {
+            background: var(--color-surface);
+            text-align: center;
+        }
+
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .contact-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .contact-icon {
+            width: 3rem;
+            height: 3rem;
+            background: var(--color-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            color: white;
+        }
+
+        /* Responsive Design */
         @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            h2 {
+                font-size: 2rem;
+            }
+            
+            .hero .tagline {
+                font-size: 1.2rem;
+            }
+            
+            .hero .contact-info {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
             .container {
                 padding: 0 1rem;
             }
             
-            .section-title {
-                font-size: 2rem;
+            .section {
+                padding: 3rem 0;
+                min-height: auto;
             }
             
-            .hero {
-                min-height: 80vh;
+            .experience-timeline::before {
+                left: 1rem;
+            }
+            
+            .experience-item {
+                margin-left: 2rem;
+            }
+            
+            .experience-item::before {
+                left: -2rem;
             }
         }
 
-        ${customizations.animations ? `
-        .fade-in {
-            opacity: 0;
-            transform: translateY(30px);
-            animation: fadeInUp 0.6s ease forwards;
-        }
-
+        /* Animations */
         @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
-        ` : ''}
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        /* Utility Classes */
+        .text-center {
+            text-align: center;
+        }
+
+        .mb-4 {
+            margin-bottom: 1rem;
+        }
+
+        .mb-8 {
+            margin-bottom: 2rem;
+        }
     `;
   }
 
-  /**
-   * Generate body HTML based on template
-   */
   private generateBodyHTML(portfolioData: PortfolioData, template: PortfolioTemplate, theme: PortfolioTheme): string {
     const { personalInfo, sections } = portfolioData;
 
-    switch (template.layout) {
-      case 'modern':
-        return this.generateModernLayout(portfolioData);
-      case 'creative':
-        return this.generateCreativeLayout(portfolioData);
-      case 'minimal':
-        return this.generateMinimalLayout(portfolioData);
-      case 'technical':
-        return this.generateTechnicalLayout(portfolioData);
-      case 'executive':
-        return this.generateExecutiveLayout(portfolioData);
-      case 'freelancer':
-        return this.generateFreelancerLayout(portfolioData);
-      default:
-        return this.generateModernLayout(portfolioData);
-    }
+    return `
+        <!-- Header -->
+        <header class="header">
+            <div class="nav-container">
+                <a href="#home" class="logo">${personalInfo.name}</a>
+                <nav>
+                    <ul class="nav-links">
+                        <li><a href="#home">Home</a></li>
+                        <li><a href="#about">About</a></li>
+                        <li><a href="#skills">Skills</a></li>
+                        <li><a href="#projects">Projects</a></li>
+                        <li><a href="#experience">Experience</a></li>
+                        <li><a href="#achievements">Achievements</a></li>
+                        <li><a href="#blog">Blog</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Hero Section -->
+            <section id="home" class="section hero">
+                <div class="container">
+                    <div class="section-content">
+                        <h1>${personalInfo.name}</h1>
+                        ${personalInfo.tagline ? `<p class="tagline">${personalInfo.tagline}</p>` : ''}
+                        <div class="contact-info">
+                            ${personalInfo.email ? `<a href="mailto:${personalInfo.email}" class="contact-item">📧 ${personalInfo.email}</a>` : ''}
+                            ${personalInfo.phone ? `<a href="tel:${personalInfo.phone}" class="contact-item">📱 ${personalInfo.phone}</a>` : ''}
+                            ${personalInfo.location ? `<span class="contact-item">📍 ${personalInfo.location}</span>` : ''}
+                            ${personalInfo.linkedin ? `<a href="${personalInfo.linkedin}" target="_blank" class="contact-item">💼 LinkedIn</a>` : ''}
+                            ${personalInfo.github ? `<a href="${personalInfo.github}" target="_blank" class="contact-item">🔗 GitHub</a>` : ''}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- About Section -->
+            <section id="about" class="section about">
+                <div class="container">
+                    <div class="section-content">
+                        <h2>About Me</h2>
+                        <div class="about-content">
+                            <p>${sections.about}</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Skills Section -->
+            <section id="skills" class="section">
+                <div class="container">
+                    <div class="section-content">
+                        <h2>Technical Proficiencies</h2>
+                        <div class="skills-grid">
+                            ${sections.skills.technical.length > 0 ? `
+                            <div class="skill-category">
+                                <h3>Technical Skills</h3>
+                                ${sections.skills.technical.map(skill => `
+                                <div class="skill-item">
+                                    <div class="skill-icon">
+                                        ${this.getSkillIcon(skill.icon || 'code')}
+                                    </div>
+                                    <div class="skill-info">
+                                        <div class="skill-name">${skill.name}</div>
+                                        ${skill.description ? `<div class="skill-description">${skill.description}</div>` : ''}
+                                        ${skill.level ? `
+                                        <div class="skill-level">
+                                            <div class="skill-level-fill" style="width: ${skill.level}%"></div>
+                                        </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                `).join('')}
+                            </div>
+                            ` : ''}
+                            
+                            ${sections.skills.soft.length > 0 ? `
+                            <div class="skill-category">
+                                <h3>Soft Skills</h3>
+                                ${sections.skills.soft.map(skill => `
+                                <div class="skill-item">
+                                    <div class="skill-icon">
+                                        ${this.getSkillIcon(skill.icon || 'users')}
+                                    </div>
+                                    <div class="skill-info">
+                                        <div class="skill-name">${skill.name}</div>
+                                        ${skill.description ? `<div class="skill-description">${skill.description}</div>` : ''}
+                                        ${skill.level ? `
+                                        <div class="skill-level">
+                                            <div class="skill-level-fill" style="width: ${skill.level}%"></div>
+                                        </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                `).join('')}
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Projects Section -->
+            ${sections.projects.length > 0 ? `
+            <section id="projects" class="section">
+                <div class="container">
+                    <div class="section-content">
+                        <h2>Projects</h2>
+                        <div class="projects-grid">
+                            ${sections.projects.map(project => `
+                            <div class="project-card">
+                                <div class="project-image">
+                                    🚀
+                                </div>
+                                <div class="project-content">
+                                    <h3 class="project-title">${project.title}</h3>
+                                    <p class="project-description">${project.description}</p>
+                                    <div class="project-tech">
+                                        ${project.technologies.map(tech => `<span class="tech-tag">${tech}</span>`).join('')}
+                                    </div>
+                                    <div class="project-links">
+                                        ${project.liveUrl ? `<a href="${project.liveUrl}" target="_blank" class="project-link">🔗 Live Demo</a>` : ''}
+                                        ${project.githubUrl ? `<a href="${project.githubUrl}" target="_blank" class="project-link">📂 GitHub</a>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </section>
+            ` : ''}
+
+            <!-- Experience Section -->
+            ${sections.experience.length > 0 ? `
+            <section id="experience" class="section">
+                <div class="container">
+                    <div class="section-content">
+                        <h2>Experience</h2>
+                        <div class="experience-timeline">
+                            ${sections.experience.map(exp => `
+                            <div class="experience-item">
+                                <div class="experience-header">
+                                    <div>
+                                        <h3 class="experience-title">${exp.title}</h3>
+                                        <p class="experience-company">${exp.company}</p>
+                                    </div>
+                                    <span class="experience-date">${exp.startDate} - ${exp.endDate}</span>
+                                </div>
+                                <p>${exp.description}</p>
+                            </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </section>
+            ` : ''}
+
+            <!-- Achievements Section -->
+            ${sections.achievements.length > 0 ? `
+            <section id="achievements" class="section">
+                <div class="container">
+                    <div class="section-content">
+                        <h2>Achievements</h2>
+                        <div class="achievements-grid">
+                            ${sections.achievements.map(achievement => `
+                            <div class="achievement-card">
+                                <div class="achievement-icon">
+                                    ${this.getAchievementIcon(achievement.type)}
+                                </div>
+                                <h3>${achievement.title}</h3>
+                                <p>${achievement.description}</p>
+                                <small>${achievement.date} ${achievement.organization ? `• ${achievement.organization}` : ''}</small>
+                            </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </section>
+            ` : ''}
+
+            <!-- Blog Section -->
+            ${sections.blogPosts.length > 0 ? `
+            <section id="blog" class="section">
+                <div class="container">
+                    <div class="section-content">
+                        <h2>Latest Blog Posts</h2>
+                        <div class="blog-grid">
+                            ${sections.blogPosts.map(post => `
+                            <div class="blog-card">
+                                <div class="blog-content">
+                                    <h3 class="blog-title">${post.title}</h3>
+                                    <p class="blog-excerpt">${post.excerpt}</p>
+                                    <div class="blog-meta">
+                                        <span>${post.publishDate}</span>
+                                        <a href="${post.url}" target="_blank" class="project-link">Read More →</a>
+                                    </div>
+                                </div>
+                            </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </section>
+            ` : ''}
+
+            <!-- Contact Section -->
+            <section id="contact" class="section contact">
+                <div class="container">
+                    <div class="section-content">
+                        <h2>Get In Touch</h2>
+                        <p>Let's work together to bring your ideas to life!</p>
+                        <div class="contact-grid">
+                            ${personalInfo.email ? `
+                            <div class="contact-card">
+                                <div class="contact-icon">📧</div>
+                                <h3>Email</h3>
+                                <a href="mailto:${personalInfo.email}">${personalInfo.email}</a>
+                            </div>
+                            ` : ''}
+                            ${personalInfo.phone ? `
+                            <div class="contact-card">
+                                <div class="contact-icon">📱</div>
+                                <h3>Phone</h3>
+                                <a href="tel:${personalInfo.phone}">${personalInfo.phone}</a>
+                            </div>
+                            ` : ''}
+                            ${personalInfo.linkedin ? `
+                            <div class="contact-card">
+                                <div class="contact-icon">💼</div>
+                                <h3>LinkedIn</h3>
+                                <a href="${personalInfo.linkedin}" target="_blank">Connect</a>
+                            </div>
+                            ` : ''}
+                            ${personalInfo.github ? `
+                            <div class="contact-card">
+                                <div class="contact-icon">🔗</div>
+                                <h3>GitHub</h3>
+                                <a href="${personalInfo.github}" target="_blank">Follow</a>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    `;
   }
 
-  /**
-   * Generate JavaScript for portfolio
-   */
+  private getSkillIcon(iconName: string): string {
+    const icons: { [key: string]: string } = {
+      'code': '💻',
+      'database': '🗄️',
+      'design': '🎨',
+      'mobile': '📱',
+      'cloud': '☁️',
+      'security': '🔒',
+      'analytics': '📊',
+      'users': '👥',
+      'communication': '💬',
+      'leadership': '👑',
+      'problem-solving': '🧩',
+      'creativity': '💡'
+    };
+    return icons[iconName] || '⚡';
+  }
+
+  private getAchievementIcon(type: string): string {
+    const icons: { [key: string]: string } = {
+      'award': '🏆',
+      'certification': '📜',
+      'recognition': '⭐',
+      'milestone': '🎯'
+    };
+    return icons[type] || '🏆';
+  }
+
   private generateJavaScript(portfolioData: PortfolioData): string {
     return `
         // Smooth scrolling for navigation links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
             });
         });
 
-        // Contact form handling
-        const contactForm = document.getElementById('contact-form');
-        if (contactForm) {
-            contactForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                // Handle form submission
-                alert('Thank you for your message! I will get back to you soon.');
-            });
-        }
-
-        ${portfolioData.customizations.animations ? `
-        // Intersection Observer for animations
+        // Animate skill levels on scroll
         const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
+            threshold: 0.5,
+            rootMargin: '0px 0px -100px 0px'
         };
 
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
-                    entry.target.classList.add('fade-in');
+                    const skillLevels = entry.target.querySelectorAll('.skill-level-fill');
+                    skillLevels.forEach(level => {
+                        const width = level.style.width;
+                        level.style.width = '0%';
+                        setTimeout(() => {
+                            level.style.width = width;
+                        }, 100);
+                    });
                 }
             });
         }, observerOptions);
 
-        document.querySelectorAll('.animate-on-scroll').forEach(el => {
-            observer.observe(el);
+        const skillsSection = document.querySelector('#skills');
+        if (skillsSection) {
+            observer.observe(skillsSection);
+        }
+
+        // Add fade-in animation to sections
+        const sections = document.querySelectorAll('.section');
+        const sectionObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in-up');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        sections.forEach(section => {
+            sectionObserver.observe(section);
         });
-        ` : ''}
+
+        // Update active navigation link
+        const navLinks = document.querySelectorAll('.nav-links a');
+        const navObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const id = entry.target.getAttribute('id');
+                    navLinks.forEach(link => {
+                        link.classList.remove('active');
+                        if (link.getAttribute('href') === '#' + id) {
+                            link.classList.add('active');
+                        }
+                    });
+                }
+            });
+        }, { threshold: 0.5 });
+
+        sections.forEach(section => {
+            navObserver.observe(section);
+        });
     `;
   }
 
-  /**
-   * Generate modern layout HTML
-   */
-  private generateModernLayout(portfolioData: PortfolioData): string {
-    const { personalInfo, sections } = portfolioData;
-
-    return `
-        <!-- Hero Section -->
-        <section class="hero">
-            <div class="container">
-                <h1 style="font-size: 3.5rem; margin-bottom: 1rem;">${personalInfo.name}</h1>
-                <p style="font-size: 1.25rem; margin-bottom: 2rem; opacity: 0.9;">${personalInfo.email}</p>
-                <a href="#about" class="btn">Learn More</a>
-            </div>
-        </section>
-
-        <!-- About Section -->
-        <section id="about" class="section">
-            <div class="container">
-                <h2 class="section-title">About Me</h2>
-                <div class="card">
-                    <p style="font-size: 1.125rem;">${sections.about}</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Skills Section -->
-        <section id="skills" class="section" style="background: var(--color-surface);">
-            <div class="container">
-                <h2 class="section-title">Skills</h2>
-                <div class="card">
-                    <h3 style="margin-bottom: 1rem;">Technical Skills</h3>
-                    <div>
-                        ${sections.skills.technical?.map(skill => `<span class="skill-tag">${skill}</span>`).join('') || ''}
-                    </div>
-                    ${sections.skills.soft?.length ? `
-                    <h3 style="margin: 2rem 0 1rem 0;">Soft Skills</h3>
-                    <div>
-                        ${sections.skills.soft.map(skill => `<span class="skill-tag" style="background: var(--color-secondary);">${skill}</span>`).join('')}
-                    </div>
-                    ` : ''}
-                </div>
-            </div>
-        </section>
-
-        <!-- Experience Section -->
-        ${(sections.experience && sections.experience.length > 0) || (sections.workExperience && sections.workExperience.length > 0) ? `
-        <section id="experience" class="section">
-            <div class="container">
-                <h2 class="section-title">Experience</h2>
-                ${(sections.experience || sections.workExperience || []).map(exp => `
-                <div class="card">
-                    <h3 style="color: var(--color-primary); margin-bottom: 0.5rem;">${exp.title || exp.position || 'Position'}</h3>
-                    <p style="font-weight: 500; margin-bottom: 0.5rem;">${exp.company || 'Company'}</p>
-                    <p style="color: var(--color-muted); margin-bottom: 1rem;">${exp.startDate || ''} - ${exp.endDate || (exp.current ? 'Present' : '')}</p>
-                    <p>${exp.description || ''}</p>
-                </div>
-                `).join('')}
-            </div>
-        </section>
-        ` : ''}
-
-        ${sections.projects && sections.projects.length > 0 ? `
-        <section id="projects" class="section">
-            <div class="container">
-                <h2 class="section-title">Projects</h2>
-                ${sections.projects.map(project => `
-                <div class="card">
-                    <h3 style="color: var(--color-primary); margin-bottom: 0.5rem;">${project.title}</h3>
-                    <p style="margin-bottom: 1rem;">${project.description}</p>
-                    ${project.technologies ? `
-                    <div style="margin-bottom: 1rem;">
-                        <strong>Technologies:</strong> ${Array.isArray(project.technologies) ? project.technologies.join(', ') : project.technologies}
-                    </div>
-                    ` : ''}
-                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                        ${project.liveUrl ? `<a href="${project.liveUrl}" target="_blank" class="btn" style="font-size: 0.875rem; padding: 0.5rem 1rem;">Live Demo</a>` : ''}
-                        ${project.githubUrl ? `<a href="${project.githubUrl}" target="_blank" class="btn" style="font-size: 0.875rem; padding: 0.5rem 1rem; background: var(--color-secondary);">GitHub</a>` : ''}
-                    </div>
-                </div>
-                `).join('')}
-            </div>
-        </section>
-        ` : ''}
-
-        <!-- Education Section -->
-        ${sections.education && sections.education.length > 0 ? `
-        <section id="education" class="section">
-            <div class="container">
-                <h2 class="section-title">Education</h2>
-                ${sections.education.map(edu => `
-                <div class="card">
-                    <h3 style="color: var(--color-primary); margin-bottom: 0.5rem;">${edu.degree || 'Degree'}</h3>
-                    <p style="font-weight: 500; margin-bottom: 0.5rem;">${edu.school || 'Institution'}</p>
-                    <p style="color: var(--color-muted); margin-bottom: 1rem;">${edu.graduationYear || ''}</p>
-                    ${edu.gpa ? `<p>GPA: ${edu.gpa}</p>` : ''}
-                </div>
-                `).join('')}
-            </div>
-        </section>
-        ` : ''}
-
-        <!-- Certifications Section -->
-        ${sections.certifications && sections.certifications.length > 0 ? `
-        <section id="certifications" class="section">
-            <div class="container">
-                <h2 class="section-title">Certifications</h2>
-                ${sections.certifications.map(cert => `
-                <div class="card">
-                    <h3 style="color: var(--color-primary); margin-bottom: 0.5rem;">${cert.name || 'Certification'}</h3>
-                    <p style="font-weight: 500; margin-bottom: 0.5rem;">${cert.issuer || 'Issuer'}</p>
-                    <p style="color: var(--color-muted); margin-bottom: 1rem;">${cert.date || ''}</p>
-                </div>
-                `).join('')}
-            </div>
-        </section>
-        ` : ''}
-
-        <!-- Blog Posts Section -->
-        ${sections.blogPosts && sections.blogPosts.length > 0 ? `
-        <section id="blog" class="section" style="background: var(--color-surface);">
-            <div class="container">
-                <h2 class="section-title">Latest Blog Posts</h2>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-                    ${sections.blogPosts.map(post => `
-                    <div class="card">
-                        <h3 style="color: var(--color-primary); margin-bottom: 0.5rem;">${post.title}</h3>
-                        <p style="color: var(--color-muted); font-size: 0.875rem; margin-bottom: 1rem;">${post.date}</p>
-                        <p style="margin-bottom: 1rem;">${post.excerpt || post.content?.substring(0, 150) + '...' || ''}</p>
-                        ${post.tags && post.tags.length > 0 ? `
-                        <div style="margin-bottom: 1rem;">
-                            ${post.tags.map(tag => `<span style="background: var(--color-primary); color: white; padding: 0.25rem 0.5rem; border-radius: 1rem; font-size: 0.75rem; margin-right: 0.5rem;">${tag}</span>`).join('')}
-                        </div>
-                        ` : ''}
-                        ${post.url ? `<a href="${post.url}" target="_blank" class="btn" style="font-size: 0.875rem; padding: 0.5rem 1rem;">Read More</a>` : ''}
-                    </div>
-                    `).join('')}
-                </div>
-            </div>
-        </section>
-        ` : ''}
-
-        <!-- Achievements Section -->
-        ${sections.achievements && sections.achievements.length > 0 ? `
-        <section id="achievements" class="section">
-            <div class="container">
-                <h2 class="section-title">Achievements & Awards</h2>
-                ${sections.achievements.map(achievement => `
-                <div class="card">
-                    <h3 style="color: var(--color-primary); margin-bottom: 0.5rem;">${achievement.title}</h3>
-                    <p style="font-weight: 500; margin-bottom: 0.5rem;">${achievement.organization || achievement.issuer || ''}</p>
-                    <p style="color: var(--color-muted); margin-bottom: 1rem;">${achievement.date}</p>
-                    <p>${achievement.description}</p>
-                </div>
-                `).join('')}
-            </div>
-        </section>
-        ` : ''}
-
-        <!-- Contact Section -->
-        <section id="contact" class="section" style="background: var(--color-surface);">
-            <div class="container">
-                <h2 class="section-title">Get In Touch</h2>
-                <div class="card" style="text-align: center;">
-                    <p style="font-size: 1.125rem; margin-bottom: 2rem;">Let's work together!</p>
-                    <div style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap;">
-                        <div>
-                            <h4>Email</h4>
-                            <p><a href="mailto:${personalInfo.email}" style="color: var(--color-primary);">${personalInfo.email}</a></p>
-                        </div>
-                        ${personalInfo.phone ? `
-                        <div>
-                            <h4>Phone</h4>
-                            <p><a href="tel:${personalInfo.phone}" style="color: var(--color-primary);">${personalInfo.phone}</a></p>
-                        </div>
-                        ` : ''}
-                        ${personalInfo.linkedin ? `
-                        <div>
-                            <h4>LinkedIn</h4>
-                            <p><a href="${personalInfo.linkedin}" target="_blank" style="color: var(--color-primary);">Connect</a></p>
-                        </div>
-                        ` : ''}
-                    </div>
-                </div>
-            </div>
-        </section>
-    `;
-  }
-
-  /**
-   * Generate creative layout HTML
-   */
-  private generateCreativeLayout(portfolioData: PortfolioData): string {
-    // Implementation for creative layout
-    return this.generateModernLayout(portfolioData); // Fallback for now
-  }
-
-  /**
-   * Generate minimal layout HTML
-   */
-  private generateMinimalLayout(portfolioData: PortfolioData): string {
-    // Implementation for minimal layout
-    return this.generateModernLayout(portfolioData); // Fallback for now
-  }
-
-  /**
-   * Generate technical layout HTML
-   */
-  private generateTechnicalLayout(portfolioData: PortfolioData): string {
-    // Implementation for technical layout
-    return this.generateModernLayout(portfolioData); // Fallback for now
-  }
-
-  /**
-   * Generate executive layout HTML
-   */
-  private generateExecutiveLayout(portfolioData: PortfolioData): string {
-    // Implementation for executive layout
-    return this.generateModernLayout(portfolioData); // Fallback for now
-  }
-
-  /**
-   * Generate freelancer layout HTML
-   */
-  private generateFreelancerLayout(portfolioData: PortfolioData): string {
-    // Implementation for freelancer layout
-    return this.generateModernLayout(portfolioData); // Fallback for now
-  }
-
-  /**
-   * Optimize portfolio for SEO
-   */
   optimizeForSEO(portfolioData: PortfolioData): PortfolioData {
     const optimized = { ...portfolioData };
 
-    // Generate SEO title if not provided
     if (!optimized.seo.title) {
       optimized.seo.title = `${optimized.personalInfo.name} - Professional Portfolio`;
     }
 
-    // Generate SEO description if not provided
     if (!optimized.seo.description) {
       optimized.seo.description = optimized.sections.about.substring(0, 160);
     }
 
-    // Generate keywords if not provided
     if (optimized.seo.keywords.length === 0) {
       const keywords = [
         optimized.personalInfo.name,
-        ...optimized.sections.skills.technical.slice(0, 5),
-        ...optimized.sections.skills.soft.slice(0, 3),
+        ...optimized.sections.skills.technical.map(s => s.name).slice(0, 5),
+        ...optimized.sections.skills.soft.map(s => s.name).slice(0, 3),
         'portfolio',
         'professional'
       ];
@@ -873,94 +1307,39 @@ export class PortfolioGenerator {
     return optimized;
   }
 
-  /**
-   * Generate portfolio performance report
-   */
-  generatePerformanceReport(portfolioData: PortfolioData): {
-    score: number;
-    metrics: {
-      seo: number;
-      performance: number;
-      accessibility: number;
-      bestPractices: number;
+  async deployToNetlify(portfolioData: PortfolioData): Promise<NetlifyDeployment> {
+    // Simulate Netlify deployment
+    const deploymentId = Date.now().toString();
+    
+    // Generate HTML and assets
+    const html = this.generatePortfolioHTML(portfolioData);
+    
+    // Simulate deployment process
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    const deployment: NetlifyDeployment = {
+      id: deploymentId,
+      url: `https://${portfolioData.slug}.netlify.app`,
+      deployUrl: `https://${deploymentId}--${portfolioData.slug}.netlify.app`,
+      state: 'ready',
+      createdAt: new Date().toISOString(),
+      buildLog: [
+        'Starting build...',
+        'Generating HTML...',
+        'Optimizing assets...',
+        'Deploying to CDN...',
+        'Build complete!'
+      ]
     };
-    recommendations: string[];
-  } {
-    const seoScore = this.calculateSEOScore(portfolioData);
-    const performanceScore = this.calculatePerformanceScore(portfolioData);
-    const accessibilityScore = this.calculateAccessibilityScore(portfolioData);
-    const bestPracticesScore = this.calculateBestPracticesScore(portfolioData);
 
-    const overallScore = Math.round(
-      (seoScore + performanceScore + accessibilityScore + bestPracticesScore) / 4
-    );
-
-    const recommendations = [];
-    if (seoScore < 80) recommendations.push('Improve SEO metadata and content structure');
-    if (performanceScore < 80) recommendations.push('Optimize images and reduce bundle size');
-    if (accessibilityScore < 80) recommendations.push('Add alt text and improve color contrast');
-    if (bestPracticesScore < 80) recommendations.push('Enable HTTPS and add security headers');
-
-    return {
-      score: overallScore,
-      metrics: {
-        seo: seoScore,
-        performance: performanceScore,
-        accessibility: accessibilityScore,
-        bestPractices: bestPracticesScore
-      },
-      recommendations
-    };
-  }
-
-  private calculateSEOScore(portfolioData: PortfolioData): number {
-    let score = 100;
-    
-    if (!portfolioData.seo.title) score -= 20;
-    if (!portfolioData.seo.description) score -= 20;
-    if (portfolioData.seo.keywords.length === 0) score -= 15;
-    if (!portfolioData.sections.about) score -= 15;
-    if (portfolioData.sections.about.length < 100) score -= 10;
-    
-    return Math.max(0, score);
-  }
-
-  private calculatePerformanceScore(portfolioData: PortfolioData): number {
-    let score = 100;
-    
-    // Simulate performance analysis
-    if (portfolioData.customizations.animations) score -= 10;
-    if (portfolioData.sections.experience.length > 10) score -= 5;
-    if (portfolioData.sections.projects.length > 20) score -= 10;
-    
-    return Math.max(60, score);
-  }
-
-  private calculateAccessibilityScore(portfolioData: PortfolioData): number {
-    let score = 100;
-    
-    // Simulate accessibility analysis
-    if (!portfolioData.personalInfo.name) score -= 20;
-    if (!portfolioData.sections.about) score -= 15;
-    
-    return Math.max(70, score);
-  }
-
-  private calculateBestPracticesScore(portfolioData: PortfolioData): number {
-    let score = 100;
-    
-    // Simulate best practices analysis
-    if (!portfolioData.personalInfo.email) score -= 10;
-    if (!portfolioData.seo.title) score -= 10;
-    
-    return Math.max(80, score);
+    return deployment;
   }
 }
 
 // Export singleton instance
 export const portfolioGenerator = PortfolioGenerator.getInstance();
 
-// Default portfolio data to prevent undefined errors
+// Default portfolio data
 export const defaultPortfolioData: PortfolioData = {
   id: '',
   title: '',
@@ -975,7 +1354,8 @@ export const defaultPortfolioData: PortfolioData = {
     website: '',
     linkedin: '',
     github: '',
-    twitter: ''
+    twitter: '',
+    tagline: ''
   },
   sections: {
     about: '',
@@ -987,9 +1367,8 @@ export const defaultPortfolioData: PortfolioData = {
     },
     education: [],
     certifications: [],
-    testimonials: [],
-    blogPosts: [],
     achievements: [],
+    blogPosts: [],
     contact: {}
   },
   customizations: {
