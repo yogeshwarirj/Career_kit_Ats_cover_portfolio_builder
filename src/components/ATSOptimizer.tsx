@@ -160,6 +160,12 @@ Preferred Qualifications:
   const handleDownloadOptimized = () => {
     if (!optimizedResult?.optimizedResume) return;
 
+    // Extract first name from the resume data
+    const fullName = optimizedResult.optimizedResume.personalInfo?.name || '';
+    const firstName = fullName.split(' ')[0] || 'resume';
+    // Clean the first name to be filename-safe
+    const cleanFirstName = firstName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    
     const element = document.getElementById('optimized-resume-content');
     if (!element) {
       toast.error('Resume content not found. Please try again.');
@@ -225,7 +231,7 @@ Preferred Qualifications:
           }
         }
         
-        const fileName = `optimized-resume-${new Date().toISOString().split('T')[0]}.pdf`;
+        const fileName = `${cleanFirstName}_ats_resume.pdf`;
         pdf.save(fileName);
         
         toast.success('Optimized resume downloaded as PDF!', { id: 'pdf-generation' });
