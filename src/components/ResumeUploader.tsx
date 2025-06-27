@@ -124,7 +124,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
   return (
     <div className={`w-full ${className}`}>
       <div
-        {...getRootProps()}
+      /*  {...getRootProps()}*/
         className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 ${getStatusColor()}`}
       >
         <input {...getInputProps()} />
@@ -146,13 +146,24 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
               }
             </p>
 
-            {/* DOCX File Icon */}
+         
+              {/* DOCX File Icon */}
             {!isUploading && uploadStatus !== 'success' && (
               <div className="flex items-center justify-center space-x-2 mb-4">
-                <div className="flex items-center px-3 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+             <button
+                  onClick={() => document.getElementById('file-upload').click()}
+                  className="flex items-center px-3 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
                   <FileText className="h-4 w-4 mr-2" />
                   DOCX Only
-                </div>
+                </button>
+                <input
+                  id="file-upload"
+                  type="file"
+                  accept=".docx"
+                  style={{ display: 'none' }}
+                  onChange={(e) => handleFileUpload(e.target.files[0])}
+                />
               </div>
             )}
           </div>
@@ -171,17 +182,15 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
                   <p className="text-sm text-orange-700 mb-3">
                     Convert your PDF to DOCX format for best results and accurate text extraction.
                   </p>
-                const handleLinkClick = () => {
-  window.open("https://www.adobe.com/acrobat/online/pdf-to-word.html", "_blank");
-};
-
-<button
-  onClick={handleLinkClick}
-  className="inline-flex items-center px-3 py-2 bg-orange-600 text-white text-sm font-medium rounded-md hover:bg-orange-700 transition-colors duration-200"
->
-  <ExternalLink className="h-4 w-4 mr-2" />
-  Convert PDF to DOCX
-</button>
+                  <a
+                    href="https://www.adobe.com/acrobat/online/pdf-to-word.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-3 py-2 bg-orange-600 text-white text-sm font-medium rounded-md hover:bg-orange-700 transition-colors duration-200"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Convert PDF to DOCX
+                  </a>
                 </div>
               </div>
             </div>
