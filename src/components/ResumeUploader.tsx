@@ -149,10 +149,13 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
             {/* DOCX File Icon */}
             {!isUploading && uploadStatus !== 'success' && (
               <div className="flex items-center justify-center space-x-2 mb-4">
-                <div className="flex items-center px-3 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                  <FileText className="h-4 w-4 mr-2" />
-                  DOCX Only
-                </div>
+         <button
+            onClick={openFileDialog}
+            className="flex items-center px-3 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            DOCX Only
+          </button>
               </div>
             )}
           </div>
