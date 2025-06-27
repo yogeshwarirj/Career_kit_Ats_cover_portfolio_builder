@@ -591,17 +591,18 @@ export class PortfolioGenerator {
         .skills-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
+            gap: 3rem;
             margin-top: 3rem;
         }
 
         .skill-category {
             background: white;
-            padding: 2rem;
+            padding: 2.5rem;
             border-radius: 1rem;
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
             border: 1px solid rgba(0, 0, 0, 0.05);
             transition: all 0.3s ease;
+            border-left: 4px solid var(--color-primary);
         }
 
         .skill-category:hover {
@@ -611,37 +612,39 @@ export class PortfolioGenerator {
 
         .skill-category h3 {
             color: var(--color-primary);
-            margin-bottom: 1.5rem;
+            margin-bottom: 2rem;
             text-align: center;
-            font-size: 1.3rem;
+            font-size: 1.5rem;
+            font-weight: 700;
         }
 
         .skill-item {
             display: flex;
             align-items: center;
-            margin-bottom: 1.5rem;
-            padding: 1rem;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
             background: var(--color-surface);
-            border-radius: 0.5rem;
+            border-radius: 1rem;
             transition: all 0.3s ease;
             border: 1px solid rgba(0, 0, 0, 0.05);
         }
 
         .skill-item:hover {
             transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
         }
 
         .skill-icon {
-            width: 3rem;
-            height: 3rem;
+            width: 3.5rem;
+            height: 3.5rem;
             background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
-            border-radius: 0.5rem;
+            border-radius: 1rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 1rem;
+            margin-right: 1.5rem;
             color: white;
+            font-size: 1.2rem;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
@@ -650,30 +653,33 @@ export class PortfolioGenerator {
         }
 
         .skill-name {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
             color: var(--color-text);
         }
 
         .skill-description {
             color: var(--color-muted);
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            margin-bottom: 0.75rem;
+            line-height: 1.5;
         }
 
         .skill-level {
             width: 100%;
-            height: 4px;
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 2px;
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
             overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         .skill-level-fill {
             height: 100%;
             background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
             transition: width 0.5s ease;
-            border-radius: 2px;
+            border-radius: 3px;
         }
 
         /* Projects Section */
@@ -1118,8 +1124,28 @@ export class PortfolioGenerator {
             }
             
             .section {
-                padding: 4rem 0;
+                padding: 3rem 0;
                 min-height: auto;
+            }
+            
+            .skills-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+            
+            .skill-category {
+                padding: 2rem;
+            }
+            
+            .skill-item {
+                padding: 1rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .skill-icon {
+                width: 3rem;
+                height: 3rem;
+                margin-right: 1rem;
             }
             
             .experience-timeline::before {
@@ -1246,47 +1272,61 @@ export class PortfolioGenerator {
                     <div class="section-content">
                         <h2>Technical Proficiencies</h2>
                         <div class="skills-grid">
-                            ${sections.skills.technical.length > 0 ? `
+                            ${sections.skills.technical && sections.skills.technical.length > 0 ? `
                             <div class="skill-category">
                                 <h3>Technical Skills</h3>
-                                ${sections.skills.technical.map(skill => `
+                                ${sections.skills.technical.filter(skill => skill && (typeof skill === 'string' ? skill.trim() : skill.name)).map(skill => {
+                                    const skillName = typeof skill === 'string' ? skill : skill.name;
+                                    const skillDescription = typeof skill === 'object' ? skill.description : '';
+                                    const skillLevel = typeof skill === 'object' ? skill.level : null;
+                                    const skillIcon = typeof skill === 'object' ? skill.icon : 'code';
+                                    
+                                    return `
                                 <div class="skill-item">
                                     <div class="skill-icon">
-                                        ${this.getSkillIcon(skill.icon || 'code')}
+                                        ${this.getSkillIcon(skillIcon)}
                                     </div>
                                     <div class="skill-info">
-                                        <div class="skill-name">${skill.name}</div>
-                                        ${skill.description ? `<div class="skill-description">${skill.description}</div>` : ''}
-                                        ${skill.level ? `
+                                        <div class="skill-name">${skillName}</div>
+                                        ${skillDescription ? `<div class="skill-description">${skillDescription}</div>` : ''}
+                                        ${skillLevel ? `
                                         <div class="skill-level">
-                                            <div class="skill-level-fill" style="width: ${skill.level}%"></div>
+                                            <div class="skill-level-fill" style="width: ${skillLevel}%"></div>
                                         </div>
                                         ` : ''}
                                     </div>
                                 </div>
-                                `).join('')}
+                                `;
+                                }).join('')}
                             </div>
                             ` : ''}
                             
-                            ${sections.skills.soft.length > 0 ? `
+                            ${sections.skills.soft && sections.skills.soft.length > 0 ? `
                             <div class="skill-category">
                                 <h3>Soft Skills</h3>
-                                ${sections.skills.soft.map(skill => `
+                                ${sections.skills.soft.filter(skill => skill && (typeof skill === 'string' ? skill.trim() : skill.name)).map(skill => {
+                                    const skillName = typeof skill === 'string' ? skill : skill.name;
+                                    const skillDescription = typeof skill === 'object' ? skill.description : '';
+                                    const skillLevel = typeof skill === 'object' ? skill.level : null;
+                                    const skillIcon = typeof skill === 'object' ? skill.icon : 'users';
+                                    
+                                    return `
                                 <div class="skill-item">
                                     <div class="skill-icon">
-                                        ${this.getSkillIcon(skill.icon || 'users')}
+                                        ${this.getSkillIcon(skillIcon)}
                                     </div>
                                     <div class="skill-info">
-                                        <div class="skill-name">${skill.name}</div>
-                                        ${skill.description ? `<div class="skill-description">${skill.description}</div>` : ''}
-                                        ${skill.level ? `
+                                        <div class="skill-name">${skillName}</div>
+                                        ${skillDescription ? `<div class="skill-description">${skillDescription}</div>` : ''}
+                                        ${skillLevel ? `
                                         <div class="skill-level">
-                                            <div class="skill-level-fill" style="width: ${skill.level}%"></div>
+                                            <div class="skill-level-fill" style="width: ${skillLevel}%"></div>
                                         </div>
                                         ` : ''}
                                     </div>
                                 </div>
-                                `).join('')}
+                                `;
+                                }).join('')}
                             </div>
                             ` : ''}
                         </div>
@@ -1295,22 +1335,22 @@ export class PortfolioGenerator {
             </section>
 
             <!-- Projects Section -->
-            ${sections.projects.length > 0 ? `
+            ${sections.projects && sections.projects.length > 0 ? `
             <section id="projects" class="section">
                 <div class="container">
                     <div class="section-content">
                         <h2>Projects</h2>
                         <div class="projects-grid">
-                            ${sections.projects.map(project => `
+                            ${sections.projects.filter(project => project && project.title).map(project => `
                             <div class="project-card">
                                 <div class="project-image">
                                     🚀
                                 </div>
                                 <div class="project-content">
                                     <h3 class="project-title">${project.title}</h3>
-                                    <p class="project-description">${project.description}</p>
+                                    <p class="project-description">${project.description || ''}</p>
                                     <div class="project-tech">
-                                        ${project.technologies.map(tech => `<span class="tech-tag">${tech}</span>`).join('')}
+                                        ${(project.technologies || []).filter(tech => tech && tech.trim()).map(tech => `<span class="tech-tag">${tech}</span>`).join('')}
                                     </div>
                                     <div class="project-links">
                                         ${project.liveUrl ? `<a href="${project.liveUrl}" target="_blank" class="project-link">🔗 Live Demo</a>` : ''}
@@ -1332,16 +1372,16 @@ export class PortfolioGenerator {
                     <div class="section-content">
                         <h2>Experience</h2>
                         <div class="experience-timeline">
-                            ${sections.experience.map(exp => `
+                            ${sections.experience.filter(exp => exp && exp.title && exp.company).map(exp => `
                             <div class="experience-item">
                                 <div class="experience-header">
                                     <div>
                                         <h3 class="experience-title">${exp.title}</h3>
                                         <p class="experience-company">${exp.company}</p>
                                     </div>
-                                    <span class="experience-date">${exp.startDate} - ${exp.current ? 'Present' : exp.endDate}</span>
+                                    <span class="experience-date">${exp.startDate || ''} - ${exp.current ? 'Present' : (exp.endDate || '')}</span>
                                 </div>
-                                <p>${exp.description}</p>
+                                <p>${exp.description || ''}</p>
                             </div>
                             `).join('')}
                         </div>
@@ -1357,7 +1397,7 @@ export class PortfolioGenerator {
                     <div class="section-content">
                         <h2>Education</h2>
                         <div class="education-timeline">
-                            ${sections.education.map(edu => `
+                            ${sections.education.filter(edu => edu && edu.degree && edu.school).map(edu => `
                             <div class="education-item">
                                 <div class="education-header">
                                     <div>
@@ -1365,7 +1405,7 @@ export class PortfolioGenerator {
                                         <p class="education-school">${edu.school}</p>
                                         ${edu.gpa ? `<p class="education-gpa">GPA: ${edu.gpa}</p>` : ''}
                                     </div>
-                                    <span class="education-year">${edu.graduationYear}</span>
+                                    <span class="education-year">${edu.graduationYear || ''}</span>
                                 </div>
                             </div>
                             `).join('')}
@@ -1382,14 +1422,14 @@ export class PortfolioGenerator {
                     <div class="section-content">
                         <h2>Certifications</h2>
                         <div class="certifications-grid">
-                            ${sections.certifications.map(cert => `
+                            ${sections.certifications.filter(cert => cert && cert.name).map(cert => `
                             <div class="certification-card">
                                 <div class="certification-icon">
                                     🏆
                                 </div>
                                 <h3 class="certification-name">${cert.name}</h3>
-                                <p class="certification-issuer">${cert.issuer}</p>
-                                <span class="certification-date">${cert.date}</span>
+                                <p class="certification-issuer">${cert.issuer || ''}</p>
+                                <span class="certification-date">${cert.date || ''}</span>
                             </div>
                             `).join('')}
                         </div>
@@ -1399,20 +1439,20 @@ export class PortfolioGenerator {
             ` : ''}
 
             <!-- Achievements Section -->
-            ${sections.achievements.length > 0 ? `
+            ${sections.achievements && sections.achievements.length > 0 ? `
             <section id="achievements" class="section">
                 <div class="container">
                     <div class="section-content">
                         <h2>Achievements</h2>
                         <div class="achievements-grid">
-                            ${sections.achievements.map(achievement => `
+                            ${sections.achievements.filter(achievement => achievement && achievement.title).map(achievement => `
                             <div class="achievement-card">
                                 <div class="achievement-icon">
-                                    ${this.getAchievementIcon(achievement.type)}
+                                    ${this.getAchievementIcon(achievement.type || 'award')}
                                 </div>
                                 <h3>${achievement.title}</h3>
-                                <p>${achievement.description}</p>
-                                <small>${achievement.date} ${achievement.organization ? `• ${achievement.organization}` : ''}</small>
+                                <p>${achievement.description || ''}</p>
+                                <small>${achievement.date || ''} ${achievement.organization ? `• ${achievement.organization}` : ''}</small>
                             </div>
                             `).join('')}
                         </div>
@@ -1422,20 +1462,20 @@ export class PortfolioGenerator {
             ` : ''}
 
             <!-- Blog Section -->
-            ${sections.blogPosts.length > 0 ? `
+            ${sections.blogPosts && sections.blogPosts.length > 0 ? `
             <section id="blog" class="section">
                 <div class="container">
                     <div class="section-content">
                         <h2>Latest Blog Posts</h2>
                         <div class="blog-grid">
-                            ${sections.blogPosts.map(post => `
+                            ${sections.blogPosts.filter(post => post && post.title).map(post => `
                             <div class="blog-card">
                                 <div class="blog-content">
                                     <h3 class="blog-title">${post.title}</h3>
-                                    <p class="blog-excerpt">${post.excerpt}</p>
+                                    <p class="blog-excerpt">${post.excerpt || ''}</p>
                                     <div class="blog-meta">
-                                        <span>${post.publishDate}</span>
-                                        <a href="${post.url}" target="_blank" class="project-link">Read More →</a>
+                                        <span>${post.publishDate || ''}</span>
+                                        ${post.url ? `<a href="${post.url}" target="_blank" class="project-link">Read More →</a>` : ''}
                                     </div>
                                 </div>
                             </div>
