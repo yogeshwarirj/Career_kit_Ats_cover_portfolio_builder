@@ -198,7 +198,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 
