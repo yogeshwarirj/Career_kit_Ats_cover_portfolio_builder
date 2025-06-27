@@ -423,9 +423,7 @@ ${personalInfo.name}`
                 )}
               </div>
               
-              <button className="bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200">
-                {subscription.isSubscribed ? 'Manage Subscription' : 'Upgrade to Premium'}
-              </button>
+            
             </div>
           </div>
         </div>
