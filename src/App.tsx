@@ -19,7 +19,7 @@ function App() {
             <>
               <header className="bg-white shadow-sm border-b border-gray-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                  <div className="flex justify-between items-center h-16">
+                  <div className="flex justify-between items-center h-16 relative">
                     {/* Logo */}
                     <Link to="/" className="flex items-center space-x-2">
                       <FileText className="h-8 w-8 text-teal-600" />
@@ -70,6 +70,23 @@ function App() {
                         <User className="h-4 w-4" />
                         <span>Log In</span>
                       </button>
+                    </div>
+
+                    {/* Bolt.new Badge - Top Right */}
+                    <div className="absolute top-2 right-2 z-50">
+                      <a 
+                        href="https://bolt.new/" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="block transition-transform duration-200 hover:scale-110"
+                        aria-label="Built with Bolt.new"
+                      >
+                        <img 
+                          src="/white_circle_360x360.png" 
+                          alt="Built with Bolt.new" 
+                          className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full shadow-lg hover:shadow-xl transition-shadow duration-200"
+                        />
+                      </a>
                     </div>
                   </div>
                 </div>
