@@ -438,7 +438,7 @@ const PortfolioBuilder: React.FC = () => {
                 </div>
 
                 <div className="space-y-4">
-                  {portfolioData.skills.filter(skill => skill.category === 'technical').map((skill) => (
+                  {(portfolioData.skills || []).filter(skill => skill.category === 'technical').map((skill) => (
                     <div key={skill.id} className="p-4 border border-gray-200 rounded-lg">
                       <div className="flex items-center justify-between mb-3">
                         <input
@@ -487,7 +487,7 @@ const PortfolioBuilder: React.FC = () => {
                 </div>
 
                 <div className="space-y-4">
-                  {portfolioData.skills.filter(skill => skill.category === 'soft').map((skill) => (
+                  {(portfolioData.skills || []).filter(skill => skill.category === 'soft').map((skill) => (
                     <div key={skill.id} className="p-4 border border-gray-200 rounded-lg">
                       <div className="flex items-center justify-between mb-3">
                         <input
@@ -1011,7 +1011,7 @@ const PortfolioBuilder: React.FC = () => {
                 <div className="mb-8">
                   <h2 className="text-2xl font-bold text-gray-900 mb-4">Featured Projects</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {portfolioData.projects.slice(0, 4).map((project) => (
+                    {(portfolioData.projects || []).slice(0, 4).map((project) => (
                       <div key={project.id} className="border border-gray-200 rounded-lg overflow-hidden">
                         {project.imageUrl && (
                           <img
@@ -1053,15 +1053,15 @@ const PortfolioBuilder: React.FC = () => {
                 </div>
               )}
 
-              {portfolioData.skills && portfolioData.skills.length > 0 && (
+              {portfolioData.skills && (portfolioData.skills || []).length > 0 && (
                 <div className="mb-8">
                   <h2 className="text-2xl font-bold text-gray-900 mb-4">Skills</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {portfolioData.skills.filter(skill => skill.category === 'technical').length > 0 && (
+                    {(portfolioData.skills || []).filter(skill => skill.category === 'technical').length > 0 && (
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-3">Technical Skills</h3>
                         <div className="space-y-2">
-                          {portfolioData.skills.filter(skill => skill.category === 'technical').map((skill) => (
+                          {(portfolioData.skills || []).filter(skill => skill.category === 'technical').map((skill) => (
                             <div key={skill.id}>
                               <div className="flex justify-between text-sm mb-1">
                                 <span className="text-gray-700">{skill.name}</span>
@@ -1078,11 +1078,11 @@ const PortfolioBuilder: React.FC = () => {
                         </div>
                       </div>
                     )}
-                    {portfolioData.skills.filter(skill => skill.category === 'soft').length > 0 && (
+                    {(portfolioData.skills || []).filter(skill => skill.category === 'soft').length > 0 && (
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-3">Soft Skills</h3>
                         <div className="space-y-2">
-                          {portfolioData.skills.filter(skill => skill.category === 'soft').map((skill) => (
+                          {(portfolioData.skills || []).filter(skill => skill.category === 'soft').map((skill) => (
                             <div key={skill.id}>
                               <div className="flex justify-between text-sm mb-1">
                                 <span className="text-gray-700">{skill.name}</span>
