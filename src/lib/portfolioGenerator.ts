@@ -218,10 +218,12 @@ export class PortfolioGenerator {
         name: 'Light',
         description: 'Clean and bright theme',
         colors: {
-          background: '#ffffff',
-          surface: '#f8fafc',
-          text: '#1f2937',
-          muted: '#6b7280'
+            background: '#f5f5f5', // Subtle off-white
+        surface: '#e0e0e0',    // Slightly darker gray for cards/panels
+        text: '#333333',       // Dark gray for good readability
+        muted: '#6b7280',
+
+          
         }
       },
       {
