@@ -1,5 +1,7 @@
 import React from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import Hero from './components/Hero';
 import Features from './components/Features';
 import CallToAction from './components/CallToAction';
@@ -7,12 +9,47 @@ import ResumeBuilder from './pages/ResumeBuilder';
 import CoverLetterGenerator from './pages/CoverLetterGenerator';
 import ATSOptimization from './pages/ATSOptimization';
 import PortfolioBuilder from './pages/PortfolioBuilder';
+import AuthPage from './pages/AuthPage';
+import AuthForm from './components/AuthForm';
+import UserProfile from './components/UserProfile';
 import { FileText, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { auth } from './lib/supabase';
 
 function App() {
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showAuthForm, setShowAuthForm] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
+
+  useEffect(() => {
+    // Check for existing session
+    auth.getCurrentUser().then(({ data: { user } }) => {
+      setUser(user);
+      setIsLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+      setIsLoading(false);
+      
+      if (event === 'SIGNED_IN') {
+        setShowAuthForm(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = () => {
+    setUser(null);
+    setShowUserProfile(false);
+  };
+
   return (
     <Router>
+      <Toaster position="top-right" />
       <div className="min-h-screen bg-white font-['Montserrat',sans-serif]">
         <Routes>
           <Route path="/" element={
@@ -58,18 +95,55 @@ function App() {
                       >
                         Portfolio Builder
                       </Link>
-                      <button className="flex items-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors duration-200">
-                        <User className="h-4 w-4" />
-                        <span>Log In</span>
-                      </button>
+                      
+                      {/* Auth/Profile Section */}
+                      {isLoading ? (
+                        <div className="w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                      ) : user ? (
+                        <div className="flex items-center space-x-3">
+                          <span className="text-sm text-gray-600 hidden sm:block">
+                            Welcome, {user.email?.split('@')[0]}
+                          </span>
+                          <button 
+                            onClick={() => setShowUserProfile(true)}
+                            className="flex items-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors duration-200"
+                          >
+                            <User className="h-4 w-4" />
+                            <span>Profile</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => setShowAuthForm(true)}
+                          className="flex items-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors duration-200"
+                        >
+                          <User className="h-4 w-4" />
+                          <span>Sign In</span>
+                        </button>
+                      )}
                     </nav>
 
                     {/* Mobile menu button */}
                     <div className="md:hidden">
-                      <button className="flex items-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors duration-200">
-                        <User className="h-4 w-4" />
-                        <span>Log In</span>
-                      </button>
+                      {isLoading ? (
+                        <div className="w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                      ) : user ? (
+                        <button 
+                          onClick={() => setShowUserProfile(true)}
+                          className="flex items-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors duration-200"
+                        >
+                          <User className="h-4 w-4" />
+                          <span>Profile</span>
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => setShowAuthForm(true)}
+                          className="flex items-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors duration-200"
+                        >
+                          <User className="h-4 w-4" />
+                          <span>Sign In</span>
+                        </button>
+                      )}
                     </div>
 
                     {/* Bolt.new Badge - Top Right */}
@@ -97,8 +171,26 @@ function App() {
                 <Features />
                 <CallToAction />
               </main>
+              
+              {/* Auth Modal */}
+              {showAuthForm && (
+                <AuthForm 
+                  onSuccess={() => setShowAuthForm(false)}
+                  onClose={() => setShowAuthForm(false)}
+                />
+              )}
+              
+              {/* User Profile Modal */}
+              {showUserProfile && user && (
+                <UserProfile 
+                  user={user}
+                  onClose={() => setShowUserProfile(false)}
+                  onSignOut={handleSignOut}
+                />
+              )}
             </>
           } />
+          <Route path="/auth" element={<AuthPage />} />
           <Route path="/resume-builder" element={<ResumeBuilder />} />
           <Route path="/cover-letter" element={<CoverLetterGenerator />} />
           <Route path="/ats-optimizer" element={<ATSOptimization />} />

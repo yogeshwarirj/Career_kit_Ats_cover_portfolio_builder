@@ -4,24 +4,11 @@ import { ArrowLeft, FileText, User, Building, Briefcase, Sparkles, Download, Cop
 import { Toaster, toast } from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { supabaseService, CoverLetterData as SupabaseCoverLetterData } from '../lib/supabaseService';
+import { auth } from '../lib/supabase';
 
-interface CoverLetterData {
-  id: string;
-  jobTitle: string;
-  companyName: string;
-  personalInfo: {
-    name: string;
-    email: string;
-    phone: string;
-    address: string;
-    linkedin: string;
-    portfolio: string;
-  };
-  skills: string[];
-  jobDescription: string;
-  generatedLetter: string;
-  template: string;
-  createdAt: string;
+interface CoverLetterData extends SupabaseCoverLetterData {
+  // Extending the Supabase interface
 }
 
 interface UserSubscription {
@@ -63,35 +50,111 @@ const CoverLetterGenerator: React.FC = () => {
   });
 
   const [currentLetter, setCurrentLetter] = useState<CoverLetterData | null>(null);
+  const [user, setUser] = useState<any>(null);
 
   // Load saved data on component mount
   useEffect(() => {
+    // Check authentication status
+    auth.getCurrentUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+
     loadSavedData();
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const loadSavedData = () => {
     try {
-      const saved = localStorage.getItem('coverLetters');
+      // Load subscription data from localStorage
       const sub = localStorage.getItem('subscription');
-      
-      if (saved) {
-        setSavedLetters(JSON.parse(saved));
-      }
-      
       if (sub) {
         setSubscription(JSON.parse(sub));
       }
+      
+      // Load cover letters from Supabase if authenticated, otherwise from localStorage
+      auth.getCurrentUser().then(({ data: { user } }) => {
+        if (user) {
+          supabaseService.getCoverLetters().then(result => {
+            if (result.success && result.data) {
+              // Convert Supabase data to local format
+              const convertedLetters: CoverLetterData[] = result.data.map(letter => ({
+                id: letter.id || '',
+                jobTitle: letter.job_title,
+                companyName: letter.company_name,
+                personalInfo: letter.personal_info,
+                skills: letter.skills,
+                jobDescription: letter.job_description || '',
+                generatedLetter: letter.generated_letter,
+                template: letter.template,
+                createdAt: letter.created_at || new Date().toISOString(),
+                // Include Supabase fields
+                job_title: letter.job_title,
+                company_name: letter.company_name,
+                personal_info: letter.personal_info,
+                generated_letter: letter.generated_letter,
+                created_at: letter.created_at,
+                last_updated: letter.last_updated
+              }));
+              setSavedLetters(convertedLetters);
+            }
+          }).catch(error => {
+            console.error('Failed to load from Supabase:', error);
+            // Fall back to localStorage
+            const saved = localStorage.getItem('coverLetters');
+            if (saved) {
+              setSavedLetters(JSON.parse(saved));
+            }
+          });
+        } else {
+          // Load from localStorage if not authenticated
+          const saved = localStorage.getItem('coverLetters');
+          if (saved) {
+            setSavedLetters(JSON.parse(saved));
+          }
+        }
+      });
     } catch (error) {
       console.error('Error loading saved data:', error);
     }
   };
 
-  const saveToLocalStorage = (letters: CoverLetterData[], sub: UserSubscription) => {
+  const saveToStorage = async (letters: CoverLetterData[], sub: UserSubscription) => {
     try {
+      // Always save subscription to localStorage
+      localStorage.setItem('subscription', JSON.stringify(sub));
+      
+      // Save cover letters to Supabase if authenticated, otherwise localStorage
+      const { data: { user } } = await auth.getCurrentUser();
+      if (user && letters.length > 0) {
+        // Save the latest letter to Supabase
+        const latestLetter = letters[letters.length - 1];
+        const supabaseData: SupabaseCoverLetterData = {
+          id: latestLetter.id,
+          job_title: latestLetter.jobTitle,
+          company_name: latestLetter.companyName,
+          personal_info: latestLetter.personalInfo,
+          skills: latestLetter.skills,
+          job_description: latestLetter.jobDescription,
+          generated_letter: latestLetter.generatedLetter,
+          template: latestLetter.template
+        };
+        
+        await supabaseService.saveCoverLetter(supabaseData);
+      } else {
+        // Fall back to localStorage
+        localStorage.setItem('coverLetters', JSON.stringify(letters));
+      }
+    } catch (error) {
+      console.error('Error saving to storage:', error);
+      // Always fall back to localStorage
       localStorage.setItem('coverLetters', JSON.stringify(letters));
       localStorage.setItem('subscription', JSON.stringify(sub));
-    } catch (error) {
-      console.error('Error saving to localStorage:', error);
     }
   };
 
@@ -146,7 +209,13 @@ const CoverLetterGenerator: React.FC = () => {
         jobDescription: formData.jobDescription,
         generatedLetter: generatedContent,
         template: selectedTemplate,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        // Supabase fields
+        job_title: formData.jobTitle,
+        company_name: formData.companyName,
+        personal_info: formData.personalInfo,
+        generated_letter: generatedContent,
+        created_at: new Date().toISOString()
       };
 
       const updatedLetters = [...savedLetters, newLetter];
@@ -158,7 +227,7 @@ const CoverLetterGenerator: React.FC = () => {
       setSavedLetters(updatedLetters);
       setSubscription(updatedSubscription);
       setCurrentLetter(newLetter);
-      saveToLocalStorage(updatedLetters, updatedSubscription);
+      await saveToStorage(updatedLetters, updatedSubscription);
       
       setCurrentStep('edit');
       toast.success('Cover letter generated successfully!');
@@ -241,7 +310,7 @@ ${personalInfo.name}`
       
       setSavedLetters(updatedLetters);
       setCurrentLetter(updatedLetter);
-      saveToLocalStorage(updatedLetters, subscription);
+      await saveToStorage(updatedLetters, subscription);
     }
   };
 
@@ -761,7 +830,7 @@ ${personalInfo.name}`
                   
                   <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
                     <button className="bg-gradient-to-r from-teal-600 to-blue-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-teal-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105">
-                      Upgrade for $3 (7 Letters)
+                      {user ? 'Upgrade for $3 (7 Letters)' : 'Sign In to Upgrade'}
                     </button>
                     <button 
                       onClick={() => setCurrentStep('input')}
@@ -963,8 +1032,16 @@ ${personalInfo.name}`
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
               <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
                 <Clock className="h-6 w-6 mr-2 text-teal-600" />
-                Your Saved Cover Letters
+                {user ? 'Your Saved Cover Letters' : 'Recent Cover Letters (Local)'}
               </h3>
+              
+              {!user && (
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-blue-800 text-sm">
+                    <strong>Sign in to save your cover letters permanently</strong> and access them from any device.
+                  </p>
+                </div>
+              )}
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {savedLetters.slice(-6).map((letter) => (

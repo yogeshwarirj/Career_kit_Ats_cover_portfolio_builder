@@ -1,5 +1,7 @@
 import { encryptData, decryptData } from './encryption';
 import debounce from 'lodash.debounce';
+import { supabaseService } from './supabaseService';
+import { auth } from './supabase';
 
 export interface ResumeData {
   id: string;
@@ -45,6 +47,29 @@ export class LocalStorageManager {
   // Save resume with encryption
   saveResume(resume: ResumeData): void {
     try {
+      // Try to save to Supabase first if user is authenticated
+      auth.getCurrentUser().then(({ data: { user } }) => {
+        if (user) {
+          supabaseService.saveResume(resume).catch(error => {
+            console.error('Failed to save to Supabase:', error);
+            // Fall back to localStorage if Supabase fails
+            this.saveToLocalStorage(resume);
+          });
+        } else {
+          // Save to localStorage if not authenticated
+          this.saveToLocalStorage(resume);
+        }
+      });
+    } catch (error) {
+      console.error('Error saving resume:', error);
+      // Fall back to localStorage
+      this.saveToLocalStorage(resume);
+    }
+  }
+
+  // Private method for localStorage operations
+  private saveToLocalStorage(resume: ResumeData): void {
+    try {
       const resumes = this.getAllResumes();
       const existingIndex = resumes.findIndex(r => r.id === resume.id);
       
@@ -75,6 +100,22 @@ export class LocalStorageManager {
   // Get all resumes
   getAllResumes(): ResumeData[] {
     try {
+      // Try to get from Supabase first if user is authenticated
+      auth.getCurrentUser().then(({ data: { user } }) => {
+        if (user) {
+          supabaseService.getResumes().then(result => {
+            if (result.success && result.data) {
+              // Update localStorage with Supabase data for offline access
+              const encrypted = encryptData(result.data);
+              localStorage.setItem(STORAGE_KEYS.RESUMES, encrypted);
+            }
+          }).catch(error => {
+            console.error('Failed to sync with Supabase:', error);
+          });
+        }
+      });
+
+      // Return localStorage data immediately for UI responsiveness
       const encrypted = localStorage.getItem(STORAGE_KEYS.RESUMES);
       if (!encrypted) return [];
       
@@ -95,6 +136,16 @@ export class LocalStorageManager {
   // Delete resume
   deleteResume(id: string): void {
     try {
+      // Try to delete from Supabase first if user is authenticated
+      auth.getCurrentUser().then(({ data: { user } }) => {
+        if (user) {
+          supabaseService.deleteResume(id).catch(error => {
+            console.error('Failed to delete from Supabase:', error);
+          });
+        }
+      });
+
+      // Always delete from localStorage
       const resumes = this.getAllResumes().filter(r => r.id !== id);
       const encrypted = encryptData(resumes);
       localStorage.setItem(STORAGE_KEYS.RESUMES, encrypted);

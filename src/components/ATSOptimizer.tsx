@@ -7,6 +7,8 @@ import { ParsedResume } from '../lib/resumeParser';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { supabaseService, ATSOptimizedResume } from '../lib/supabaseService';
+import { auth } from '../lib/supabase';
 
 interface ATSOptimizerProps {
   onClose?: () => void;
@@ -31,13 +33,26 @@ const ATSOptimizer: React.FC<ATSOptimizerProps> = ({ onClose, initialResumeData,
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
   const [editingOptimized, setEditingOptimized] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   const atsAnalyzer = ATSAnalyzer.getInstance();
 
   useEffect(() => {
+    // Check authentication status
+    auth.getCurrentUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+
     if (initialResumeData) {
       setCurrentStep('analyze');
     }
+
+    return () => subscription.unsubscribe();
   }, [initialResumeData]);
 
   const handleResumeUpload = (parsedResume: ParsedResume) => {
@@ -148,6 +163,28 @@ Preferred Qualifications:
     try {
       const result = await atsAnalyzer.generateOptimizedResume(resumeData, jobDescription);
       setOptimizedResult(result);
+      
+      // Save to Supabase if user is authenticated
+      if (user && result.optimizedResume) {
+        const atsResumeData: ATSOptimizedResume = {
+          job_description_used: jobDescription,
+          optimized_resume_data: result.optimizedResume,
+          analysis_result: {
+            overallScore: result.overallScore,
+            keywordScore: result.keywordScore,
+            formatScore: result.formatScore,
+            contentScore: result.contentScore,
+            keywords: result.keywords,
+            recommendations: result.recommendations
+          }
+        };
+        
+        supabaseService.saveATSResume(atsResumeData).catch(error => {
+          console.error('Failed to save ATS resume to Supabase:', error);
+          // Don't show error to user as the main functionality still works
+        });
+      }
+      
       setCurrentStep('optimize');
       toast.success('Optimized resume generated successfully!');
     } catch (error) {
@@ -790,9 +827,17 @@ Preferred Qualifications:
                           +{analysisResult.keywords.missing.length - 8} more
                         </span>
                       )}
-                    </div>
+                    {user ? 'Auto-saved to your account' : 'Saved locally (Sign in to save permanently)'}
                   </div>
                 </div>
+                
+                {!user && (
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-blue-800 text-xs">
+                      <strong>Sign in to save your ATS results</strong> and access them from any device.
+                    </p>
+                  </div>
+                )}
               </div>
     {/* Recommendations */}
               <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
