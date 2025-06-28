@@ -164,6 +164,28 @@ export class ATSAnalyzer {
   }
 
   /**
+   * Generate an ATS-optimized resume based on uploaded resume and job description
+   */
+  async generateOptimizedResume(resumeData: any, jobDescription: string): Promise<ATSAnalysisResult & { optimizedResume: any }> {
+    // Simulate processing time for realistic UX
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    const resumeText = this.extractResumeText(resumeData);
+    const jobKeywords = this.extractJobKeywords(jobDescription);
+    
+    // Perform analysis first
+    const analysis = await this.analyzeResume(resumeData, jobDescription);
+    
+    // Generate optimized resume
+    const optimizedResume = this.createOptimizedResume(resumeData, jobKeywords, jobDescription);
+    
+    return {
+      ...analysis,
+      optimizedResume
+    };
+  }
+
+  /**
    * Create an optimized version of the resume based on job requirements
    */
   private createOptimizedResume(resumeData: any, jobKeywords: string[], jobDescription: string): any {
