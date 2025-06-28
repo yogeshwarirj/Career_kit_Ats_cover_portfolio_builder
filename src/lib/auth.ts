@@ -287,7 +287,8 @@ export class AuthService {
   async getCurrentUser(): Promise<{ user: User | null; session: Session | null }> {
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data } = await supabase.auth.getSession();
+      const session = data?.session || null;
 
       if (error) {
         console.error('Get user error:', error);
