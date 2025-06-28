@@ -10,11 +10,13 @@ import CoverLetterGenerator from './pages/CoverLetterGenerator';
 import ATSOptimization from './pages/ATSOptimization';
 import PortfolioBuilder from './pages/PortfolioBuilder';
 import AuthPage from './pages/AuthPage';
+import AuthCallbackPage from './pages/AuthCallbackPage';
+import PasswordResetForm from './components/PasswordResetForm';
 import AuthForm from './components/AuthForm';
 import UserProfile from './components/UserProfile';
 import { FileText, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { auth } from './lib/supabase';
+import { authService } from './lib/auth';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -24,13 +26,13 @@ function App() {
 
   useEffect(() => {
     // Check for existing session
-    auth.getCurrentUser().then(({ data: { user } }) => {
+    authService.getCurrentUser().then(({ user }) => {
       setUser(user);
       setIsLoading(false);
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = authService.onAuthStateChange((event, session) => {
       setUser(session?.user || null);
       setIsLoading(false);
       
@@ -51,7 +53,8 @@ function App() {
     };
   }, []);
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    await authService.signOut();
     setUser(null);
     setShowUserProfile(false);
   };
@@ -205,6 +208,8 @@ function App() {
             </>
           } />
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="/auth/reset-password" element={<PasswordResetForm />} />
           <Route path="/resume-builder" element={<ResumeBuilder />} />
           <Route path="/cover-letter" element={<CoverLetterGenerator />} />
           <Route path="/ats-optimizer" element={<ATSOptimization />} />

@@ -7,14 +7,24 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables. Please check your .env file.');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce'
+  }
+});
 
-// Auth helper functions
+// Legacy auth helper functions for backward compatibility
 export const auth = {
   signUp: async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`
+      }
     });
     return { data, error };
   },
@@ -38,5 +48,16 @@ export const auth = {
 
   onAuthStateChange: (callback: (event: string, session: any) => void) => {
     return supabase.auth.onAuthStateChange(callback);
+  },
+
+  resend: async (options: { type: 'signup' | 'recovery'; email: string }) => {
+    const { error } = await supabase.auth.resend({
+      type: options.type,
+      email: options.email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`
+      }
+    });
+    return { error };
   }
 };
