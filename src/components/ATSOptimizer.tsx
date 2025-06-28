@@ -1,1053 +1,308 @@
-import React, { useState, useEffect } from 'react';
-import { Upload, FileText, Target, Zap, Shield, TrendingUp, CheckCircle, AlertTriangle, XCircle, Download, Copy, Eye, EyeOff, RefreshCw, Star, Award, Users, Lightbulb, ArrowRight, BarChart3, PieChart, Activity, Sparkles, Edit3, Save, Plus } from 'lucide-react';
-import { ResumeData } from '../lib/localStorage';
-import { ATSAnalyzer, ATSAnalysisResult } from '../lib/atsAnalyzer';
-import { ResumeUploader } from './ResumeUploader';
-import { ParsedResume } from '../lib/resumeParser';
-import toast from 'react-hot-toast';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import { supabaseService, ATSOptimizedResume } from '../lib/supabaseService';
-import { auth } from '../lib/supabase';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, Shield, Target, TrendingUp, Users, Star, CheckCircle, Sparkles, BarChart3, Zap, Award, FileText, Upload, Search, Filter, Eye, Download } from 'lucide-react';
+import ATSOptimizer from '../components/ATSOptimizer';
+import { Toaster } from 'react-hot-toast';
 
-interface ATSOptimizerProps {
-  onClose?: () => void;
-  initialResumeData?: ResumeData;
-  className?: string;
-}
+const ATSOptimization: React.FC = () => {
+  const [showOptimizer, setShowOptimizer] = useState(false);
 
-interface OptimizedResumeResult extends ATSAnalysisResult {
-  optimizedResume?: ResumeData;
-}
-
-const ATSOptimizer: React.FC<ATSOptimizerProps> = ({ onClose, initialResumeData, className = '' }) => {
-  const [currentStep, setCurrentStep] = useState<'upload' | 'analyze' | 'results' | 'optimize'>('upload');
-  const [resumeData, setResumeData] = useState<ResumeData | null>(initialResumeData || null);
-  const [jobDescription, setJobDescription] = useState('');
-  const [jobUrl, setJobUrl] = useState('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isOptimizing, setIsOptimizing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<ATSAnalysisResult | null>(null);
-  const [optimizedResult, setOptimizedResult] = useState<OptimizedResumeResult | null>(null);
-  const [inputMethod, setInputMethod] = useState<'text' | 'url'>('text');
-  const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
-  const [showComparison, setShowComparison] = useState(false);
-  const [editingOptimized, setEditingOptimized] = useState(false);
-  const [user, setUser] = useState<any>(null);
-
-  const atsAnalyzer = ATSAnalyzer.getInstance();
-
-  useEffect(() => {
-    // Check authentication status
-    auth.getCurrentUser().then(({ user }) => {
-      setUser(user);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
-    });
-
-    if (initialResumeData) {
-      setCurrentStep('analyze');
+  const features = [
+    {
+      icon: <BarChart3 className="h-8 w-8" />,
+      title: "Comprehensive ATS Scoring",
+      description: "Get detailed scores for keyword matching, formatting compliance, and content quality with actionable insights.",
+      gradient: "from-blue-500 to-blue-600",
+      shadowColor: "shadow-blue-500/25",
+      glowColor: "group-hover:shadow-blue-500/40"
+    },
+    {
+      icon: <Target className="h-8 w-8" />,
+      title: "Smart Keyword Analysis",
+      description: "Identify missing keywords and optimize your resume to match job descriptions perfectly.",
+      gradient: "from-purple-500 to-purple-600",
+      shadowColor: "shadow-purple-500/25",
+      glowColor: "group-hover:shadow-purple-500/40"
+    },
+    {
+      icon: <Shield className="h-8 w-8" />,
+      title: "Format Compliance Check",
+      description: "Ensure your resume format is ATS-friendly with proper structure and readable formatting.",
+      gradient: "from-green-500 to-green-600",
+      shadowColor: "shadow-green-500/25",
+      glowColor: "group-hover:shadow-green-500/40"
+    },
+    {
+      icon: <TrendingUp className="h-8 w-8" />,
+      title: "Content Quality Analysis",
+      description: "Improve your resume content with suggestions for action verbs, achievements, and impact statements.",
+      gradient: "from-orange-500 to-orange-600",
+      shadowColor: "shadow-orange-500/25",
+      glowColor: "group-hover:shadow-orange-500/40"
+    },
+    {
+      icon: <Zap className="h-8 w-8" />,
+      title: "Real-time Optimization",
+      description: "Get instant feedback and recommendations as you upload and analyze your resume.",
+      gradient: "from-teal-500 to-teal-600",
+      shadowColor: "shadow-teal-500/25",
+      glowColor: "group-hover:shadow-teal-500/40"
+    },
+    {
+      icon: <Award className="h-8 w-8" />,
+      title: "Industry-Specific Insights",
+      description: "Receive tailored recommendations based on your industry and target job requirements.",
+      gradient: "from-red-500 to-red-600",
+      shadowColor: "shadow-red-500/25",
+      glowColor: "group-hover:shadow-red-500/40"
     }
+  ];
 
-    return () => subscription.unsubscribe();
-  }, [initialResumeData]);
+  const stats = [
+    { number: "95%", label: "Success Rate", description: "Users see improved ATS scores" },
+    { number: "3x", label: "More Interviews", description: "Average increase in interview calls" },
+    { number: "50K+", label: "Resumes Analyzed", description: "Trusted by professionals worldwide" },
+    { number: "24/7", label: "Available", description: "Analyze your resume anytime" }
+  ];
 
-  const handleResumeUpload = (parsedResume: ParsedResume) => {
-    const convertedData: ResumeData = {
-      id: Date.now().toString(),
-      title: `ATS Analysis - ${new Date().toLocaleDateString()}`,
-      personalInfo: {
-        name: parsedResume.personalInfo?.name || '',
-        email: parsedResume.personalInfo?.email || '',
-        phone: parsedResume.personalInfo?.phone || '',
-        address: parsedResume.personalInfo?.location || '',
-        linkedin: parsedResume.personalInfo?.linkedin || '',
-        portfolio: parsedResume.personalInfo?.website || ''
-      },
-      summary: parsedResume.summary || '',
-      experience: parsedResume.experience || [],
-      education: parsedResume.education || [],
-      skills: parsedResume.skills || [],
-      projects: parsedResume.projects || [],
-      certifications: parsedResume.certifications || [],
-      languages: parsedResume.languages || [],
-      template: 'modern-professional',
-      lastModified: new Date().toISOString(),
-      version: 1
-    };
-    
-    // Validate that we have sufficient data for analysis
-    if (!convertedData.personalInfo.name && !convertedData.personalInfo.email && 
-        convertedData.experience.length === 0 && (!convertedData.skills || convertedData.skills.length === 0)) {
-      toast.error('Insufficient data extracted from resume. Please ensure your resume contains clear sections for experience, skills, and contact information.');
-      return;
+  const howItWorks = [
+    {
+      step: 1,
+      title: "Upload Your Resume",
+      description: "Upload your resume in PDF, DOCX, or TXT format for instant analysis",
+      icon: <Upload className="h-6 w-6" />
+    },
+    {
+      step: 2,
+      title: "Add Job Description",
+      description: "Paste the job description or URL to analyze against specific requirements",
+      icon: <FileText className="h-6 w-6" />
+    },
+    {
+      step: 3,
+      title: "Get Detailed Analysis",
+      description: "Receive comprehensive scoring and actionable recommendations",
+      icon: <BarChart3 className="h-6 w-6" />
+    },
+    {
+      step: 4,
+      title: "Optimize & Download",
+      description: "Apply suggestions and download your optimized resume",
+      icon: <Download className="h-6 w-6" />
     }
-    
-    setResumeData(convertedData);
-    setCurrentStep('analyze');
-    toast.success(`Resume uploaded successfully! Extracted: ${convertedData.personalInfo.name || 'Contact info'}, ${convertedData.experience.length} positions, ${Array.isArray(convertedData.skills) ? convertedData.skills.length : 0} skills.`);
-  };
+  ];
 
-  const fetchJobFromUrl = async (url: string): Promise<string> => {
-    // Simulate job description extraction from URL
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Mock job description - in production, this would use a web scraping service
-    return `We are seeking a talented Software Engineer to join our dynamic team. 
-
-Key Responsibilities:
-- Develop and maintain web applications using React, Node.js, and TypeScript
-- Collaborate with cross-functional teams to define and implement new features
-- Write clean, maintainable, and efficient code
-- Participate in code reviews and maintain high coding standards
-- Work with databases (PostgreSQL, MongoDB) and cloud services (AWS, Azure)
-
-Required Skills:
-- 3+ years of experience in software development
-- Proficiency in JavaScript, TypeScript, React, and Node.js
-- Experience with RESTful APIs and microservices architecture
-- Knowledge of version control systems (Git)
-- Strong problem-solving and communication skills
-- Bachelor's degree in Computer Science or related field
-
-Preferred Qualifications:
-- Experience with cloud platforms (AWS, Azure, GCP)
-- Knowledge of containerization (Docker, Kubernetes)
-- Familiarity with CI/CD pipelines
-- Experience with testing frameworks (Jest, Cypress)
-- Understanding of agile development methodologies`;
-  };
-
-  const handleAnalyze = async () => {
-    if (!resumeData) {
-      toast.error('Please upload a resume first');
-      return;
-    }
-
-    let finalJobDescription = jobDescription;
-
-    if (inputMethod === 'url' && jobUrl) {
-      setIsAnalyzing(true);
-      try {
-        finalJobDescription = await fetchJobFromUrl(jobUrl);
-        setJobDescription(finalJobDescription);
-      } catch (error) {
-        toast.error('Failed to fetch job description from URL');
-        setIsAnalyzing(false);
-        return;
-      }
-    }
-
-    if (!finalJobDescription.trim()) {
-      toast.error('Please provide a job description');
-      setIsAnalyzing(false);
-      return;
-    }
-
-    setIsAnalyzing(true);
-
-    try {
-      const result = await atsAnalyzer.analyzeResume(resumeData, finalJobDescription);
-      setAnalysisResult(result);
-      setCurrentStep('results');
-      toast.success('ATS analysis completed!');
-    } catch (error) {
-      toast.error('Analysis failed. Please try again.');
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleOptimizeResume = async () => {
-    console.log('handleOptimizeResume called');
-    console.log('resumeData:', resumeData);
-    console.log('jobDescription:', jobDescription);
-    console.log('analysisResult:', analysisResult);
-
-    if (!resumeData || !jobDescription || !analysisResult) {
-      toast.error('Resume data, job description, and analysis results are required to generate an optimized resume.', { 
-        duration: 5000 
-      });
-      return;
-    }
-
-    setIsOptimizing(true);
-
-    try {
-      console.log('Starting optimization process...');
-      const optimizedResume = await atsAnalyzer.optimizeResume(resumeData, analysisResult);
-      console.log('Optimization completed:', optimizedResume);
-      
-      const result: OptimizedResumeResult = {
-        ...analysisResult,
-        optimizedResume
-      };
-      setOptimizedResult(result);
-      
-      // Save to Supabase if user is authenticated
-      if (user) {
-        console.log('Saving to Supabase...');
-        const atsResumeData: ATSOptimizedResume = {
-          job_description_used: jobDescription,
-          optimized_resume_data: optimizedResume,
-          analysis_result: analysisResult,
-          original_resume_id: resumeData.id
-        };
-        
-        await supabaseService.saveATSResume(atsResumeData);
-        toast.success('ATS optimized resume saved to your account!', { duration: 4000 });
-        console.log('Saved to Supabase successfully');
-      }
-      
-      setCurrentStep('optimize');
-      toast.success('Optimized resume generated successfully!', { duration: 4000 });
-      console.log('Process completed successfully');
-    } catch (error) {
-      console.error('Optimization error:', error);
-      toast.error('Failed to generate optimized resume. Please try again.', { 
-        duration: 5000 
-      });
-    } finally {
-      setIsOptimizing(false);
-      console.log('handleOptimizeResume finished');
-    }
-  };
-
-  const handleDownloadOptimized = () => {
-    if (!optimizedResult?.optimizedResume) return;
-
-    // Extract first name from the resume data
-    const fullName = optimizedResult.optimizedResume.personalInfo?.name || '';
-    const firstName = fullName.split(' ')[0] || 'resume';
-    // Clean the first name to be filename-safe
-    const cleanFirstName = firstName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    
-    const element = document.getElementById('optimized-resume-content');
-    if (!element) {
-      toast.error('Resume content not found. Please try again.');
-      return;
-    }
-
-    toast.loading('Generating PDF...', { id: 'pdf-generation' });
-
-    html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff'
-    }).then(canvas => {
-      try {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
-        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-        const imgX = (pdfWidth - imgWidth * ratio) / 2;
-        const imgY = 0;
-        
-        // Calculate if content needs multiple pages
-        const scaledHeight = imgHeight * ratio;
-        
-        if (scaledHeight <= pdfHeight) {
-          // Single page
-          pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, scaledHeight);
-        } else {
-          // Multiple pages
-          let position = 0;
-          const pageHeight = pdfHeight;
-          
-          while (position < scaledHeight) {
-            const remainingHeight = scaledHeight - position;
-            const currentPageHeight = Math.min(pageHeight, remainingHeight);
-            
-            // Create a temporary canvas for this page section
-            const pageCanvas = document.createElement('canvas');
-            const pageCtx = pageCanvas.getContext('2d');
-            const sourceY = (position / ratio);
-            const sourceHeight = (currentPageHeight / ratio);
-            
-            pageCanvas.width = imgWidth;
-            pageCanvas.height = sourceHeight;
-            
-            if (pageCtx) {
-              pageCtx.drawImage(canvas, 0, sourceY, imgWidth, sourceHeight, 0, 0, imgWidth, sourceHeight);
-              const pageImgData = pageCanvas.toDataURL('image/png');
-              
-              if (position > 0) {
-                pdf.addPage();
-              }
-              
-              pdf.addImage(pageImgData, 'PNG', imgX, 0, imgWidth * ratio, currentPageHeight);
-            }
-            
-            position += pageHeight;
-          }
-        }
-        
-        const fileName = `${cleanFirstName}_ats_resume.pdf`;
-        pdf.save(fileName);
-        
-        toast.success('Optimized resume downloaded as PDF!', { id: 'pdf-generation' });
-      } catch (error) {
-        console.error('PDF generation error:', error);
-        toast.error('Failed to generate PDF. Please try again.', { id: 'pdf-generation' });
-      }
-    }).catch(error => {
-      console.error('Canvas generation error:', error);
-      toast.error('Failed to generate PDF. Please try again.', { id: 'pdf-generation' });
-    });
-  };
-
-  const generateResumeText = (resume: ResumeData): string => {
-    let text = `${resume.personalInfo.name}\n`;
-    text += `${resume.personalInfo.email} | ${resume.personalInfo.phone} | ${resume.personalInfo.address}\n\n`;
-    
-    if (resume.summary) {
-      text += `PROFESSIONAL SUMMARY\n${resume.summary}\n\n`;
-    }
-    
-    if (resume.experience.length > 0) {
-      text += `EXPERIENCE\n`;
-      resume.experience.forEach(exp => {
-        text += `${exp.title} | ${exp.company} | ${exp.startDate} - ${exp.endDate}\n`;
-        text += `${exp.description}\n\n`;
-      });
-    }
-    
-    if (Array.isArray(resume.skills) && resume.skills.length > 0) {
-      text += `SKILLS\n`;
-      text += `${resume.skills.join(', ')}\n\n`;
-    }
-    
-    if (resume.education.length > 0) {
-      text += `EDUCATION\n`;
-      resume.education.forEach(edu => {
-        text += `${edu.degree} | ${edu.school} | ${edu.graduationYear}\n`;
-      });
-    }
-    
-    return text;
-  };
-
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const getScoreBgColor = (score: number) => {
-    if (score >= 80) return 'bg-green-100 border-green-200';
-    if (score >= 60) return 'bg-yellow-100 border-yellow-200';
-    return 'bg-red-100 border-red-200';
-  };
-
-  const getScoreIcon = (score: number) => {
-    if (score >= 80) return <CheckCircle className="h-6 w-6 text-green-600" />;
-    if (score >= 60) return <AlertTriangle className="h-6 w-6 text-yellow-600" />;
-    return <XCircle className="h-6 w-6 text-red-600" />;
-  };
-
-  const ScoreCard: React.FC<{ title: string; score: number; description: string; icon: React.ReactNode }> = ({ title, score, description, icon }) => (
-    <div className={`p-6 rounded-xl border-2 ${getScoreBgColor(score)} transition-all duration-300 hover:shadow-lg`}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center">
-          {icon}
-          <h3 className="text-lg font-semibold text-gray-900 ml-2">{title}</h3>
-        </div>
-        <div className={`text-3xl font-bold ${getScoreColor(score)}`}>
-          {score}%
-        </div>
-      </div>
-      <p className="text-gray-600 text-sm">{description}</p>
-      <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
-        <div 
-          className={`h-2 rounded-full transition-all duration-500 ${
-            score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-          }`}
-          style={{ width: `${score}%` }}
-        ></div>
-      </div>
-    </div>
-  );
-
-  const ResumeComparison: React.FC = () => {
-    if (!resumeData || !optimizedResult?.optimizedResume) return null;
-
+  if (showOptimizer) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Original Resume */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <FileText className="h-5 w-5 text-gray-600 mr-2" />
-            Original Resume
-          </h3>
-          <div className="space-y-4 text-sm">
-            <div>
-              <h4 className="font-medium text-gray-900">{resumeData.personalInfo.name}</h4>
-              <p className="text-gray-600">{resumeData.personalInfo.email}</p>
-            </div>
-            {resumeData.summary && (
-              <div>
-                <h5 className="font-medium text-gray-900">Summary</h5>
-                <p className="text-gray-600">{resumeData.summary.substring(0, 150)}...</p>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
+        <Toaster position="top-right" />
+        
+        {/* Header */}
+        <header className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-white/20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center">
+                <button 
+                  onClick={() => setShowOptimizer(false)}
+                  className="flex items-center group mr-4"
+                >
+                  <ArrowLeft className="h-5 w-5 text-gray-600 mr-3 group-hover:text-blue-600 transition-colors duration-200" />
+                </button>
+                <Link to="/" className="flex items-center">
+                  <Shield className="h-8 w-8 text-blue-600" />
+                  <span className="ml-2 text-xl font-bold text-gray-900">ATS Optimizer</span>
+                </Link>
               </div>
-            )}
-            <div>
-              <h5 className="font-medium text-gray-900">Skills</h5>
-              <p className="text-gray-600">
-                {Array.isArray(resumeData.skills) ? resumeData.skills.slice(0, 5).join(', ') : 'No skills listed'}
-              </p>
+             
             </div>
           </div>
-        </div>
+        </header>
 
-        {/* Optimized Resume */}
-        <div className="bg-white rounded-xl shadow-lg border border-green-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Sparkles className="h-5 w-5 text-green-600 mr-2" />
-            ATS-Optimized Resume
-          </h3>
-          <div className="space-y-4 text-sm">
-            <div>
-              <h4 className="font-medium text-gray-900">{optimizedResult.optimizedResume.personalInfo.name}</h4>
-              <p className="text-gray-600">{optimizedResult.optimizedResume.personalInfo.email}</p>
-            </div>
-            {optimizedResult.optimizedResume.summary && (
-              <div>
-                <h5 className="font-medium text-gray-900">Enhanced Summary</h5>
-                <p className="text-gray-600">{optimizedResult.optimizedResume.summary.substring(0, 150)}...</p>
-              </div>
-            )}
-            <div>
-              <h5 className="font-medium text-gray-900">Optimized Skills</h5>
-              <p className="text-gray-600">
-                {Array.isArray(optimizedResult.optimizedResume.skills) ? 
-                  optimizedResult.optimizedResume.skills.slice(0, 5).join(', ') : 
-                  'No skills listed'}
-              </p>
-            </div>
-          </div>
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <ATSOptimizer onClose={() => setShowOptimizer(false)} />
         </div>
       </div>
     );
-  };
+  }
 
   return (
-    <div className={`w-full ${className}`}>
-      {onClose && (
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-              <Shield className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">ATS Resume Builder</h2>
-              <p className="text-gray-600">Generate ATS-optimized resumes tailored to job descriptions</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
-          >
-            <svg className="h-6 w-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
-
-      {/* Progress Indicator */}
-      <div className="mb-8">
-        <div className="flex items-center justify-center space-x-4">
-          {['upload', 'analyze', 'results', 'optimize'].map((step, index) => (
-            <div key={step} className="flex items-center">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
-                currentStep === step 
-                  ? 'bg-blue-600 text-white shadow-lg' 
-                  : index < ['upload', 'analyze', 'results', 'optimize'].indexOf(currentStep)
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-200 text-gray-600'
-              }`}>
-                {index + 1}
-              </div>
-              {index < 3 && (
-                <div className={`w-16 h-1 mx-2 transition-all duration-300 ${
-                  index < ['upload', 'analyze', 'results', 'optimize'].indexOf(currentStep)
-                    ? 'bg-green-500'
-                    : 'bg-gray-200'
-                }`}></div>
-              )}
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-center mt-4">
-          <span className="text-sm text-gray-600 capitalize">
-            Step {['upload', 'analyze', 'results', 'optimize'].indexOf(currentStep) + 1}: {
-              currentStep === 'upload' ? 'Upload Resume' : 
-              currentStep === 'analyze' ? 'Add Job Description' : 
-              currentStep === 'results' ? 'View Analysis' :
-              'Generate Optimized Resume'
-            }
-          </span>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 relative overflow-hidden">
+      <Toaster position="top-right" />
+      
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-96 h-96 bg-gradient-to-r from-blue-100/30 to-purple-100/30 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
+        <div className="absolute top-40 right-10 w-96 h-96 bg-gradient-to-r from-green-100/30 to-teal-100/30 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-gradient-to-r from-orange-100/30 to-red-100/30 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
       </div>
 
-      {/* Step Content */}
-      {currentStep === 'upload' && (
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 text-sm font-medium mb-4 animate-fade-in">
-              <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
-              AI-Powered ATS Resume Builder
+      {/* Header */}
+      <header className="relative z-50 bg-white/80 backdrop-blur-sm shadow-sm border-b border-white/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <Link to="/" className="flex items-center group">
+                <ArrowLeft className="h-5 w-5 text-gray-600 mr-3 group-hover:text-blue-600 transition-colors duration-200" />
+                <Shield className="h-8 w-8 text-blue-600" />
+                <span className="ml-2 text-xl font-bold text-gray-900">ATS Optimizer</span>
+              </Link>
             </div>
-            
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4 leading-[1.15] animate-fade-in-up">
-              Build Your{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 animate-gradient-x">
-                ATS-Optimized Resume
-              </span>
-            </h1>
-            
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-[1.15] animate-fade-in-up delay-200">
-              Upload your existing resume and we'll generate a tailored, ATS-optimized version based on any job description
+           
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Hero Section */}
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 text-sm font-medium mb-6 animate-fade-in">
+            <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
+            Professional ATS Analysis & Optimization
+          </div>
+          
+          <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 mb-6 leading-[1.1] animate-fade-in-up">
+            Beat the{' '}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600 animate-gradient-x">
+              ATS System
+            </span>
+            <br />
+            Get More Interviews
+          </h1>
+          
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed animate-fade-in-up delay-200">
+            Optimize your resume for Applicant Tracking Systems with our AI-powered analysis. 
+            Get detailed scoring, keyword recommendations, and formatting suggestions to increase your chances of landing interviews.
+          </p>
+
+          <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4 animate-fade-in-up delay-400">
+            <button
+              onClick={() => setShowOptimizer(true)}
+              className="group bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center"
+            >
+              Start Free Analysis
+              <Target className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-200" />
+            </button>
+          </div>
+
+        </div>
+
+        {/* How It Works */}
+        <div className="mb-20">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">How It Works</h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Get your ATS score in 4 simple steps
             </p>
           </div>
 
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
-            <ResumeUploader 
-              onResumeUploaded={handleResumeUpload}
-              mode="ats-analysis"
-              className="mb-6"
-            />
-
-            {/* Features Preview */}
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
-                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Target className="h-6 w-6 text-white" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {howItWorks.map((step, index) => (
+              <div key={index} className="text-center group">
+                <div className="relative mb-6">
+                  <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                    {step.icon}
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full opacity-0 group-hover:opacity-20 animate-ping"></div>
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-white border-2 border-blue-500 rounded-full flex items-center justify-center text-blue-600 font-bold text-sm">
+                    {step.step}
+                  </div>
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Job-Specific Optimization</h3>
-                <p className="text-sm text-gray-600">Tailor your resume to match specific job requirements and keywords</p>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">{step.title}</h3>
+                <p className="text-gray-600">{step.description}</p>
               </div>
-              
-              <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl">
-                <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Zap className="h-6 w-6 text-white" />
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Real-Time Feedback</h3>
-                <p className="text-sm text-gray-600">Get instant suggestions and improvements as you build</p>
-              </div>
-              
-              <div className="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
-                <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Download className="h-6 w-6 text-white" />
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Multiple Formats</h3>
-                <p className="text-sm text-gray-600">Export your optimized resume in ATS-friendly formats</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
-      )}
 
-      {currentStep === 'analyze' && (
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
+        {/* Features Grid */}
+        <div className="mb-20">
+          <div className="text-center mb-12">
             <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-green-100 to-teal-100 text-green-800 text-sm font-medium mb-4 animate-fade-in">
-              <Target className="w-4 h-4 mr-2 animate-pulse" />
-              Job Description Analysis
-            </div>
-            
-            <h2 className="text-4xl font-bold text-gray-900 mb-4 leading-[1.15]">
-              Analyze Against{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 via-teal-600 to-blue-600">
-                Job Requirements
-              </span>
-            </h2>
-            <p className="text-lg text-gray-600">
-              Provide the job description to generate a tailored, ATS-optimized resume
-            </p>
-          </div>
-
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
-            {/* Resume Summary */}
-            <div className="mb-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <FileText className="h-5 w-5 mr-2 text-blue-600" />
-                Resume Loaded
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <span className="font-medium text-gray-700">Name:</span>
-                  <span className="ml-2 text-gray-600">{resumeData?.personalInfo.name || 'Not specified'}</span>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-700">Experience:</span>
-                  <span className="ml-2 text-gray-600">{resumeData?.experience.length || 0} positions</span>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-700">Skills:</span>
-                  <span className="ml-2 text-gray-600">
-                    {Array.isArray(resumeData?.skills) ? resumeData.skills.length : 0} skills
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Input Method Selection */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">How would you like to provide the job description?</h3>
-              <div className="flex space-x-4">
-                <button
-                  onClick={() => setInputMethod('text')}
-                  className={`flex-1 p-4 rounded-lg border-2 transition-all duration-200 ${
-                    inputMethod === 'text'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                >
-                  <FileText className="h-6 w-6 mx-auto mb-2" />
-                  <div className="font-medium">Paste Text</div>
-                  <div className="text-sm text-gray-600">Copy and paste the job description</div>
-                </button>
-                
-                <button
-                  onClick={() => setInputMethod('url')}
-                  className={`flex-1 p-4 rounded-lg border-2 transition-all duration-200 ${
-                    inputMethod === 'url'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                >
-                  <Target className="h-6 w-6 mx-auto mb-2" />
-                  <div className="font-medium">Job URL</div>
-                  <div className="text-sm text-gray-600">Extract from job posting URL</div>
-                </button>
-              </div>
-            </div>
-
-            {/* Job Description Input */}
-            {inputMethod === 'text' ? (
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Job Description *
-                </label>
-                <textarea
-                  rows={12}
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Paste the complete job description here including requirements, responsibilities, and qualifications..."
-                />
-                <p className="text-sm text-gray-500 mt-2">
-                  Paste the job description to generate an ATS-optimized resume based on your uploaded resume
-                </p>
-              </div>
-            ) : (
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Job Posting URL *
-                </label>
-                <input
-                  type="url"
-                  value={jobUrl}
-                  onChange={(e) => setJobUrl(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="https://company.com/careers/job-posting"
-                />
-                <p className="text-sm text-gray-500 mt-2">
-                  We'll automatically extract the job description from the URL
-                </p>
-              </div>
-            )}
-
-            <div className="flex justify-between">
-              <button
-                onClick={() => setCurrentStep('upload')}
-                className="px-6 py-3 text-gray-700 hover:text-blue-600 transition-colors duration-200"
-              >
-                ← Back to Upload
-              </button>
-              
-              <button
-                onClick={handleAnalyze}
-                disabled={isAnalyzing || (!jobDescription.trim() && !jobUrl.trim())}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center"
-              >
-                {isAnalyzing ? (
-                  <>
-                    <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    Analyze Resume
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {currentStep === 'results' && analysisResult && (
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-green-100 to-blue-100 text-green-800 text-sm font-medium mb-4 animate-fade-in">
               <Award className="w-4 h-4 mr-2 animate-pulse" />
-              Analysis Complete
+              Advanced Features
             </div>
             
             <h2 className="text-4xl font-bold text-gray-900 mb-4 leading-[1.15]">
-              Your ATS{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 via-blue-600 to-purple-600">
-                Analysis Results
+              Everything You Need for{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 via-teal-600 to-blue-600 animate-gradient-x">
+                ATS Success
               </span>
             </h2>
-            <p className="text-lg text-gray-600">
-              Review your current ATS score and generate an optimized version
+            
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-[1.15]">
+              Comprehensive analysis and optimization tools to maximize your resume's performance
             </p>
           </div>
 
-          {/* Overall Score */}
-          <div className="mb-8">
-            <div className={`p-8 rounded-2xl border-2 ${getScoreBgColor(analysisResult.overallScore)} text-center`}>
-              <div className="flex items-center justify-center mb-4">
-                {getScoreIcon(analysisResult.overallScore)}
-                <h3 className="text-2xl font-bold text-gray-900 ml-3">Current ATS Score</h3>
-              </div>
-              <div className={`text-6xl font-bold ${getScoreColor(analysisResult.overallScore)} mb-4`}>
-                {analysisResult.overallScore}%
-              </div>
-              <p className="text-lg text-gray-700 mb-4">
-                {analysisResult.overallScore >= 80 ? 'Excellent! Your resume is highly optimized for ATS systems.' :
-                 analysisResult.overallScore >= 60 ? 'Good score with room for improvement.' :
-                 'Significant optimization needed to pass ATS screening.'}
-              </p>
-              <div className="w-full bg-gray-200 rounded-full h-4 max-w-md mx-auto">
-                <div 
-                  className={`h-4 rounded-full transition-all duration-1000 ${
-                    analysisResult.overallScore >= 80 ? 'bg-green-500' : 
-                    analysisResult.overallScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                  }`}
-                  style={{ width: `${analysisResult.overallScore}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Detailed Scores */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <ScoreCard
-              title="Keyword Match"
-              score={analysisResult.keywordScore}
-              description="How well your resume matches job requirements"
-              icon={<Target className="h-6 w-6 text-blue-600" />}
-            />
-            <ScoreCard
-              title="Format Compliance"
-              score={analysisResult.formatScore}
-              description="ATS-friendly formatting and structure"
-              icon={<Shield className="h-6 w-6 text-green-600" />}
-            />
-            <ScoreCard
-              title="Content Quality"
-              score={analysisResult.contentScore}
-              description="Writing quality and impact of your content"
-              icon={<TrendingUp className="h-6 w-6 text-purple-600" />}
-            />
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-8">
-            <button
-              onClick={handleOptimizeResume}
-              disabled={isOptimizing}
-              className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-green-700 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
-            >
-              {isOptimizing ? (
-                <>
-                  <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
-                  Generating Optimized Resume...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-5 w-5" />
-                  Generate ATS-Optimized Resume
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Detailed Analysis Toggle */}
-          <div className="mb-6">
-            <button
-              onClick={() => setShowDetailedAnalysis(!showDetailedAnalysis)}
-              className="flex items-center justify-center w-full p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-            >
-              <span className="font-medium text-gray-900 mr-2">
-                {showDetailedAnalysis ? 'Hide' : 'Show'} Detailed Analysis
-              </span>
-              {showDetailedAnalysis ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-            </button>
-          </div>
-
-          {/* Detailed Analysis */}
-          {showDetailedAnalysis && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-              {/* Keywords Analysis */}
-              <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-                <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-                  <Target className="h-5 w-5 text-purple-600 mr-2" />
-                  Keyword Analysis
-                </h4>
-                
-                <div className="space-y-4">
-                  <div>
-                    <h5 className="font-medium text-green-900 mb-2 flex items-center">
-                      <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
-                      Found Keywords ({analysisResult.matchedKeywords.length})
-                    </h5>
-                    <div className="flex flex-wrap gap-2">
-                      {analysisResult.matchedKeywords.slice(0, 10).map((keyword, index) => (
-                        <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded-full">
-                          {keyword}
-                        </span>
-                      ))}
-                      {analysisResult.matchedKeywords.length > 10 && (
-                        <span className="px-2 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
-                          +{analysisResult.matchedKeywords.length - 10} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h5 className="font-medium text-red-900 mb-2 flex items-center">
-                      <XCircle className="h-4 w-4 text-red-600 mr-1" />
-                      Missing Keywords ({analysisResult.missingKeywords.length})
-                    </h5>
-                    <div className="flex flex-wrap gap-2">
-                      {analysisResult.missingKeywords.slice(0, 8).map((keyword, index) => (
-                        <span key={index} className="px-2 py-1 bg-red-100 text-red-800 text-sm rounded-full">
-                          {keyword}
-                        </span>
-                      ))}
-                      {analysisResult.missingKeywords.length > 8 && (
-                        <span className="px-2 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
-                          +{analysisResult.missingKeywords.length - 8} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recommendations */}
-              <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-                <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-                  <Lightbulb className="h-5 w-5 text-yellow-600 mr-2" />
-                  Optimization Recommendations
-                </h4>
-                
-                <div className="space-y-3">
-                  {analysisResult.recommendations.map((rec, index) => (
-                    <div key={index} className="flex items-start">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
-                      <p className="text-sm text-gray-700">{rec}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {currentStep === 'optimize' && optimizedResult && (
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-green-100 to-teal-100 text-green-800 text-sm font-medium mb-4 animate-fade-in">
-              <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
-              Optimization Complete
-            </div>
-            
-            <h2 className="text-4xl font-bold text-gray-900 mb-4 leading-[1.15]">
-              Your{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 via-teal-600 to-blue-600">
-                ATS-Optimized Resume
-              </span>
-            </h2>
-            <p className="text-lg text-gray-600">
-              Review and download your tailored, ATS-optimized resume
-            </p>
-          </div>
-
-          {/* Score Improvement */}
-          <div className="mb-8 p-6 bg-gradient-to-r from-green-50 to-teal-50 rounded-xl border border-green-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-green-900 mb-2">ATS Score Improvement</h3>
-                <p className="text-green-800">Your optimized resume is projected to score significantly higher</p>
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold text-green-600">
-                  {analysisResult ? analysisResult.overallScore : 0}% → 85%+
-                </div>
-                <div className="text-sm text-green-700">Estimated improvement</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Comparison Toggle */}
-          <div className="mb-6">
-            <button
-              onClick={() => setShowComparison(!showComparison)}
-              className="flex items-center justify-center w-full p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-            >
-              <span className="font-medium text-gray-900 mr-2">
-                {showComparison ? 'Hide' : 'Show'} Before & After Comparison
-              </span>
-              {showComparison ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-            </button>
-          </div>
-
-          {/* Resume Comparison */}
-          {showComparison && (
-            <div className="mb-8">
-              <ResumeComparison />
-            </div>
-          )}
-
-          {/* Optimized Resume Preview */}
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900 flex items-center">
-                <FileText className="h-6 w-6 text-green-600 mr-2" />
-                ATS-Optimized Resume Preview
-              </h3>
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => setEditingOptimized(!editingOptimized)}
-                  className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
-                >
-                  {editingOptimized ? <Eye className="h-4 w-4 mr-2" /> : <Edit3 className="h-4 w-4 mr-2" />}
-                  {editingOptimized ? 'Preview' : 'Edit'}
-                </button>
-                <button
-                  onClick={handleDownloadOptimized}
-                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </button>
-              </div>
-            </div>
-
-            {optimizedResult.optimizedResume && (
-              <div className="prose max-w-none">
-                <div id="optimized-resume-content" className="bg-gray-50 p-6 rounded-lg">
-                  <div className="text-center mb-6">
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                      {optimizedResult.optimizedResume.personalInfo.name}
-                    </h1>
-                    <div className="text-gray-600">
-                      {optimizedResult.optimizedResume.personalInfo.email} | {optimizedResult.optimizedResume.personalInfo.phone} | {optimizedResult.optimizedResume.personalInfo.address}
-                    </div>
-                  </div>
-
-                  {optimizedResult.optimizedResume.summary && (
-                    <div className="mb-6">
-                      <h2 className="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-300 pb-1">
-                        PROFESSIONAL SUMMARY
-                      </h2>
-                      <p className="text-gray-700">{optimizedResult.optimizedResume.summary}</p>
-                    </div>
-                  )}
-
-                  {optimizedResult.optimizedResume.experience.length > 0 && (
-                    <div className="mb-6">
-                      <h2 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-1">
-                        EXPERIENCE
-                      </h2>
-                      {optimizedResult.optimizedResume.experience.map((exp, index) => (
-                        <div key={index} className="mb-4">
-                          <div className="flex justify-between items-start mb-1">
-                            <h3 className="font-semibold text-gray-900">{exp.title}</h3>
-                            <span className="text-sm text-gray-600">{exp.startDate} - {exp.endDate}</span>
-                          </div>
-                          <p className="text-gray-700 font-medium mb-2">{exp.company}</p>
-                          <p className="text-gray-600 text-sm">{exp.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {Array.isArray(optimizedResult.optimizedResume.skills) && optimizedResult.optimizedResume.skills.length > 0 && (
-                    <div className="mb-6">
-                      <h2 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-1">
-                        SKILLS
-                      </h2>
-                      <div className="text-gray-700">
-                        {optimizedResult.optimizedResume.skills.join(', ')}
-                      </div>
-                    </div>
-                  )}
-
-                  {optimizedResult.optimizedResume.education.length > 0 && (
-                    <div className="mb-6">
-                      <h2 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-1">
-                        EDUCATION
-                      </h2>
-                      {optimizedResult.optimizedResume.education.map((edu, index) => (
-                        <div key={index} className="mb-2">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="font-semibold text-gray-900">{edu.degree}</h3>
-                              <p className="text-gray-700">{edu.school}</p>
-                            </div>
-                            <span className="text-sm text-gray-600">{edu.graduationYear}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex justify-between">
-            <button
-              onClick={() => setCurrentStep('results')}
-              className="px-6 py-3 text-gray-700 hover:text-blue-600 transition-colors duration-200"
-            >
-              ← Back to Analysis
-            </button>
-            
-            <div className="flex space-x-4">
-              <button
-                onClick={handleDownloadOptimized}
-                className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-green-700 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 flex items-center"
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {features.map((feature, index) => (
+              <div
+                key={index}
+                className={`group relative bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl ${feature.shadowColor} hover:shadow-2xl ${feature.glowColor} transition-all duration-500 transform hover:-translate-y-2 hover:rotate-1 p-8 border border-white/20 animate-fade-in-up`}
+                style={{ animationDelay: `${index * 100}ms` }}
               >
-                <Download className="mr-2 h-5 w-5" />
-                Download Optimized Resume
-              </button>
-            </div>
+                {/* Gradient Border Effect */}
+                <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm -z-10`}></div>
+                
+                {/* Floating Particles */}
+                <div className="absolute inset-0 overflow-hidden rounded-2xl">
+                  <div className="absolute top-4 right-4 w-2 h-2 bg-white rounded-full opacity-60 animate-ping"></div>
+                  <div className="absolute bottom-6 left-6 w-1 h-1 bg-white rounded-full opacity-40 animate-pulse delay-1000"></div>
+                  <div className="absolute top-1/2 right-8 w-1.5 h-1.5 bg-white rounded-full opacity-50 animate-bounce delay-500"></div>
+                </div>
+
+                {/* Icon Container */}
+                <div className="relative mb-6">
+                  <div className={`w-16 h-16 rounded-full bg-gradient-to-r ${feature.gradient} flex items-center justify-center text-white shadow-lg ${feature.shadowColor} group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 mx-auto`}>
+                    {feature.icon}
+                    
+                    {/* Rotating Ring */}
+                    <div className={`absolute inset-0 rounded-full border-2 border-dashed border-white/30 animate-spin-slow group-hover:border-white/60 transition-colors duration-500`}></div>
+                    
+                    {/* Pulse Ring */}
+                    <div className={`absolute inset-0 rounded-full bg-gradient-to-r ${feature.gradient} opacity-0 group-hover:opacity-20 animate-ping`}></div>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="text-center">
+                  <h3 className="text-xl font-bold text-gray-900 mb-3 leading-[1.15] group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-purple-600 transition-all duration-300">
+                    {feature.title}
+                  </h3>
+                  
+                  <p className="text-gray-600 leading-[1.15] group-hover:text-gray-700 transition-colors duration-300">
+                    {feature.description}
+                  </p>
+                </div>
+
+                {/* Corner Accent */}
+                <div className={`absolute top-0 right-0 w-16 h-16 bg-gradient-to-br ${feature.gradient} opacity-10 rounded-bl-3xl rounded-tr-2xl group-hover:opacity-20 transition-opacity duration-500`}></div>
+              </div>
+            ))}
           </div>
         </div>
-      )}
+
+        {/* CTA Section */}
+        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600 rounded-2xl p-12 text-center text-white">
+          <h2 className="text-4xl font-bold mb-4">Ready to Optimize Your Resume?</h2>
+          <p className="text-xl mb-8 opacity-90">
+            Get detailed ATS analysis and actionable recommendations in minutes
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4">
+            <button
+              onClick={() => setShowOptimizer(true)}
+              className="bg-white text-blue-600 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center"
+            >
+              Start Free Analysis
+              <Shield className="ml-2 h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 
-export default ATSOptimizer;
+export default ATSOptimization;
