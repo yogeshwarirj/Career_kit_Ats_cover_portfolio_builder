@@ -785,6 +785,12 @@ Preferred Qualifications:
                           {keyword}
                         </span>
                       ))}
+                {/* Page Header */}
+                <div className="flex justify-between items-center mb-4 text-xs text-gray-500">
+                  <span>ATS-Optimized Resume Preview</span>
+                  <span>Page 1 of 2</span>
+                </div>
+
                       {analysisResult.keywords.missing.length > 8 && (
                         <span className="px-2 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
                           +{analysisResult.keywords.missing.length - 8} more
@@ -908,10 +914,10 @@ Preferred Qualifications:
                   </div>
 
                   {optimizedResult.optimizedResume.summary && (
-                    <div className="mb-6">
+                {(optimizedResult.optimizedResume.skills.technical.length > 0 || optimizedResult.optimizedResume.skills.soft.length > 0) && (
                       <h2 className="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-300 pb-1">
-                        PROFESSIONAL SUMMARY
-                      </h2>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-1">
+                      CORE COMPETENCIES & SKILLS
                       <p className="text-gray-700">{optimizedResult.optimizedResume.summary}</p>
                     </div>
                   )}
@@ -973,21 +979,63 @@ Preferred Qualifications:
                     </div>
                   )}
 
-                  {optimizedResult.optimizedResume.additionalKeywords && (
+                {optimizedResult.optimizedResume.education.length > 0 && (
                     <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <h3 className="font-medium text-green-900 mb-2 flex items-center">
-                        <Plus className="h-4 w-4 mr-1" />
-                        Additional Keywords Added
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {optimizedResult.optimizedResume.additionalKeywords.map((keyword, index) => (
-                          <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded-full">
-                            {keyword}
-                          </span>
-                        ))}
-                      </div>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-1">
+                      EDUCATION
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {optimizedResult.optimizedResume.education.map((edu, index) => (
+                      <div key={index} className="mb-2">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{edu.degree}</h3>
+                            <p className="text-gray-700">{edu.school}</p>
+                          </div>
+                          <span className="text-sm text-gray-600">{edu.graduationYear}</span>
+                        </div>
+                            {optimizedResult.optimizedResume.skills.technical.join(' • ')}
+                    ))}
+                  </div>
+                )}
+
+                {optimizedResult.optimizedResume.certifications && optimizedResult.optimizedResume.certifications.length > 0 && (
+                  <div className="mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-1">
+                      CERTIFICATIONS & AWARDS
+                    </h2>
+                    {optimizedResult.optimizedResume.certifications.map((cert, index) => (
+                      <div key={index} className="mb-2">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{cert.name}</h3>
+                            <p className="text-gray-700">{cert.issuer}</p>
+                          </div>
+                          <span className="text-sm text-gray-600">{cert.date}</span>
+                        </div>
+                          <h3 className="font-medium text-gray-900 mb-2">Professional Skills:</h3>
+                    ))}
+                            {optimizedResult.optimizedResume.skills.soft.join(' • ')}
+                          </div>
+                        </div>
+                {optimizedResult.optimizedResume.additionalKeywords && (
                     </div>
-                  )}
+                    <h2 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-1">
+                      ADDITIONAL KEYWORDS
+
+                    <div className="text-gray-700 text-sm">
+                      {optimizedResult.optimizedResume.additionalKeywords.join(' • ')}
+                    </div>
+                      PROFESSIONAL EXPERIENCE
+                    </h2>
+                    {optimizedResult.optimizedResume.experience.map((exp, index) => (
+                {/* Footer with page indicator */}
+                <div className="mt-8 pt-4 border-t border-gray-300 text-center">
+                  <div className="text-xs text-gray-500">
+                    End of Resume - Total Pages: 2
+                  </div>
+                  <div className="text-xs text-gray-400 mt-2">
+                    Note: This is a visual preview. PDF download will handle precise pagination.
+                  </div>
                 </div>
               </div>
             )}
