@@ -758,17 +758,17 @@ Preferred Qualifications:
                   <div>
                     <h5 className="font-medium text-green-900 mb-2 flex items-center">
                       <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
-                      Found Keywords ({analysisResult.keywords.found.length})
+                      Found Keywords ({analysisResult.matchedKeywords.length})
                     </h5>
                     <div className="flex flex-wrap gap-2">
-                      {analysisResult.keywords.found.map((keyword, index) => (
+                      {analysisResult.matchedKeywords.map((keyword, index) => (
                         <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded-full">
                           {keyword}
                         </span>
                       ))}
-                      {analysisResult.keywords.found.length > 10 && (
+                      {analysisResult.matchedKeywords.length > 10 && (
                         <span className="px-2 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
-                          +{analysisResult.keywords.found.length - 10} more
+                          +{analysisResult.matchedKeywords.length - 10} more
                         </span>
                       )}
                     </div>
@@ -777,17 +777,17 @@ Preferred Qualifications:
                   <div>
                     <h5 className="font-medium text-red-900 mb-2 flex items-center">
                       <XCircle className="h-4 w-4 text-red-600 mr-1" />
-                      Missing Keywords ({analysisResult.keywords.missing.length})
+                      Missing Keywords ({analysisResult.missingKeywords.length})
                     </h5>
                     <div className="flex flex-wrap gap-2">
-                      {analysisResult.keywords.missing.map((keyword, index) => (
+                      {analysisResult.missingKeywords.map((keyword, index) => (
                         <span key={index} className="px-2 py-1 bg-red-100 text-red-800 text-sm rounded-full">
                           {keyword}
                         </span>
                       ))}
-                      {analysisResult.keywords.missing.length > 8 && (
+                      {analysisResult.missingKeywords.length > 8 && (
                         <span className="px-2 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
-                          +{analysisResult.keywords.missing.length - 8} more
+                          +{analysisResult.missingKeywords.length - 8} more
                         </span>
                       )}
                     </div>
