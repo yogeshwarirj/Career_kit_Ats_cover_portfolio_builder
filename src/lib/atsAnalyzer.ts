@@ -4,19 +4,8 @@ export interface ATSAnalysisResult {
   keywordScore: number;
   formatScore: number;
   contentScore: number;
-  keywords: {
-    found: string[];
-    missing: string[];
-    density: number;
-  };
-  formatting: {
-    issues: string[];
-    recommendations: string[];
-  };
-  content: {
-    strengths: string[];
-    improvements: string[];
-  };
+  matchedKeywords: string[];
+  missingKeywords: string[];
   recommendations: string[];
   detailedAnalysis: {
     sections: {
@@ -141,19 +130,8 @@ export class ATSAnalyzer {
       keywordScore,
       formatScore,
       contentScore,
-      keywords: {
-        found: keywordAnalysis.foundKeywords,
-        missing: keywordAnalysis.missingKeywords,
-        density: keywordAnalysis.density
-      },
-      formatting: {
-        issues: formatAnalysis.issues,
-        recommendations: formatAnalysis.recommendations
-      },
-      content: {
-        strengths: contentAnalysis.strengths,
-        improvements: contentAnalysis.improvements
-      },
+      matchedKeywords: keywordAnalysis.foundKeywords,
+      missingKeywords: keywordAnalysis.missingKeywords,
       recommendations,
       detailedAnalysis: {
         sections: sectionAnalysis,
@@ -164,354 +142,33 @@ export class ATSAnalyzer {
   }
 
   /**
-   * Generate an ATS-optimized resume based on uploaded resume and job description
+   * Optimize resume based on analysis results
    */
-  async generateOptimizedResume(resumeData: any, jobDescription: string): Promise<ATSAnalysisResult & { optimizedResume: any }> {
-    // Simulate processing time for realistic UX
-    await new Promise(resolve => setTimeout(resolve, 3000));
+  async optimizeResume(resumeData: any, analysisResult: ATSAnalysisResult): Promise<any> {
+    // Simulate processing time
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
-    const resumeText = this.extractResumeText(resumeData);
-    const jobKeywords = this.extractJobKeywords(jobDescription);
-    
-    // Perform analysis first
-    const analysis = await this.analyzeResume(resumeData, jobDescription);
-    
-    // Generate optimized resume
-    const optimizedResume = this.createOptimizedResume(resumeData, jobKeywords, jobDescription);
-    
-    return {
-      ...analysis,
-      optimizedResume
-    };
-  }
-
-  /**
-   * Create an optimized version of the resume based on job requirements
-   */
-  private createOptimizedResume(resumeData: any, jobKeywords: string[], jobDescription: string): any {
     const optimized = JSON.parse(JSON.stringify(resumeData)); // Deep clone
-    
-    // Optimize summary/objective
-    optimized.summary = this.optimizeSummary(resumeData.summary, jobKeywords, jobDescription);
-    
-    // Optimize experience descriptions
-    optimized.experience = this.optimizeExperience(resumeData.experience, jobKeywords, jobDescription);
-    
-    // Optimize skills section
-    optimized.skills = this.optimizeSkills(resumeData.skills, jobKeywords);
-    
-    // Add missing keywords strategically
-    optimized.additionalKeywords = this.suggestAdditionalKeywords(jobKeywords, resumeData);
-    
+
+    // Add missing keywords to skills
+    const missingSkills = analysisResult.missingKeywords.filter(keyword => 
+      this.isSkillKeyword(keyword)
+    ).slice(0, 5);
+
+    if (missingSkills.length > 0) {
+      optimized.skills = optimized.skills || [];
+      optimized.skills.push(...missingSkills);
+    }
+
+    // Enhance summary with keywords
+    if (analysisResult.missingKeywords.length > 0) {
+      const keywordsToAdd = analysisResult.missingKeywords.slice(0, 3);
+      const enhancedSummary = optimized.summary + 
+        ` Experienced in ${keywordsToAdd.join(', ')} with a proven track record of delivering results.`;
+      optimized.summary = enhancedSummary;
+    }
+
     return optimized;
-  }
-
-  /**
-   * Optimize the professional summary
-   */
-  private optimizeSummary(originalSummary: string, jobKeywords: string[], jobDescription: string): string {
-    if (!originalSummary) {
-      return this.generateSummaryFromKeywords(jobKeywords);
-    }
-    
-    let optimizedSummary = originalSummary;
-    
-    // Add missing high-priority keywords naturally
-    const missingKeywords = jobKeywords.filter(keyword => 
-      !originalSummary.toLowerCase().includes(keyword.toLowerCase())
-    ).slice(0, 3);
-    
-    if (missingKeywords.length > 0) {
-      optimizedSummary += ` Experienced in ${missingKeywords.join(', ')} with a proven track record of delivering results.`;
-    }
-    
-    return optimizedSummary;
-  }
-
-  /**
-   * Generate a summary from job keywords if none exists
-   */
-  private generateSummaryFromKeywords(jobKeywords: string[]): string {
-    const topSkills = jobKeywords.slice(0, 5);
-    return `Results-driven professional with expertise in ${topSkills.join(', ')}. Proven ability to deliver high-quality solutions and drive business objectives through innovative approaches and collaborative teamwork.`;
-  }
-
-  /**
-   * Optimize experience descriptions
-   */
-  private optimizeExperience(experience: any[], jobKeywords: string[], jobDescription: string): any[] {
-    return experience.map(exp => {
-      const optimizedExp = { ...exp };
-      
-      if (exp.description) {
-        optimizedExp.description = this.enhanceDescription(exp.description, jobKeywords);
-      }
-      
-      return optimizedExp;
-    });
-  }
-
-  /**
-   * Enhance job descriptions with relevant keywords
-   */
-  private enhanceDescription(description: string, jobKeywords: string[]): string {
-    let enhanced = description;
-    
-    // Find keywords that could naturally fit into the description
-    const relevantKeywords = jobKeywords.filter(keyword => {
-      const keywordLower = keyword.toLowerCase();
-      return !description.toLowerCase().includes(keywordLower) && 
-             (keywordLower.includes('manage') || keywordLower.includes('develop') || 
-              keywordLower.includes('implement') || keywordLower.includes('lead') ||
-              keywordLower.includes('design') || keywordLower.includes('optimize'));
-    }).slice(0, 2);
-    
-    if (relevantKeywords.length > 0) {
-      enhanced += ` Utilized ${relevantKeywords.join(' and ')} to enhance project outcomes and team efficiency.`;
-    }
-    
-    return enhanced;
-  }
-
-  /**
-   * Optimize skills section
-   */
-  private optimizeSkills(skills: any, jobKeywords: string[]): any {
-    const optimized = { ...skills };
-    
-    // Add missing technical keywords to technical skills
-    const technicalKeywords = jobKeywords.filter(keyword => 
-      this.isTechnicalSkill(keyword) && 
-      !skills.technical?.some((skill: string) => skill.toLowerCase().includes(keyword.toLowerCase()))
-    );
-    
-    if (technicalKeywords.length > 0) {
-      optimized.technical = [...(skills.technical || []), ...technicalKeywords.slice(0, 5)];
-    }
-    
-    // Add missing soft skills
-    const softKeywords = jobKeywords.filter(keyword => 
-      this.isSoftSkill(keyword) && 
-      !skills.soft?.some((skill: string) => skill.toLowerCase().includes(keyword.toLowerCase()))
-    );
-    
-    if (softKeywords.length > 0) {
-      optimized.soft = [...(skills.soft || []), ...softKeywords.slice(0, 3)];
-    }
-    
-    return optimized;
-  }
-
-  /**
-   * Check if a keyword is a technical skill
-   */
-  private isTechnicalSkill(keyword: string): boolean {
-    const technicalTerms = [
-      'javascript', 'python', 'java', 'react', 'node', 'sql', 'aws', 'docker', 'git',
-      'html', 'css', 'angular', 'vue', 'mongodb', 'postgresql', 'kubernetes', 'jenkins',
-      'api', 'rest', 'graphql', 'microservices', 'cloud', 'devops', 'ci/cd', 'testing'
-    ];
-    
-    return technicalTerms.some(term => keyword.toLowerCase().includes(term));
-  }
-
-  /**
-   * Check if a keyword is a soft skill
-   */
-  private isSoftSkill(keyword: string): boolean {
-    const softTerms = [
-      'leadership', 'communication', 'teamwork', 'problem solving', 'analytical',
-      'creative', 'adaptable', 'organized', 'detail-oriented', 'collaborative',
-      'innovative', 'strategic', 'customer service', 'project management'
-    ];
-    
-    return softTerms.some(term => keyword.toLowerCase().includes(term));
-  }
-
-  /**
-   * Suggest additional keywords to add
-   */
-  private suggestAdditionalKeywords(jobKeywords: string[], resumeData: any): string[] {
-    const resumeText = this.extractResumeText(resumeData).toLowerCase();
-    
-    return jobKeywords.filter(keyword => 
-      !resumeText.includes(keyword.toLowerCase())
-    ).slice(0, 8);
-  }
-  /**
-   * Generate an ATS-optimized resume based on uploaded resume and job description
-   */
-  async generateOptimizedResume(resumeData: any, jobDescription: string): Promise<ATSAnalysisResult & { optimizedResume: any }> {
-    // Simulate processing time for realistic UX
-    await new Promise(resolve => setTimeout(resolve, 3000));
-
-    const resumeText = this.extractResumeText(resumeData);
-    const jobKeywords = this.extractJobKeywords(jobDescription);
-    
-    // Perform analysis first
-    const analysis = await this.analyzeResume(resumeData, jobDescription);
-    
-    // Generate optimized resume
-    const optimizedResume = this.createOptimizedResume(resumeData, jobKeywords, jobDescription);
-    
-    return {
-      ...analysis,
-      optimizedResume
-    };
-  }
-
-  /**
-   * Create an optimized version of the resume based on job requirements
-   */
-  private createOptimizedResume(resumeData: any, jobKeywords: string[], jobDescription: string): any {
-    const optimized = JSON.parse(JSON.stringify(resumeData)); // Deep clone
-    
-    // Optimize summary/objective
-    optimized.summary = this.optimizeSummary(resumeData.summary, jobKeywords, jobDescription);
-    
-    // Optimize experience descriptions
-    optimized.experience = this.optimizeExperience(resumeData.experience, jobKeywords, jobDescription);
-    
-    // Optimize skills section
-    optimized.skills = this.optimizeSkills(resumeData.skills, jobKeywords);
-    
-    // Add missing keywords strategically
-    optimized.additionalKeywords = this.suggestAdditionalKeywords(jobKeywords, resumeData);
-    
-    return optimized;
-  }
-
-  /**
-   * Optimize the professional summary
-   */
-  private optimizeSummary(originalSummary: string, jobKeywords: string[], jobDescription: string): string {
-    if (!originalSummary) {
-      return this.generateSummaryFromKeywords(jobKeywords);
-    }
-    
-    let optimizedSummary = originalSummary;
-    
-    // Add missing high-priority keywords naturally
-    const missingKeywords = jobKeywords.filter(keyword => 
-      !originalSummary.toLowerCase().includes(keyword.toLowerCase())
-    ).slice(0, 3);
-    
-    if (missingKeywords.length > 0) {
-      optimizedSummary += ` Experienced in ${missingKeywords.join(', ')} with a proven track record of delivering results.`;
-    }
-    
-    return optimizedSummary;
-  }
-
-  /**
-   * Generate a summary from job keywords if none exists
-   */
-  private generateSummaryFromKeywords(jobKeywords: string[]): string {
-    const topSkills = jobKeywords.slice(0, 5);
-    return `Results-driven professional with expertise in ${topSkills.join(', ')}. Proven ability to deliver high-quality solutions and drive business objectives through innovative approaches and collaborative teamwork.`;
-  }
-
-  /**
-   * Optimize experience descriptions
-   */
-  private optimizeExperience(experience: any[], jobKeywords: string[], jobDescription: string): any[] {
-    return experience.map(exp => {
-      const optimizedExp = { ...exp };
-      
-      if (exp.description) {
-        optimizedExp.description = this.enhanceDescription(exp.description, jobKeywords);
-      }
-      
-      return optimizedExp;
-    });
-  }
-
-  /**
-   * Enhance job descriptions with relevant keywords
-   */
-  private enhanceDescription(description: string, jobKeywords: string[]): string {
-    let enhanced = description;
-    
-    // Find keywords that could naturally fit into the description
-    const relevantKeywords = jobKeywords.filter(keyword => {
-      const keywordLower = keyword.toLowerCase();
-      return !description.toLowerCase().includes(keywordLower) && 
-             (keywordLower.includes('manage') || keywordLower.includes('develop') || 
-              keywordLower.includes('implement') || keywordLower.includes('lead') ||
-              keywordLower.includes('design') || keywordLower.includes('optimize'));
-    }).slice(0, 2);
-    
-    if (relevantKeywords.length > 0) {
-      enhanced += ` Utilized ${relevantKeywords.join(' and ')} to enhance project outcomes and team efficiency.`;
-    }
-    
-    return enhanced;
-  }
-
-  /**
-   * Optimize skills section
-   */
-  private optimizeSkills(skills: any, jobKeywords: string[]): any {
-    const optimized = { ...skills };
-    
-    // Add missing technical keywords to technical skills
-    const technicalKeywords = jobKeywords.filter(keyword => 
-      this.isTechnicalSkill(keyword) && 
-      !skills.technical?.some((skill: string) => skill.toLowerCase().includes(keyword.toLowerCase()))
-    );
-    
-    if (technicalKeywords.length > 0) {
-      optimized.technical = [...(skills.technical || []), ...technicalKeywords.slice(0, 5)];
-    }
-    
-    // Add missing soft skills
-    const softKeywords = jobKeywords.filter(keyword => 
-      this.isSoftSkill(keyword) && 
-      !skills.soft?.some((skill: string) => skill.toLowerCase().includes(keyword.toLowerCase()))
-    );
-    
-    if (softKeywords.length > 0) {
-      optimized.soft = [...(skills.soft || []), ...softKeywords.slice(0, 3)];
-    }
-    
-    return optimized;
-  }
-
-  /**
-   * Check if a keyword is a technical skill
-   */
-  private isTechnicalSkill(keyword: string): boolean {
-    const technicalTerms = [
-      'javascript', 'python', 'java', 'react', 'node', 'sql', 'aws', 'docker', 'git',
-      'html', 'css', 'angular', 'vue', 'mongodb', 'postgresql', 'kubernetes', 'jenkins',
-      'api', 'rest', 'graphql', 'microservices', 'cloud', 'devops', 'ci/cd', 'testing'
-    ];
-    
-    return technicalTerms.some(term => keyword.toLowerCase().includes(term));
-  }
-
-  /**
-   * Check if a keyword is a soft skill
-   */
-  private isSoftSkill(keyword: string): boolean {
-    const softTerms = [
-      'leadership', 'communication', 'teamwork', 'problem solving', 'analytical',
-      'creative', 'adaptable', 'organized', 'detail-oriented', 'collaborative',
-      'innovative', 'strategic', 'customer service', 'project management'
-    ];
-    
-    return softTerms.some(term => keyword.toLowerCase().includes(term));
-  }
-
-  /**
-   * Suggest additional keywords to add
-   */
-  private suggestAdditionalKeywords(jobKeywords: string[], resumeData: any): string[] {
-    const resumeText = this.extractResumeText(resumeData).toLowerCase();
-    
-    return jobKeywords.filter(keyword => 
-      !resumeText.includes(keyword.toLowerCase())
-    ).slice(0, 8);
   }
 
   /**
@@ -527,8 +184,7 @@ export class ATSAnalyzer {
       resumeData.education?.map((edu: any) => 
         `${edu.degree} ${edu.school}`
       ).join(' ') || '',
-      resumeData.skills?.technical?.join(' ') || '',
-      resumeData.skills?.soft?.join(' ') || '',
+      Array.isArray(resumeData.skills) ? resumeData.skills.join(' ') : '',
       resumeData.certifications?.map((cert: any) => 
         `${cert.name} ${cert.issuer}`
       ).join(' ') || ''
@@ -573,19 +229,6 @@ export class ATSAnalyzer {
         keywords.add(this.capitalizePhrase(threeWordPhrase));
       }
     }
-
-    // Extract single important words
-    const importantWords = words.filter(word => 
-      word.length >= 4 && 
-      !this.isCommonWord(word) &&
-      this.isRelevantTerm(word)
-    );
-
-    importantWords.forEach(word => {
-      if (this.isSkillOrTechnology(word)) {
-        keywords.add(this.capitalizeWord(word));
-      }
-    });
 
     return Array.from(keywords).slice(0, 25); // Limit to most relevant keywords
   }
@@ -641,30 +284,10 @@ export class ATSAnalyzer {
       score -= 20;
     }
 
-    if (!resumeData.skills || (!resumeData.skills.technical && !resumeData.skills.soft)) {
+    if (!resumeData.skills || (Array.isArray(resumeData.skills) && resumeData.skills.length === 0)) {
       issues.push('Missing skills section');
       recommendations.push('Add a dedicated skills section with relevant technical and soft skills');
       score -= 15;
-    }
-
-    // Check for ATS-friendly formatting
-    if (!this.hasConsistentDateFormat(resumeData.experience)) {
-      issues.push('Inconsistent date formatting');
-      recommendations.push('Use consistent date format (MM/YYYY or Month YYYY)');
-      score -= 5;
-    }
-
-    if (!this.hasActionVerbs(resumeData.experience)) {
-      issues.push('Limited use of action verbs');
-      recommendations.push('Start bullet points with strong action verbs');
-      score -= 10;
-    }
-
-    // General recommendations
-    if (recommendations.length === 0) {
-      recommendations.push('Use standard section headings (Experience, Education, Skills)');
-      recommendations.push('Maintain consistent formatting throughout');
-      recommendations.push('Use bullet points for easy scanning');
     }
 
     return {
@@ -705,33 +328,6 @@ export class ATSAnalyzer {
       score -= 5;
     }
 
-    // Check content length
-    const wordCount = resumeText.split(' ').length;
-    if (wordCount >= 300 && wordCount <= 800) {
-      strengths.push('Appropriate content length');
-      score += 5;
-    } else if (wordCount < 300) {
-      improvements.push('Expand content to provide more detail about your experience');
-      score -= 10;
-    } else {
-      improvements.push('Consider condensing content for better readability');
-      score -= 5;
-    }
-
-    // Check for industry terminology
-    const industryTermCount = Object.values(this.industryKeywords)
-      .flat()
-      .filter(term => resumeText.toLowerCase().includes(term.toLowerCase()))
-      .length;
-
-    if (industryTermCount >= 5) {
-      strengths.push('Includes relevant industry terminology');
-      score += 5;
-    } else {
-      improvements.push('Include more industry-specific terms and technologies');
-      score -= 5;
-    }
-
     return {
       score: Math.max(50, Math.min(95, score)),
       strengths,
@@ -760,17 +356,30 @@ export class ATSAnalyzer {
       sections.push(this.analyzeSkillsSection(resumeData.skills, jobDescription));
     }
 
-    // Analyze Education
-    if (resumeData.education && resumeData.education.length > 0) {
-      sections.push(this.analyzeEducationSection(resumeData.education, jobDescription));
-    }
-
     return sections;
   }
 
-  /**
-   * Calculate keyword matching score
-   */
+  // Helper methods
+  private isRelevantPhrase(phrase: string): boolean {
+    const relevantPhrases = [
+      'project management', 'data analysis', 'customer service', 'team leadership',
+      'software development', 'digital marketing', 'financial analysis', 'quality assurance'
+    ];
+    return relevantPhrases.some(p => phrase.includes(p));
+  }
+
+  private isSkillKeyword(keyword: string): boolean {
+    return this.skillsDatabase.some(skill => 
+      skill.toLowerCase().includes(keyword.toLowerCase())
+    );
+  }
+
+  private capitalizePhrase(phrase: string): string {
+    return phrase.split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
   private calculateKeywordScore(keywordAnalysis: any): number {
     const { density, foundKeywords, totalKeywords } = keywordAnalysis;
     
@@ -785,23 +394,14 @@ export class ATSAnalyzer {
     return Math.min(95, Math.max(30, Math.round(score)));
   }
 
-  /**
-   * Calculate formatting compliance score
-   */
   private calculateFormatScore(formatAnalysis: any): number {
     return formatAnalysis.score;
   }
 
-  /**
-   * Calculate content quality score
-   */
   private calculateContentScore(contentAnalysis: any): number {
     return contentAnalysis.score;
   }
 
-  /**
-   * Generate actionable recommendations
-   */
   private generateRecommendations(
     keywordAnalysis: any, 
     formatAnalysis: any, 
@@ -830,78 +430,7 @@ export class ATSAnalyzer {
       recommendations.push(...contentAnalysis.improvements.slice(0, 2));
     }
 
-    // Overall recommendations
-    if (overallScore < 70) {
-      recommendations.push('Focus on adding quantifiable achievements and relevant keywords');
-      recommendations.push('Ensure your resume directly addresses the job requirements');
-    }
-
     return recommendations.slice(0, 8); // Limit to most important recommendations
-  }
-
-  // Helper methods
-  private isRelevantPhrase(phrase: string): boolean {
-    const relevantPhrases = [
-      'project management', 'data analysis', 'customer service', 'team leadership',
-      'software development', 'digital marketing', 'financial analysis', 'quality assurance',
-      'business development', 'product management', 'user experience', 'machine learning'
-    ];
-    return relevantPhrases.some(p => phrase.includes(p));
-  }
-
-  private isCommonWord(word: string): boolean {
-    const commonWords = [
-      'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one',
-      'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'its', 'may', 'new', 'now', 'old',
-      'see', 'two', 'who', 'boy', 'did', 'man', 'men', 'put', 'say', 'she', 'too', 'use', 'will'
-    ];
-    return commonWords.includes(word.toLowerCase());
-  }
-
-  private isRelevantTerm(word: string): boolean {
-    return this.skillsDatabase.some(skill => 
-      skill.toLowerCase().includes(word.toLowerCase())
-    ) || this.commonATSKeywords.includes(word.toLowerCase());
-  }
-
-  private isSkillOrTechnology(word: string): boolean {
-    return this.skillsDatabase.some(skill => 
-      skill.toLowerCase() === word.toLowerCase()
-    );
-  }
-
-  private capitalizePhrase(phrase: string): string {
-    return phrase.split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  }
-
-  private capitalizeWord(word: string): string {
-    return word.charAt(0).toUpperCase() + word.slice(1);
-  }
-
-  private hasConsistentDateFormat(experience: any[]): boolean {
-    if (!experience || experience.length === 0) return true;
-    
-    const dateFormats = experience.map(exp => {
-      const start = exp.startDate || '';
-      const end = exp.endDate || '';
-      return `${start}-${end}`;
-    });
-    
-    // Simple check - in production, would use more sophisticated date parsing
-    return dateFormats.every(format => format.includes('/') || format.includes('-'));
-  }
-
-  private hasActionVerbs(experience: any[]): boolean {
-    if (!experience || experience.length === 0) return false;
-    
-    const allDescriptions = experience
-      .map(exp => exp.description || '')
-      .join(' ')
-      .toLowerCase();
-    
-    return this.actionVerbs.some(verb => allDescriptions.includes(verb));
   }
 
   private analyzeSummarySection(summary: string, jobDescription: string): any {
@@ -944,7 +473,7 @@ export class ATSAnalyzer {
   }
 
   private analyzeSkillsSection(skills: any, jobDescription: string): any {
-    const allSkills = [...(skills.technical || []), ...(skills.soft || [])];
+    const allSkills = Array.isArray(skills) ? skills : [];
     const jobKeywords = this.extractJobKeywords(jobDescription);
     const matchingSkills = allSkills.filter(skill => 
       jobKeywords.some(keyword => 
@@ -962,24 +491,6 @@ export class ATSAnalyzer {
       suggestions: matchingSkills.length < 5 ? 
         ['Add more skills that match job requirements'] : 
         ['Good skills alignment with job requirements']
-    };
-  }
-
-  private analyzeEducationSection(education: any[], jobDescription: string): any {
-    const hasRelevantEducation = education.some(edu => 
-      jobDescription.toLowerCase().includes(edu.degree?.toLowerCase() || '') ||
-      jobDescription.toLowerCase().includes(edu.school?.toLowerCase() || '')
-    );
-    
-    const score = hasRelevantEducation ? 80 : 70;
-    
-    return {
-      name: 'Education',
-      score,
-      issues: [],
-      suggestions: hasRelevantEducation ? 
-        ['Education aligns well with job requirements'] : 
-        ['Consider highlighting relevant coursework or certifications']
     };
   }
 

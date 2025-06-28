@@ -4,25 +4,10 @@ import { ArrowLeft, FileText, User, Building, Briefcase, Sparkles, Download, Cop
 import { Toaster, toast } from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-
-interface CoverLetterData {
-  id: string;
-  jobTitle: string;
-  companyName: string;
-  personalInfo: {
-    name: string;
-    email: string;
-    phone: string;
-    address: string;
-    linkedin: string;
-    portfolio: string;
-  };
-  skills: string[];
-  jobDescription: string;
-  generatedLetter: string;
-  template: string;
-  createdAt: string;
-}
+import { supabaseService, CoverLetterData } from '../lib/supabaseService';
+import { auth } from '../lib/supabase';
+import { ResumeUploader } from '../components/ResumeUploader';
+import { ParsedResume } from '../lib/resumeParser';
 
 interface UserSubscription {
   isSubscribed: boolean;
@@ -38,10 +23,11 @@ const CoverLetterGenerator: React.FC = () => {
   const [selectedTemplate, setSelectedTemplate] = useState('professional');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [savedLetters, setSavedLetters] = useState<CoverLetterData[]>([]);
+  const [user, setUser] = useState<any>(null);
   const [subscription, setSubscription] = useState<UserSubscription>({
     isSubscribed: false,
     freeLettersUsed: 0,
-    maxFreeLetters: 300,
+    maxFreeLetters: 3,
     subscriptionType: null,
     expiresAt: null
   });
@@ -66,10 +52,43 @@ const CoverLetterGenerator: React.FC = () => {
 
   // Load saved data on component mount
   useEffect(() => {
-    loadSavedData();
+    // Check authentication status
+    auth.getCurrentUser().then(({ user }) => {
+      setUser(user);
+      if (user) {
+        loadSavedData();
+      } else {
+        loadLocalData();
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+      if (session?.user) {
+        loadSavedData();
+      } else {
+        loadLocalData();
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const loadSavedData = () => {
+  const loadSavedData = async () => {
+    try {
+      const result = await supabaseService.getCoverLetters();
+      if (result.success && result.data) {
+        setSavedLetters(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading saved data:', error);
+      // Fall back to local storage
+      loadLocalData();
+    }
+  };
+
+  const loadLocalData = () => {
     try {
       const saved = localStorage.getItem('coverLetters');
       const sub = localStorage.getItem('subscription');
@@ -82,17 +101,46 @@ const CoverLetterGenerator: React.FC = () => {
         setSubscription(JSON.parse(sub));
       }
     } catch (error) {
-      console.error('Error loading saved data:', error);
+      console.error('Error loading local data:', error);
     }
   };
 
-  const saveToLocalStorage = (letters: CoverLetterData[], sub: UserSubscription) => {
+  const saveToStorage = async (letters: CoverLetterData[], sub: UserSubscription) => {
     try {
+      // Save to Supabase if authenticated
+      if (user && letters.length > 0) {
+        const latestLetter = letters[letters.length - 1];
+        await supabaseService.saveCoverLetter(latestLetter);
+      }
+      
+      // Always save to localStorage as backup
       localStorage.setItem('coverLetters', JSON.stringify(letters));
       localStorage.setItem('subscription', JSON.stringify(sub));
     } catch (error) {
-      console.error('Error saving to localStorage:', error);
+      console.error('Error saving data:', error);
+      // Fall back to localStorage only
+      localStorage.setItem('coverLetters', JSON.stringify(letters));
+      localStorage.setItem('subscription', JSON.stringify(sub));
     }
+  };
+
+  const handleResumeUpload = (parsedResume: ParsedResume) => {
+    // Auto-fill form data from uploaded resume
+    setFormData(prev => ({
+      ...prev,
+      personalInfo: {
+        name: parsedResume.personalInfo?.name || '',
+        email: parsedResume.personalInfo?.email || '',
+        phone: parsedResume.personalInfo?.phone || '',
+        address: parsedResume.personalInfo?.location || '',
+        linkedin: parsedResume.personalInfo?.linkedin || '',
+        portfolio: parsedResume.personalInfo?.website || ''
+      },
+      skills: [...(parsedResume.skills?.technical || []), ...(parsedResume.skills?.soft || [])],
+      skillsInput: [...(parsedResume.skills?.technical || []), ...(parsedResume.skills?.soft || [])].join(', ')
+    }));
+    
+    toast.success('Resume data imported successfully!');
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -139,14 +187,14 @@ const CoverLetterGenerator: React.FC = () => {
       
       const newLetter: CoverLetterData = {
         id: Date.now().toString(),
-        jobTitle: formData.jobTitle,
-        companyName: formData.companyName,
-        personalInfo: formData.personalInfo,
+        job_title: formData.jobTitle,
+        company_name: formData.companyName,
+        personal_info: formData.personalInfo,
         skills: formData.skills,
-        jobDescription: formData.jobDescription,
-        generatedLetter: generatedContent,
+        job_description: formData.jobDescription,
+        generated_letter: generatedContent,
         template: selectedTemplate,
-        createdAt: new Date().toISOString()
+        created_at: new Date().toISOString()
       };
 
       const updatedLetters = [...savedLetters, newLetter];
@@ -158,7 +206,7 @@ const CoverLetterGenerator: React.FC = () => {
       setSavedLetters(updatedLetters);
       setSubscription(updatedSubscription);
       setCurrentLetter(newLetter);
-      saveToLocalStorage(updatedLetters, updatedSubscription);
+      await saveToStorage(updatedLetters, updatedSubscription);
       
       setCurrentStep('edit');
       toast.success('Cover letter generated successfully!');
@@ -232,16 +280,16 @@ ${personalInfo.name}`
     return templates[template as keyof typeof templates] || templates.professional;
   };
 
-  const handleLetterEdit = (newContent: string) => {
+  const handleLetterEdit = async (newContent: string) => {
     if (currentLetter) {
-      const updatedLetter = { ...currentLetter, generatedLetter: newContent };
+      const updatedLetter = { ...currentLetter, generated_letter: newContent };
       const updatedLetters = savedLetters.map(letter => 
         letter.id === currentLetter.id ? updatedLetter : letter
       );
       
       setSavedLetters(updatedLetters);
       setCurrentLetter(updatedLetter);
-      saveToLocalStorage(updatedLetters, subscription);
+      await saveToStorage(updatedLetters, subscription);
     }
   };
 
@@ -263,7 +311,7 @@ ${personalInfo.name}`
     tempDiv.style.color = '#000000';
     tempDiv.style.backgroundColor = '#ffffff';
     tempDiv.style.whiteSpace = 'pre-wrap';
-    tempDiv.innerHTML = currentLetter.generatedLetter.replace(/\n/g, '<br>');
+    tempDiv.innerHTML = currentLetter.generated_letter.replace(/\n/g, '<br>');
     
     document.body.appendChild(tempDiv);
     
@@ -326,7 +374,7 @@ ${personalInfo.name}`
           }
         }
         
-        const fileName = `${currentLetter.companyName}_${currentLetter.jobTitle}_Cover_Letter.pdf`;
+        const fileName = `${currentLetter.company_name}_${currentLetter.job_title}_Cover_Letter.pdf`;
         pdf.save(fileName);
         
         // Clean up
@@ -348,7 +396,7 @@ ${personalInfo.name}`
   const copyToClipboard = () => {
     if (!currentLetter) return;
     
-    navigator.clipboard.writeText(currentLetter.generatedLetter);
+    navigator.clipboard.writeText(currentLetter.generated_letter);
     toast.success('Cover letter copied to clipboard!');
   };
 
@@ -416,12 +464,12 @@ ${personalInfo.name}`
                   </>
                 ) : (
                   <>
-                  
+                    <span className="text-sm text-gray-700">
+                      {subscription.freeLettersUsed}/{subscription.maxFreeLetters} free letters used
+                    </span>
                   </>
                 )}
               </div>
-              
-            
             </div>
           </div>
         </div>
@@ -487,6 +535,24 @@ ${personalInfo.name}`
             </div>
 
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+              {/* Resume Upload Section */}
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                  <FileText className="h-5 w-5 mr-2 text-teal-600" />
+                  Import from Resume (Optional)
+                </h3>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-blue-800">
+                    Upload your resume to automatically fill in your personal information and skills.
+                  </p>
+                </div>
+                <ResumeUploader
+                  onResumeUploaded={handleResumeUpload}
+                  mode="cover-letter"
+                  className="max-w-2xl mx-auto"
+                />
+              </div>
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Personal Information */}
                 <div>
@@ -720,7 +786,7 @@ ${personalInfo.name}`
                     <Crown className="h-12 w-12 text-white" />
                   </div>
                   
-                
+                  <h2 className="text-3xl font-bold text-gray-900 mb-4">Upgrade to Premium</h2>
                   <p className="text-lg text-gray-600 mb-8">
                     You've used all {subscription.maxFreeLetters} free cover letters. Upgrade to premium for unlimited access!
                   </p>
@@ -757,7 +823,7 @@ ${personalInfo.name}`
                   
                   <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
                     <button className="bg-gradient-to-r from-teal-600 to-blue-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-teal-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105">
-                      Upgrade for $3 (7 Letters)
+                      Upgrade for $9.99/month
                     </button>
                     <button 
                       onClick={() => setCurrentStep('input')}
@@ -884,17 +950,17 @@ ${personalInfo.name}`
                   <div className="mt-6 p-3 bg-green-50 rounded-lg">
                     <div className="flex items-center text-sm text-green-800">
                       <Save className="h-4 w-4 mr-2" />
-                      Auto-saved locally
+                      {user ? 'Saved to cloud' : 'Saved locally'}
                     </div>
                   </div>
 
                   <div className="mt-4">
                     <h4 className="font-medium text-gray-900 mb-2">Letter Details</h4>
                     <div className="space-y-1 text-sm text-gray-600">
-                      <p><strong>Position:</strong> {currentLetter.jobTitle}</p>
-                      <p><strong>Company:</strong> {currentLetter.companyName}</p>
+                      <p><strong>Position:</strong> {currentLetter.job_title}</p>
+                      <p><strong>Company:</strong> {currentLetter.company_name}</p>
                       <p><strong>Template:</strong> {templates.find(t => t.id === currentLetter.template)?.name}</p>
-                      <p><strong>Created:</strong> {new Date(currentLetter.createdAt).toLocaleDateString()}</p>
+                      <p><strong>Created:</strong> {new Date(currentLetter.created_at || '').toLocaleDateString()}</p>
                     </div>
                   </div>
                 </div>
@@ -906,20 +972,20 @@ ${personalInfo.name}`
                   {isPreviewMode ? (
                     <div className="prose max-w-none">
                       <div className="whitespace-pre-wrap font-serif text-gray-900 leading-relaxed">
-                        {currentLetter.generatedLetter}
+                        {currentLetter.generated_letter}
                       </div>
                     </div>
                   ) : (
                     <div>
                       <h3 className="text-xl font-semibold text-gray-900 mb-4">Edit Your Cover Letter</h3>
                       <textarea
-                        value={currentLetter.generatedLetter}
+                        value={currentLetter.generated_letter}
                         onChange={(e) => handleLetterEdit(e.target.value)}
                         className="w-full h-96 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200 font-serif"
                         placeholder="Edit your cover letter here..."
                       />
                       <p className="text-sm text-gray-500 mt-2">
-                        Characters: {currentLetter.generatedLetter.length}
+                        Characters: {currentLetter.generated_letter.length}
                       </p>
                     </div>
                   )}
@@ -967,16 +1033,16 @@ ${personalInfo.name}`
                   <div key={letter.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow duration-200">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h4 className="font-semibold text-gray-900">{letter.jobTitle}</h4>
-                        <p className="text-sm text-gray-600">{letter.companyName}</p>
+                        <h4 className="font-semibold text-gray-900">{letter.job_title}</h4>
+                        <p className="text-sm text-gray-600">{letter.company_name}</p>
                       </div>
                       <span className="text-xs text-gray-500">
-                        {new Date(letter.createdAt).toLocaleDateString()}
+                        {new Date(letter.created_at || '').toLocaleDateString()}
                       </span>
                     </div>
                     
                     <p className="text-sm text-gray-700 mb-4 line-clamp-3">
-                      {letter.generatedLetter.substring(0, 150)}...
+                      {letter.generated_letter.substring(0, 150)}...
                     </p>
                     
                     <div className="flex space-x-2">

@@ -7,6 +7,8 @@ import { ParsedResume } from '../lib/resumeParser';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { supabaseService, ATSOptimizedResume } from '../lib/supabaseService';
+import { auth } from '../lib/supabase';
 
 interface ATSOptimizerProps {
   onClose?: () => void;
@@ -31,25 +33,47 @@ const ATSOptimizer: React.FC<ATSOptimizerProps> = ({ onClose, initialResumeData,
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
   const [editingOptimized, setEditingOptimized] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   const atsAnalyzer = ATSAnalyzer.getInstance();
 
   useEffect(() => {
+    // Check authentication status
+    auth.getCurrentUser().then(({ user }) => {
+      setUser(user);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+
     if (initialResumeData) {
       setCurrentStep('analyze');
     }
+
+    return () => subscription.unsubscribe();
   }, [initialResumeData]);
 
   const handleResumeUpload = (parsedResume: ParsedResume) => {
     const convertedData: ResumeData = {
       id: Date.now().toString(),
       title: `ATS Analysis - ${new Date().toLocaleDateString()}`,
-      personalInfo: parsedResume.personalInfo,
-      summary: parsedResume.summary,
-      experience: parsedResume.experience,
-      education: parsedResume.education,
-      skills: parsedResume.skills,
-      certifications: parsedResume.certifications,
+      personalInfo: {
+        name: parsedResume.personalInfo?.name || '',
+        email: parsedResume.personalInfo?.email || '',
+        phone: parsedResume.personalInfo?.phone || '',
+        address: parsedResume.personalInfo?.location || '',
+        linkedin: parsedResume.personalInfo?.linkedin || '',
+        portfolio: parsedResume.personalInfo?.website || ''
+      },
+      summary: parsedResume.summary || '',
+      experience: parsedResume.experience || [],
+      education: parsedResume.education || [],
+      skills: parsedResume.skills || [],
+      projects: parsedResume.projects || [],
+      certifications: parsedResume.certifications || [],
+      languages: parsedResume.languages || [],
       template: 'modern-professional',
       lastModified: new Date().toISOString(),
       version: 1
@@ -57,14 +81,14 @@ const ATSOptimizer: React.FC<ATSOptimizerProps> = ({ onClose, initialResumeData,
     
     // Validate that we have sufficient data for analysis
     if (!convertedData.personalInfo.name && !convertedData.personalInfo.email && 
-        convertedData.experience.length === 0 && convertedData.skills.technical.length === 0) {
+        convertedData.experience.length === 0 && (!convertedData.skills || convertedData.skills.length === 0)) {
       toast.error('Insufficient data extracted from resume. Please ensure your resume contains clear sections for experience, skills, and contact information.');
       return;
     }
     
     setResumeData(convertedData);
     setCurrentStep('analyze');
-    toast.success(`Resume uploaded successfully! Extracted: ${convertedData.personalInfo.name || 'Contact info'}, ${convertedData.experience.length} positions, ${convertedData.skills.technical.length + convertedData.skills.soft.length} skills.`);
+    toast.success(`Resume uploaded successfully! Extracted: ${convertedData.personalInfo.name || 'Contact info'}, ${convertedData.experience.length} positions, ${Array.isArray(convertedData.skills) ? convertedData.skills.length : 0} skills.`);
   };
 
   const fetchJobFromUrl = async (url: string): Promise<string> => {
@@ -138,16 +162,34 @@ Preferred Qualifications:
   };
 
   const handleOptimizeResume = async () => {
-    if (!resumeData || !jobDescription) {
-      toast.error('Resume data and job description are required');
+    if (!resumeData || !jobDescription || !analysisResult) {
+      toast.error('Resume data, job description, and analysis results are required');
       return;
     }
 
     setIsOptimizing(true);
 
     try {
-      const result = await atsAnalyzer.generateOptimizedResume(resumeData, jobDescription);
+      const optimizedResume = await atsAnalyzer.optimizeResume(resumeData, analysisResult);
+      const result: OptimizedResumeResult = {
+        ...analysisResult,
+        optimizedResume
+      };
       setOptimizedResult(result);
+      
+      // Save to Supabase if user is authenticated
+      if (user) {
+        const atsResumeData: ATSOptimizedResume = {
+          job_description_used: jobDescription,
+          optimized_resume_data: optimizedResume,
+          analysis_result: analysisResult,
+          original_resume_id: resumeData.id
+        };
+        
+        await supabaseService.saveATSResume(atsResumeData);
+        toast.success('ATS optimized resume saved to your account!');
+      }
+      
       setCurrentStep('optimize');
       toast.success('Optimized resume generated successfully!');
     } catch (error) {
@@ -247,7 +289,7 @@ Preferred Qualifications:
 
   const generateResumeText = (resume: ResumeData): string => {
     let text = `${resume.personalInfo.name}\n`;
-    text += `${resume.personalInfo.email} | ${resume.personalInfo.phone} | ${resume.personalInfo.location}\n\n`;
+    text += `${resume.personalInfo.email} | ${resume.personalInfo.phone} | ${resume.personalInfo.address}\n\n`;
     
     if (resume.summary) {
       text += `PROFESSIONAL SUMMARY\n${resume.summary}\n\n`;
@@ -261,15 +303,9 @@ Preferred Qualifications:
       });
     }
     
-    if (resume.skills.technical.length > 0 || resume.skills.soft.length > 0) {
+    if (Array.isArray(resume.skills) && resume.skills.length > 0) {
       text += `SKILLS\n`;
-      if (resume.skills.technical.length > 0) {
-        text += `Technical: ${resume.skills.technical.join(', ')}\n`;
-      }
-      if (resume.skills.soft.length > 0) {
-        text += `Soft Skills: ${resume.skills.soft.join(', ')}\n`;
-      }
-      text += '\n';
+      text += `${resume.skills.join(', ')}\n\n`;
     }
     
     if (resume.education.length > 0) {
@@ -347,7 +383,9 @@ Preferred Qualifications:
             )}
             <div>
               <h5 className="font-medium text-gray-900">Skills</h5>
-              <p className="text-gray-600">{resumeData.skills.technical.slice(0, 5).join(', ')}</p>
+              <p className="text-gray-600">
+                {Array.isArray(resumeData.skills) ? resumeData.skills.slice(0, 5).join(', ') : 'No skills listed'}
+              </p>
             </div>
           </div>
         </div>
@@ -371,20 +409,12 @@ Preferred Qualifications:
             )}
             <div>
               <h5 className="font-medium text-gray-900">Optimized Skills</h5>
-              <p className="text-gray-600">{optimizedResult.optimizedResume.skills.technical.slice(0, 5).join(', ')}</p>
+              <p className="text-gray-600">
+                {Array.isArray(optimizedResult.optimizedResume.skills) ? 
+                  optimizedResult.optimizedResume.skills.slice(0, 5).join(', ') : 
+                  'No skills listed'}
+              </p>
             </div>
-            {optimizedResult.optimizedResume.additionalKeywords && (
-              <div>
-                <h5 className="font-medium text-green-900">Added Keywords</h5>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {optimizedResult.optimizedResume.additionalKeywords.slice(0, 6).map((keyword, index) => (
-                    <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                      {keyword}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -502,7 +532,7 @@ Preferred Qualifications:
                   <Download className="h-6 w-6 text-white" />
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-2">Multiple Formats</h3>
-                <p className="text-sm text-gray-600">Export your optimized resume in TEXT ATS-friendly formats</p>
+                <p className="text-sm text-gray-600">Export your optimized resume in ATS-friendly formats</p>
               </div>
             </div>
           </div>
@@ -548,7 +578,7 @@ Preferred Qualifications:
                 <div>
                   <span className="font-medium text-gray-700">Skills:</span>
                   <span className="ml-2 text-gray-600">
-                    {((resumeData?.skills.technical?.length || 0) + (resumeData?.skills.soft?.length || 0))} skills
+                    {Array.isArray(resumeData?.skills) ? resumeData.skills.length : 0} skills
                   </span>
                 </div>
               </div>
@@ -571,7 +601,18 @@ Preferred Qualifications:
                   <div className="text-sm text-gray-600">Copy and paste the job description</div>
                 </button>
                 
-               
+                <button
+                  onClick={() => setInputMethod('url')}
+                  className={`flex-1 p-4 rounded-lg border-2 transition-all duration-200 ${
+                    inputMethod === 'url'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  <Target className="h-6 w-6 mx-auto mb-2" />
+                  <div className="font-medium">Job URL</div>
+                  <div className="text-sm text-gray-600">Extract from job posting URL</div>
+                </button>
               </div>
             </div>
 
@@ -727,8 +768,6 @@ Preferred Qualifications:
                 </>
               )}
             </button>
-            
-           
           </div>
 
           {/* Detailed Analysis Toggle */}
@@ -758,17 +797,17 @@ Preferred Qualifications:
                   <div>
                     <h5 className="font-medium text-green-900 mb-2 flex items-center">
                       <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
-                      Found Keywords ({analysisResult.keywords.found.length})
+                      Found Keywords ({analysisResult.matchedKeywords.length})
                     </h5>
                     <div className="flex flex-wrap gap-2">
-                      {analysisResult.keywords.found.map((keyword, index) => (
+                      {analysisResult.matchedKeywords.slice(0, 10).map((keyword, index) => (
                         <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded-full">
                           {keyword}
                         </span>
                       ))}
-                      {analysisResult.keywords.found.length > 10 && (
+                      {analysisResult.matchedKeywords.length > 10 && (
                         <span className="px-2 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
-                          +{analysisResult.keywords.found.length - 10} more
+                          +{analysisResult.matchedKeywords.length - 10} more
                         </span>
                       )}
                     </div>
@@ -777,24 +816,25 @@ Preferred Qualifications:
                   <div>
                     <h5 className="font-medium text-red-900 mb-2 flex items-center">
                       <XCircle className="h-4 w-4 text-red-600 mr-1" />
-                      Missing Keywords ({analysisResult.keywords.missing.length})
+                      Missing Keywords ({analysisResult.missingKeywords.length})
                     </h5>
                     <div className="flex flex-wrap gap-2">
-                      {analysisResult.keywords.missing.map((keyword, index) => (
+                      {analysisResult.missingKeywords.slice(0, 8).map((keyword, index) => (
                         <span key={index} className="px-2 py-1 bg-red-100 text-red-800 text-sm rounded-full">
                           {keyword}
                         </span>
                       ))}
-                      {analysisResult.keywords.missing.length > 8 && (
+                      {analysisResult.missingKeywords.length > 8 && (
                         <span className="px-2 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
-                          +{analysisResult.keywords.missing.length - 8} more
+                          +{analysisResult.missingKeywords.length - 8} more
                         </span>
                       )}
                     </div>
                   </div>
                 </div>
               </div>
-    {/* Recommendations */}
+
+              {/* Recommendations */}
               <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
                 <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
                   <Lightbulb className="h-5 w-5 text-yellow-600 mr-2" />
@@ -903,7 +943,7 @@ Preferred Qualifications:
                       {optimizedResult.optimizedResume.personalInfo.name}
                     </h1>
                     <div className="text-gray-600">
-                      {optimizedResult.optimizedResume.personalInfo.email} | {optimizedResult.optimizedResume.personalInfo.phone} | {optimizedResult.optimizedResume.personalInfo.location}
+                      {optimizedResult.optimizedResume.personalInfo.email} | {optimizedResult.optimizedResume.personalInfo.phone} | {optimizedResult.optimizedResume.personalInfo.address}
                     </div>
                   </div>
 
@@ -934,23 +974,14 @@ Preferred Qualifications:
                     </div>
                   )}
 
-                  {(optimizedResult.optimizedResume.skills.technical.length > 0 || optimizedResult.optimizedResume.skills.soft.length > 0) && (
+                  {Array.isArray(optimizedResult.optimizedResume.skills) && optimizedResult.optimizedResume.skills.length > 0 && (
                     <div className="mb-6">
                       <h2 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-1">
                         SKILLS
                       </h2>
-                      {optimizedResult.optimizedResume.skills.technical.length > 0 && (
-                        <div className="mb-2">
-                          <strong className="text-gray-900">Technical:</strong>
-                          <span className="text-gray-700 ml-2">{optimizedResult.optimizedResume.skills.technical.join(', ')}</span>
-                        </div>
-                      )}
-                      {optimizedResult.optimizedResume.skills.soft.length > 0 && (
-                        <div>
-                          <strong className="text-gray-900">Soft Skills:</strong>
-                          <span className="text-gray-700 ml-2">{optimizedResult.optimizedResume.skills.soft.join(', ')}</span>
-                        </div>
-                      )}
+                      <div className="text-gray-700">
+                        {optimizedResult.optimizedResume.skills.join(', ')}
+                      </div>
                     </div>
                   )}
 
@@ -970,22 +1001,6 @@ Preferred Qualifications:
                           </div>
                         </div>
                       ))}
-                    </div>
-                  )}
-
-                  {optimizedResult.optimizedResume.additionalKeywords && (
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <h3 className="font-medium text-green-900 mb-2 flex items-center">
-                        <Plus className="h-4 w-4 mr-1" />
-                        Additional Keywords Added
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {optimizedResult.optimizedResume.additionalKeywords.map((keyword, index) => (
-                          <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded-full">
-                            {keyword}
-                          </span>
-                        ))}
-                      </div>
                     </div>
                   )}
                 </div>
