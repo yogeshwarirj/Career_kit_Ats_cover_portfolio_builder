@@ -301,7 +301,7 @@ ${personalInfo.name}`
     return templates[template as keyof typeof templates] || templates.professional;
   };
 
-  const handleLetterEdit = (newContent: string) => {
+  const handleLetterEdit = async (newContent: string) => {
     if (currentLetter) {
       const updatedLetter = { ...currentLetter, generatedLetter: newContent };
       const updatedLetters = savedLetters.map(letter => 
