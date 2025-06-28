@@ -41,7 +41,7 @@ const CoverLetterGenerator: React.FC = () => {
   const [subscription, setSubscription] = useState<UserSubscription>({
     isSubscribed: false,
     freeLettersUsed: 0,
-    maxFreeLetters: 300,
+    maxFreeLetters: 30,
     subscriptionType: null,
     expiresAt: null
   });
@@ -416,12 +416,16 @@ ${personalInfo.name}`
                   </>
                 ) : (
                   <>
-                  
+                    <span className="text-sm text-gray-600">
+                      {subscription.freeLettersUsed}/{subscription.maxFreeLetters} free letters used
+                    </span>
                   </>
                 )}
               </div>
               
-            
+              <button className="bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                {subscription.isSubscribed ? 'Manage Subscription' : 'Upgrade to Premium'}
+              </button>
             </div>
           </div>
         </div>
