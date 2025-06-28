@@ -162,15 +162,25 @@ Preferred Qualifications:
   };
 
   const handleOptimizeResume = async () => {
+    console.log('handleOptimizeResume called');
+    console.log('resumeData:', resumeData);
+    console.log('jobDescription:', jobDescription);
+    console.log('analysisResult:', analysisResult);
+
     if (!resumeData || !jobDescription || !analysisResult) {
-      toast.error('Resume data, job description, and analysis results are required');
+      toast.error('Resume data, job description, and analysis results are required to generate an optimized resume.', { 
+        duration: 5000 
+      });
       return;
     }
 
     setIsOptimizing(true);
 
     try {
+      console.log('Starting optimization process...');
       const optimizedResume = await atsAnalyzer.optimizeResume(resumeData, analysisResult);
+      console.log('Optimization completed:', optimizedResume);
+      
       const result: OptimizedResumeResult = {
         ...analysisResult,
         optimizedResume
@@ -179,6 +189,7 @@ Preferred Qualifications:
       
       // Save to Supabase if user is authenticated
       if (user) {
+        console.log('Saving to Supabase...');
         const atsResumeData: ATSOptimizedResume = {
           job_description_used: jobDescription,
           optimized_resume_data: optimizedResume,
@@ -187,15 +198,21 @@ Preferred Qualifications:
         };
         
         await supabaseService.saveATSResume(atsResumeData);
-        toast.success('ATS optimized resume saved to your account!');
+        toast.success('ATS optimized resume saved to your account!', { duration: 4000 });
+        console.log('Saved to Supabase successfully');
       }
       
       setCurrentStep('optimize');
-      toast.success('Optimized resume generated successfully!');
+      toast.success('Optimized resume generated successfully!', { duration: 4000 });
+      console.log('Process completed successfully');
     } catch (error) {
-      toast.error('Failed to generate optimized resume. Please try again.');
+      console.error('Optimization error:', error);
+      toast.error('Failed to generate optimized resume. Please try again.', { 
+        duration: 5000 
+      });
     } finally {
       setIsOptimizing(false);
+      console.log('handleOptimizeResume finished');
     }
   };
 
