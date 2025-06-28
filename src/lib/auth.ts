@@ -291,7 +291,10 @@ export class AuthService {
       const session = data?.session || null;
 
       if (error) {
-        console.error('Get user error:', error);
+        // Only log unexpected errors, not normal "no session" states
+        if (!error.message.includes('Auth session missing')) {
+          console.error('Get user error:', error);
+        }
         return { user: null, session: null };
       }
 
@@ -343,7 +346,11 @@ export class AuthService {
    * Handle authentication errors with specific messages
    */
   private handleAuthError(error: AuthError): AuthResult {
-    console.error('Auth error:', error);
+    // Only log unexpected errors, not user input validation errors
+    if (!error.message.includes('Invalid login credentials') && 
+        !error.message.includes('invalid_credentials')) {
+      console.error('Auth error:', error);
+    }
 
     let errorMessage = 'An unexpected error occurred';
 
