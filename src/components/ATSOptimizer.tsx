@@ -538,7 +538,7 @@ const ATSOptimizer: React.FC<ATSOptimizerProps> = ({ onClose, initialResumeData,
                     )}
 
                     {/* Skills */}
-                    {(optimizedResult.optimizedResume.skills.technical.length > 0 || optimizedResult.optimizedResume.skills.soft.length > 0) && (
+                    {(optimizedResult.optimizedResume.skills?.technical?.length > 0 || optimizedResult.optimizedResume.skills?.soft?.length > 0) && (
                       <div className="mb-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-300 pb-1">
                           CORE COMPETENCIES & SKILLS
@@ -547,11 +547,11 @@ const ATSOptimizer: React.FC<ATSOptimizerProps> = ({ onClose, initialResumeData,
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                               <h3 className="font-medium text-gray-900 mb-2">Technical Skills:</h3>
-                              <p className="text-gray-700">{optimizedResult.optimizedResume.skills.technical.join(' • ')}</p>
+                              <p className="text-gray-700">{optimizedResult.optimizedResume.skills?.technical?.join(' • ') || 'N/A'}</p>
                             </div>
                             <div>
                               <h3 className="font-medium text-gray-900 mb-2">Professional Skills:</h3>
-                              <p className="text-gray-700">{optimizedResult.optimizedResume.skills.soft.join(' • ')}</p>
+                              <p className="text-gray-700">{optimizedResult.optimizedResume.skills?.soft?.join(' • ') || 'N/A'}</p>
                             </div>
                           </div>
                         </div>
@@ -559,12 +559,12 @@ const ATSOptimizer: React.FC<ATSOptimizerProps> = ({ onClose, initialResumeData,
                     )}
 
                     {/* Experience */}
-                    {optimizedResult.optimizedResume.experience.length > 0 && (
+                    {optimizedResult.optimizedResume.experience?.length > 0 && (
                       <div className="mb-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-1">
                           PROFESSIONAL EXPERIENCE
                         </h2>
-                        {optimizedResult.optimizedResume.experience.map((exp, index) => (
+                        {optimizedResult.optimizedResume.experience?.map((exp, index) => (
                           <div key={index} className="mb-4">
                             <div className="flex justify-between items-start mb-1">
                               <h3 className="font-semibold text-gray-900">{exp.title}</h3>
@@ -578,12 +578,12 @@ const ATSOptimizer: React.FC<ATSOptimizerProps> = ({ onClose, initialResumeData,
                     )}
 
                     {/* Education */}
-                    {optimizedResult.optimizedResume.education.length > 0 && (
+                    {optimizedResult.optimizedResume.education?.length > 0 && (
                       <div className="mb-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-1">
                           EDUCATION
                         </h2>
-                        {optimizedResult.optimizedResume.education.map((edu, index) => (
+                        {optimizedResult.optimizedResume.education?.map((edu, index) => (
                           <div key={index} className="mb-2">
                             <div className="flex justify-between items-start">
                               <div>
@@ -598,13 +598,13 @@ const ATSOptimizer: React.FC<ATSOptimizerProps> = ({ onClose, initialResumeData,
                     )}
 
                     {/* Additional Keywords */}
-                    {optimizedResult.optimizedResume.additionalKeywords && (
+                    {optimizedResult.optimizedResume.additionalKeywords?.length > 0 && (
                       <div className="mb-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-1">
                           ADDITIONAL KEYWORDS
                         </h2>
                         <div className="text-gray-700 text-sm">
-                          {optimizedResult.optimizedResume.additionalKeywords.join(' • ')}
+                          {optimizedResult.optimizedResume.additionalKeywords?.join(' • ')}
                         </div>
                       </div>
                     )}
