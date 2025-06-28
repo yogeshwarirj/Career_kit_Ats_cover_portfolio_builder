@@ -415,29 +415,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onClose, initialMode = '
             </>
           )}
         </div>
-
-        {/* Features List */}
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-          <h4 className="font-medium text-gray-900 mb-3">With your CareerKit account:</h4>
-          <div className="space-y-2 text-sm text-gray-600">
-            <div className="flex items-center">
-              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-              <span>Save unlimited resumes and cover letters</span>
-            </div>
-            <div className="flex items-center">
-              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-              <span>Access your documents from any device</span>
-            </div>
-            <div className="flex items-center">
-              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-              <span>Track ATS optimization scores</span>
-            </div>
-            <div className="flex items-center">
-              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-              <span>Sync across all your devices</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
