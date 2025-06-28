@@ -39,7 +39,16 @@ function App() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Listen for custom auth events from Hero component
+    const handleOpenAuth = () => {
+      setShowAuthForm(true);
+    };
+
+    window.addEventListener('openAuth', handleOpenAuth);
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('openAuth', handleOpenAuth);
+    };
   }, []);
 
   const handleSignOut = () => {
@@ -98,15 +107,17 @@ function App() {
                       
                       {/* Auth/Profile Section */}
                       {isLoading ? (
-                        <div className="w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="flex items-center">
+                          <div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
                       ) : user ? (
                         <div className="flex items-center space-x-3">
                           <span className="text-sm text-gray-600 hidden sm:block">
-                            Welcome, {user.email?.split('@')[0]}
+                            Hi, {user.email?.split('@')[0] || 'User'}
                           </span>
                           <button 
                             onClick={() => setShowUserProfile(true)}
-                            className="flex items-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors duration-200"
+                            className="flex items-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors duration-200 shadow-md hover:shadow-lg"
                           >
                             <User className="h-4 w-4" />
                             <span>Profile</span>
@@ -115,7 +126,7 @@ function App() {
                       ) : (
                         <button 
                           onClick={() => setShowAuthForm(true)}
-                          className="flex items-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors duration-200"
+                          className="flex items-center space-x-2 bg-gradient-to-r from-teal-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:from-teal-700 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
                         >
                           <User className="h-4 w-4" />
                           <span>Sign In</span>
@@ -126,19 +137,21 @@ function App() {
                     {/* Mobile menu button */}
                     <div className="md:hidden">
                       {isLoading ? (
-                        <div className="w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="flex items-center">
+                          <div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
                       ) : user ? (
                         <button 
                           onClick={() => setShowUserProfile(true)}
-                          className="flex items-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors duration-200"
+                          className="flex items-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors duration-200 shadow-md"
                         >
                           <User className="h-4 w-4" />
-                          <span>Profile</span>
+                          <span className="hidden sm:inline">Profile</span>
                         </button>
                       ) : (
                         <button 
                           onClick={() => setShowAuthForm(true)}
-                          className="flex items-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors duration-200"
+                          className="flex items-center space-x-2 bg-gradient-to-r from-teal-600 to-blue-600 text-white px-4 py-2 rounded-lg hover:from-teal-700 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
                         >
                           <User className="h-4 w-4" />
                           <span>Sign In</span>
@@ -146,25 +159,26 @@ function App() {
                       )}
                     </div>
 
-                    {/* Bolt.new Badge - Top Right */}
-                    <div className="absolute top-2 right-2 z-50">
-                      <a 
-                        href="https://bolt.new/" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="block transition-transform duration-200 hover:scale-110"
-                        aria-label="Built with Bolt.new"
-                      >
-                        <img 
-                          src="/white_circle_360x360.png" 
-                          alt="Built with Bolt.new" 
-                          className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full shadow-lg hover:shadow-xl transition-shadow duration-200"
-                        />
-                      </a>
-                    </div>
                   </div>
                 </div>
               </header>
+              
+              {/* Bolt.new Badge - Fixed Position */}
+              <div className="fixed top-4 right-4 z-50">
+                <a 
+                  href="https://bolt.new/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="block transition-transform duration-200 hover:scale-110"
+                  aria-label="Built with Bolt.new"
+                >
+                  <img 
+                    src="/white_circle_360x360.png" 
+                    alt="Built with Bolt.new" 
+                    className="w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg hover:shadow-xl transition-shadow duration-200"
+                  />
+                </a>
+              </div>
               
               <main>
                 <Hero />

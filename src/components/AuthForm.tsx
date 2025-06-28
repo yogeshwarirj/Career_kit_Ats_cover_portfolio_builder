@@ -131,6 +131,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onClose }) => {
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
                 placeholder="Enter your email"
                 required
+                autoComplete="email"
               />
             </div>
           </div>
@@ -150,6 +151,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onClose }) => {
                 placeholder="Enter your password"
                 required
                 minLength={6}
+                autoComplete={isSignUp ? "new-password" : "current-password"}
               />
               <button
                 type="button"
@@ -181,6 +183,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess, onClose }) => {
                   placeholder="Confirm your password"
                   required
                   minLength={6}
+                  autoComplete="new-password"
                 />
               </div>
             </div>
