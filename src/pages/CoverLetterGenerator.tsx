@@ -4,12 +4,10 @@ import { ArrowLeft, FileText, User, Building, Briefcase, Sparkles, Download, Cop
 import { Toaster, toast } from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { supabaseService, CoverLetterData as SupabaseCoverLetterData } from '../lib/supabaseService';
+import { supabaseService, CoverLetterData } from '../lib/supabaseService';
 import { auth } from '../lib/supabase';
-
-interface CoverLetterData extends SupabaseCoverLetterData {
-  // Extending the Supabase interface
-}
+import { ResumeUploader } from '../components/ResumeUploader';
+import { ParsedResume } from '../lib/resumeParser';
 
 interface UserSubscription {
   isSubscribed: boolean;
@@ -25,10 +23,11 @@ const CoverLetterGenerator: React.FC = () => {
   const [selectedTemplate, setSelectedTemplate] = useState('professional');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [savedLetters, setSavedLetters] = useState<CoverLetterData[]>([]);
+  const [user, setUser] = useState<any>(null);
   const [subscription, setSubscription] = useState<UserSubscription>({
     isSubscribed: false,
     freeLettersUsed: 0,
-    maxFreeLetters: 30,
+    maxFreeLetters: 3,
     subscriptionType: null,
     expiresAt: null
   });
@@ -50,112 +49,98 @@ const CoverLetterGenerator: React.FC = () => {
   });
 
   const [currentLetter, setCurrentLetter] = useState<CoverLetterData | null>(null);
-  const [user, setUser] = useState<any>(null);
 
   // Load saved data on component mount
   useEffect(() => {
     // Check authentication status
-    auth.getCurrentUser().then(({ data: { user } }) => {
+    auth.getCurrentUser().then(({ user }) => {
       setUser(user);
+      if (user) {
+        loadSavedData();
+      } else {
+        loadLocalData();
+      }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = auth.onAuthStateChange((event, session) => {
       setUser(session?.user || null);
+      if (session?.user) {
+        loadSavedData();
+      } else {
+        loadLocalData();
+      }
     });
-
-    loadSavedData();
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const loadSavedData = () => {
+  const loadSavedData = async () => {
     try {
-      // Load subscription data from localStorage
+      const result = await supabaseService.getCoverLetters();
+      if (result.success && result.data) {
+        setSavedLetters(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading saved data:', error);
+      // Fall back to local storage
+      loadLocalData();
+    }
+  };
+
+  const loadLocalData = () => {
+    try {
+      const saved = localStorage.getItem('coverLetters');
       const sub = localStorage.getItem('subscription');
+      
+      if (saved) {
+        setSavedLetters(JSON.parse(saved));
+      }
+      
       if (sub) {
         setSubscription(JSON.parse(sub));
       }
-      
-      // Load cover letters from Supabase if authenticated, otherwise from localStorage
-      auth.getCurrentUser().then(({ data: { user } }) => {
-        if (user) {
-          supabaseService.getCoverLetters().then(result => {
-            if (result.success && result.data) {
-              // Convert Supabase data to local format
-              const convertedLetters: CoverLetterData[] = result.data.map(letter => ({
-                id: letter.id || '',
-                jobTitle: letter.job_title,
-                companyName: letter.company_name,
-                personalInfo: letter.personal_info,
-                skills: letter.skills,
-                jobDescription: letter.job_description || '',
-                generatedLetter: letter.generated_letter,
-                template: letter.template,
-                createdAt: letter.created_at || new Date().toISOString(),
-                // Include Supabase fields
-                job_title: letter.job_title,
-                company_name: letter.company_name,
-                personal_info: letter.personal_info,
-                generated_letter: letter.generated_letter,
-                created_at: letter.created_at,
-                last_updated: letter.last_updated
-              }));
-              setSavedLetters(convertedLetters);
-            }
-          }).catch(error => {
-            console.error('Failed to load from Supabase:', error);
-            // Fall back to localStorage
-            const saved = localStorage.getItem('coverLetters');
-            if (saved) {
-              setSavedLetters(JSON.parse(saved));
-            }
-          });
-        } else {
-          // Load from localStorage if not authenticated
-          const saved = localStorage.getItem('coverLetters');
-          if (saved) {
-            setSavedLetters(JSON.parse(saved));
-          }
-        }
-      });
     } catch (error) {
-      console.error('Error loading saved data:', error);
+      console.error('Error loading local data:', error);
     }
   };
 
   const saveToStorage = async (letters: CoverLetterData[], sub: UserSubscription) => {
     try {
-      // Always save subscription to localStorage
-      localStorage.setItem('subscription', JSON.stringify(sub));
-      
-      // Save cover letters to Supabase if authenticated, otherwise localStorage
-      const { data: { user } } = await auth.getCurrentUser();
+      // Save to Supabase if authenticated
       if (user && letters.length > 0) {
-        // Save the latest letter to Supabase
         const latestLetter = letters[letters.length - 1];
-        const supabaseData: SupabaseCoverLetterData = {
-          id: latestLetter.id,
-          job_title: latestLetter.jobTitle,
-          company_name: latestLetter.companyName,
-          personal_info: latestLetter.personalInfo,
-          skills: latestLetter.skills,
-          job_description: latestLetter.jobDescription,
-          generated_letter: latestLetter.generatedLetter,
-          template: latestLetter.template
-        };
-        
-        await supabaseService.saveCoverLetter(supabaseData);
-      } else {
-        // Fall back to localStorage
-        localStorage.setItem('coverLetters', JSON.stringify(letters));
+        await supabaseService.saveCoverLetter(latestLetter);
       }
+      
+      // Always save to localStorage as backup
+      localStorage.setItem('coverLetters', JSON.stringify(letters));
+      localStorage.setItem('subscription', JSON.stringify(sub));
     } catch (error) {
-      console.error('Error saving to storage:', error);
-      // Always fall back to localStorage
+      console.error('Error saving data:', error);
+      // Fall back to localStorage only
       localStorage.setItem('coverLetters', JSON.stringify(letters));
       localStorage.setItem('subscription', JSON.stringify(sub));
     }
+  };
+
+  const handleResumeUpload = (parsedResume: ParsedResume) => {
+    // Auto-fill form data from uploaded resume
+    setFormData(prev => ({
+      ...prev,
+      personalInfo: {
+        name: parsedResume.personalInfo?.name || '',
+        email: parsedResume.personalInfo?.email || '',
+        phone: parsedResume.personalInfo?.phone || '',
+        address: parsedResume.personalInfo?.location || '',
+        linkedin: parsedResume.personalInfo?.linkedin || '',
+        portfolio: parsedResume.personalInfo?.website || ''
+      },
+      skills: [...(parsedResume.skills?.technical || []), ...(parsedResume.skills?.soft || [])],
+      skillsInput: [...(parsedResume.skills?.technical || []), ...(parsedResume.skills?.soft || [])].join(', ')
+    }));
+    
+    toast.success('Resume data imported successfully!');
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -202,19 +187,13 @@ const CoverLetterGenerator: React.FC = () => {
       
       const newLetter: CoverLetterData = {
         id: Date.now().toString(),
-        jobTitle: formData.jobTitle,
-        companyName: formData.companyName,
-        personalInfo: formData.personalInfo,
-        skills: formData.skills,
-        jobDescription: formData.jobDescription,
-        generatedLetter: generatedContent,
-        template: selectedTemplate,
-        createdAt: new Date().toISOString(),
-        // Supabase fields
         job_title: formData.jobTitle,
         company_name: formData.companyName,
         personal_info: formData.personalInfo,
+        skills: formData.skills,
+        job_description: formData.jobDescription,
         generated_letter: generatedContent,
+        template: selectedTemplate,
         created_at: new Date().toISOString()
       };
 
@@ -303,7 +282,7 @@ ${personalInfo.name}`
 
   const handleLetterEdit = async (newContent: string) => {
     if (currentLetter) {
-      const updatedLetter = { ...currentLetter, generatedLetter: newContent };
+      const updatedLetter = { ...currentLetter, generated_letter: newContent };
       const updatedLetters = savedLetters.map(letter => 
         letter.id === currentLetter.id ? updatedLetter : letter
       );
@@ -332,7 +311,7 @@ ${personalInfo.name}`
     tempDiv.style.color = '#000000';
     tempDiv.style.backgroundColor = '#ffffff';
     tempDiv.style.whiteSpace = 'pre-wrap';
-    tempDiv.innerHTML = currentLetter.generatedLetter.replace(/\n/g, '<br>');
+    tempDiv.innerHTML = currentLetter.generated_letter.replace(/\n/g, '<br>');
     
     document.body.appendChild(tempDiv);
     
@@ -395,7 +374,7 @@ ${personalInfo.name}`
           }
         }
         
-        const fileName = `${currentLetter.companyName}_${currentLetter.jobTitle}_Cover_Letter.pdf`;
+        const fileName = `${currentLetter.company_name}_${currentLetter.job_title}_Cover_Letter.pdf`;
         pdf.save(fileName);
         
         // Clean up
@@ -417,7 +396,7 @@ ${personalInfo.name}`
   const copyToClipboard = () => {
     if (!currentLetter) return;
     
-    navigator.clipboard.writeText(currentLetter.generatedLetter);
+    navigator.clipboard.writeText(currentLetter.generated_letter);
     toast.success('Cover letter copied to clipboard!');
   };
 
@@ -485,16 +464,12 @@ ${personalInfo.name}`
                   </>
                 ) : (
                   <>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-700">
                       {subscription.freeLettersUsed}/{subscription.maxFreeLetters} free letters used
                     </span>
                   </>
                 )}
               </div>
-              
-              <button className="bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200">
-                {subscription.isSubscribed ? 'Manage Subscription' : 'Upgrade to Premium'}
-              </button>
             </div>
           </div>
         </div>
@@ -560,6 +535,24 @@ ${personalInfo.name}`
             </div>
 
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+              {/* Resume Upload Section */}
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                  <FileText className="h-5 w-5 mr-2 text-teal-600" />
+                  Import from Resume (Optional)
+                </h3>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-blue-800">
+                    Upload your resume to automatically fill in your personal information and skills.
+                  </p>
+                </div>
+                <ResumeUploader
+                  onResumeUploaded={handleResumeUpload}
+                  mode="cover-letter"
+                  className="max-w-2xl mx-auto"
+                />
+              </div>
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Personal Information */}
                 <div>
@@ -793,7 +786,7 @@ ${personalInfo.name}`
                     <Crown className="h-12 w-12 text-white" />
                   </div>
                   
-                
+                  <h2 className="text-3xl font-bold text-gray-900 mb-4">Upgrade to Premium</h2>
                   <p className="text-lg text-gray-600 mb-8">
                     You've used all {subscription.maxFreeLetters} free cover letters. Upgrade to premium for unlimited access!
                   </p>
@@ -830,7 +823,7 @@ ${personalInfo.name}`
                   
                   <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
                     <button className="bg-gradient-to-r from-teal-600 to-blue-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-teal-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105">
-                      {user ? 'Upgrade for $3 (7 Letters)' : 'Sign In to Upgrade'}
+                      Upgrade for $9.99/month
                     </button>
                     <button 
                       onClick={() => setCurrentStep('input')}
@@ -957,17 +950,17 @@ ${personalInfo.name}`
                   <div className="mt-6 p-3 bg-green-50 rounded-lg">
                     <div className="flex items-center text-sm text-green-800">
                       <Save className="h-4 w-4 mr-2" />
-                      Auto-saved locally
+                      {user ? 'Saved to cloud' : 'Saved locally'}
                     </div>
                   </div>
 
                   <div className="mt-4">
                     <h4 className="font-medium text-gray-900 mb-2">Letter Details</h4>
                     <div className="space-y-1 text-sm text-gray-600">
-                      <p><strong>Position:</strong> {currentLetter.jobTitle}</p>
-                      <p><strong>Company:</strong> {currentLetter.companyName}</p>
+                      <p><strong>Position:</strong> {currentLetter.job_title}</p>
+                      <p><strong>Company:</strong> {currentLetter.company_name}</p>
                       <p><strong>Template:</strong> {templates.find(t => t.id === currentLetter.template)?.name}</p>
-                      <p><strong>Created:</strong> {new Date(currentLetter.createdAt).toLocaleDateString()}</p>
+                      <p><strong>Created:</strong> {new Date(currentLetter.created_at || '').toLocaleDateString()}</p>
                     </div>
                   </div>
                 </div>
@@ -979,20 +972,20 @@ ${personalInfo.name}`
                   {isPreviewMode ? (
                     <div className="prose max-w-none">
                       <div className="whitespace-pre-wrap font-serif text-gray-900 leading-relaxed">
-                        {currentLetter.generatedLetter}
+                        {currentLetter.generated_letter}
                       </div>
                     </div>
                   ) : (
                     <div>
                       <h3 className="text-xl font-semibold text-gray-900 mb-4">Edit Your Cover Letter</h3>
                       <textarea
-                        value={currentLetter.generatedLetter}
+                        value={currentLetter.generated_letter}
                         onChange={(e) => handleLetterEdit(e.target.value)}
                         className="w-full h-96 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200 font-serif"
                         placeholder="Edit your cover letter here..."
                       />
                       <p className="text-sm text-gray-500 mt-2">
-                        Characters: {currentLetter.generatedLetter.length}
+                        Characters: {currentLetter.generated_letter.length}
                       </p>
                     </div>
                   )}
@@ -1032,32 +1025,24 @@ ${personalInfo.name}`
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
               <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
                 <Clock className="h-6 w-6 mr-2 text-teal-600" />
-                {user ? 'Your Saved Cover Letters' : 'Recent Cover Letters (Local)'}
+                Your Saved Cover Letters
               </h3>
-              
-              {!user && (
-                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-blue-800 text-sm">
-                    <strong>Sign in to save your cover letters permanently</strong> and access them from any device.
-                  </p>
-                </div>
-              )}
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {savedLetters.slice(-6).map((letter) => (
                   <div key={letter.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow duration-200">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h4 className="font-semibold text-gray-900">{letter.jobTitle}</h4>
-                        <p className="text-sm text-gray-600">{letter.companyName}</p>
+                        <h4 className="font-semibold text-gray-900">{letter.job_title}</h4>
+                        <p className="text-sm text-gray-600">{letter.company_name}</p>
                       </div>
                       <span className="text-xs text-gray-500">
-                        {new Date(letter.createdAt).toLocaleDateString()}
+                        {new Date(letter.created_at || '').toLocaleDateString()}
                       </span>
                     </div>
                     
                     <p className="text-sm text-gray-700 mb-4 line-clamp-3">
-                      {letter.generatedLetter.substring(0, 150)}...
+                      {letter.generated_letter.substring(0, 150)}...
                     </p>
                     
                     <div className="flex space-x-2">
