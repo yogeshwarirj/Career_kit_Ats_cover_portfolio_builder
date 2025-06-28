@@ -59,14 +59,3 @@ const Hero: React.FC = () => {
 };
 
 export default Hero;
-              Get Started with CareerKit
-             
-            </a>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-};
-
-export default Hero;
