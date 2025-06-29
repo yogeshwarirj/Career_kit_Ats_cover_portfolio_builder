@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Volume2, VolumeX, X, Maximize2, Minimize2, MessageCircle, Sparkles, FileText, Mail, Target, Briefcase, Brain, Shield, Award, Users, Star, CheckCircle, Zap, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Minimize, Maximize2, Minimize2, MessageCircle, Sparkles, FileText, Mail, Target, Briefcase, Brain, Shield, Award, Users, Star, CheckCircle, Zap, ArrowLeft, ArrowRight } from 'lucide-react';
 import { elevenLabsService, playText, stopAudio } from '../lib/elevenLabsService';
 import toast from 'react-hot-toast';
 
@@ -229,6 +229,18 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
     toast.success(newMutedState ? '🔇 Voice muted' : '🔊 Voice enabled');
   };
 
+  const minimizeToButton = () => {
+    // Stop any playing audio
+    if (isPlaying) {
+      setIsPlaying(false);
+      stopAudio();
+      setIsSpeaking(false);
+      playbackRef.current = false;
+    }
+    setIsVisible(false);
+    toast.success('📝 AI Career Coach minimized');
+  };
+
   const goToFeature = (index: number) => {
     // Stop current playback
     playbackRef.current = false;
@@ -300,6 +312,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
               <button
                 onClick={toggleMute}
                 className="p-2 hover:bg-white/20 rounded-lg transition-colors duration-200"
+                title={isMuted ? "Unmute voice" : "Mute voice"}
               >
                 {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
               </button>
@@ -307,15 +320,17 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
               <button
                 onClick={toggleExpanded}
                 className="p-2 hover:bg-white/20 rounded-lg transition-colors duration-200"
+                title={isExpanded ? "Minimize view" : "Expand view"}
               >
                 {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
               </button>
               
               <button
-                onClick={toggleVisibility}
+                onClick={minimizeToButton}
                 className="p-2 hover:bg-white/20 rounded-lg transition-colors duration-200"
+                title="Minimize to button"
               >
-                <X className="h-4 w-4" />
+                <Minimize className="h-4 w-4" />
               </button>
             </div>
           </div>
