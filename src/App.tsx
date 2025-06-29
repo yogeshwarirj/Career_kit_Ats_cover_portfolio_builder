@@ -36,12 +36,6 @@ function App() {
                         Home
                       </Link>
                       <Link 
-                        to="/resume-builder" 
-                        className="text-gray-700 hover:text-teal-600 transition-colors duration-200"
-                      >
-                        Resume Builder
-                      </Link>
-                      <Link 
                         to="/cover-letter" 
                         className="text-gray-700 hover:text-teal-600 transition-colors duration-200"
                       >
@@ -65,19 +59,9 @@ function App() {
                       >
                         Portfolio Builder
                       </Link>
-                      <button className="flex items-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors duration-200">
-                        <User className="h-4 w-4" />
-                        <span>Log In</span>
-                      </button>
                     </nav>
 
                     {/* Mobile menu button */}
-                    <div className="md:hidden">
-                      <button className="flex items-center space-x-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors duration-200">
-                        <User className="h-4 w-4" />
-                        <span>Log In</span>
-                      </button>
-                    </div>
 
                     {/* Bolt.new Badge - Top Right */}
                     <div className="absolute top-2 right-2 z-50">
