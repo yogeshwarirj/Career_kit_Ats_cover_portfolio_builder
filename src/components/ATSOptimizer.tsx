@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileText, Target, Zap, Shield, TrendingUp, CheckCircle, AlertTriangle, XCircle, Download, Copy, Eye, EyeOff, RefreshCw, Star, Award, Users, Lightbulb, ArrowRight, BarChart3, PieChart, Activity, Sparkles, Edit3, Save, Plus, Mail, AlertCircle } from 'lucide-react';
+import { Upload, FileText, Target, Zap, Shield, TrendingUp, CheckCircle, AlertTriangle, XCircle, Download, Copy, Eye, EyeOff, RefreshCw, Star, Award, Users, Lightbulb, ArrowRight, BarChart3, PieChart, Activity, Sparkles, Edit3, Save, Plus } from 'lucide-react';
 import { ResumeData } from '../lib/localStorage';
-import { ATSAnalyzer, ATSAnalysisResult } from '../lib/atsAnalyzer';
 import { geminiATSAnalyzer, GeminiATSAnalysisResult } from '../lib/geminiATSAnalyzer';
 import { ResumeUploader } from './ResumeUploader';
 import { ParsedResume } from '../lib/resumeParser';
@@ -15,12 +14,6 @@ interface ATSOptimizerProps {
   className?: string;
 }
 
-interface OptimizedResumeResult extends ATSAnalysisResult {
-  optimizedResume?: ResumeData;
-  geminiAnalysis?: GeminiATSAnalysisResult;
-  atsLetter?: string;
-}
-
 const ATSOptimizer: React.FC<ATSOptimizerProps> = ({ onClose, initialResumeData, className = '' }) => {
   const [currentStep, setCurrentStep] = useState<'upload' | 'analyze' | 'results' | 'optimize'>('upload');
   const [resumeData, setResumeData] = useState<ResumeData | null>(initialResumeData || null);
@@ -28,27 +21,17 @@ const ATSOptimizer: React.FC<ATSOptimizerProps> = ({ onClose, initialResumeData,
   const [jobUrl, setJobUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<ATSAnalysisResult | null>(null);
-  const [optimizedResult, setOptimizedResult] = useState<OptimizedResumeResult | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<GeminiATSAnalysisResult | null>(null);
+  const [optimizedResult, setOptimizedResult] = useState<GeminiATSAnalysisResult | null>(null);
   const [inputMethod, setInputMethod] = useState<'text' | 'url'>('text');
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
-  const [showATSLetter, setShowATSLetter] = useState(false);
   const [editingOptimized, setEditingOptimized] = useState(false);
-  const [useGeminiAI, setUseGeminiAI] = useState(true);
-  const [geminiStatus, setGeminiStatus] = useState<{ configured: boolean; message: string }>({ configured: false, message: '' });
-
-  const atsAnalyzer = ATSAnalyzer.getInstance();
 
   useEffect(() => {
     if (initialResumeData) {
       setCurrentStep('analyze');
     }
-    
-    // Check Gemini configuration status
-    const status = geminiATSAnalyzer.getConfigurationStatus();
-    setGeminiStatus(status);
-    setUseGeminiAI(status.configured);
   }, [initialResumeData]);
 
   const handleResumeUpload = (parsedResume: ParsedResume) => {
@@ -114,6 +97,13 @@ Preferred Qualifications:
       return;
     }
 
+    // Check if Gemini is configured
+    const configStatus = geminiATSAnalyzer.getConfigurationStatus();
+    if (!configStatus.configured) {
+      toast.error(configStatus.message);
+      return;
+    }
+
     let finalJobDescription = jobDescription;
 
     if (inputMethod === 'url' && jobUrl) {
@@ -137,225 +127,75 @@ Preferred Qualifications:
     setIsAnalyzing(true);
 
     try {
-      let result: ATSAnalysisResult;
-      
-      if (useGeminiAI && geminiATSAnalyzer.isConfigured()) {
-        try {
-          console.log('Using Gemini AI for analysis...');
-          const geminiResult = await geminiATSAnalyzer.analyzeResumeWithGemini(resumeData, finalJobDescription);
-          
-          // Convert Gemini result to standard format
-          result = {
-            overallScore: geminiResult.overallScore,
-            keywordScore: geminiResult.keywordScore,
-            formatScore: geminiResult.formatScore,
-            contentScore: geminiResult.contentScore,
-            keywords: geminiResult.keywords,
-            formatting: {
-              issues: geminiResult.weaknesses,
-              recommendations: geminiResult.recommendations.slice(0, 3)
-            },
-            content: {
-              strengths: geminiResult.strengths,
-              improvements: geminiResult.weaknesses
-            },
-            recommendations: geminiResult.recommendations,
-            detailedAnalysis: {
-              sections: [
-                {
-                  name: 'AI Analysis',
-                  score: geminiResult.overallScore,
-                  issues: geminiResult.weaknesses,
-                  suggestions: geminiResult.recommendations.slice(0, 3)
-                }
-              ],
-              readabilityScore: geminiResult.readabilityScore,
-              lengthAnalysis: {
-                wordCount: finalJobDescription.split(' ').length,
-                optimal: true,
-                recommendation: 'Resume length is appropriate for ATS processing'
-              }
-            }
-          };
-          
-          toast.success('AI-powered ATS analysis completed!');
-        } catch (error) {
-          console.error('Gemini analysis failed:', error);
-          
-          // Handle specific error types
-          if (error instanceof Error) {
-            if (error.message === 'GEMINI_NOT_CONFIGURED') {
-              toast.error('Gemini AI not configured. Using standard analysis.');
-            } else if (error.message === 'INVALID_API_KEY') {
-              toast.error('Invalid Gemini API key. Using standard analysis.');
-            } else if (error.message === 'QUOTA_EXCEEDED') {
-              toast.error('Gemini API quota exceeded. Using standard analysis.');
-            } else if (error.message === 'NETWORK_ERROR') {
-              toast.error('Network error. Using standard analysis.');
-            } else {
-              toast.error('AI analysis failed. Using standard analysis.');
-            }
-          }
-          
-          // Fallback to standard analysis
-          result = await atsAnalyzer.analyzeResume(resumeData, finalJobDescription);
-        }
-      } else {
-        console.log('Using standard analysis...');
-        result = await atsAnalyzer.analyzeResume(resumeData, finalJobDescription);
-        if (!geminiStatus.configured) {
-          toast.error('AI analysis unavailable, using standard analysis', { duration: 4000 });
-        }
-      }
-      
+      const result = await geminiATSAnalyzer.analyzeResumeWithGemini(resumeData, finalJobDescription);
       setAnalysisResult(result);
       setCurrentStep('results');
+      toast.success('ATS analysis completed with Gemini AI!');
     } catch (error) {
-      toast.error('Analysis failed. Please try again.');
+      console.error('Analysis error:', error);
+      
+      // Handle specific error types
+      if (error instanceof Error) {
+        switch (error.message) {
+          case 'INVALID_API_KEY':
+            toast.error('Invalid Gemini API key. Please check your configuration.');
+            break;
+          case 'QUOTA_EXCEEDED':
+            toast.error('API quota exceeded. Please try again later.');
+            break;
+          case 'NETWORK_ERROR':
+            toast.error('Network error. Please check your internet connection.');
+            break;
+          case 'GEMINI_NOT_CONFIGURED':
+            toast.error('Gemini AI is not configured. Please add your API key.');
+            break;
+          default:
+            toast.error('Analysis failed. Please try again.');
+        }
+      } else {
+        toast.error('Analysis failed. Please try again.');
+      }
     } finally {
       setIsAnalyzing(false);
     }
   };
 
   const handleOptimizeResume = async () => {
-    if (!resumeData || !jobDescription) {
-      toast.error('Resume data and job description are required');
+    if (!analysisResult) {
+      toast.error('Please run analysis first');
       return;
     }
 
     setIsOptimizing(true);
 
     try {
-      let result: OptimizedResumeResult;
-      
-      if (useGeminiAI && geminiATSAnalyzer.isConfigured()) {
-        try {
-          console.log('Using Gemini AI for optimization...');
-          const geminiResult = await geminiATSAnalyzer.analyzeResumeWithGemini(resumeData, jobDescription);
-          
-          // Create optimized resume from Gemini suggestions
-          const optimizedResume = { ...resumeData };
-          
-          if (geminiResult.optimizedContent.summary) {
-            optimizedResume.summary = geminiResult.optimizedContent.summary;
-          }
-          
-          if (geminiResult.optimizedContent.skills.length > 0) {
-            optimizedResume.skills = {
-              ...optimizedResume.skills,
-              technical: [...new Set([...optimizedResume.skills.technical, ...geminiResult.optimizedContent.skills])]
-            };
-          }
-          
-          if (geminiResult.optimizedContent.additionalKeywords.length > 0) {
-            (optimizedResume as any).additionalKeywords = geminiResult.optimizedContent.additionalKeywords;
-          }
-          
-          // Convert to expected format
-          result = {
-            overallScore: geminiResult.overallScore,
-            keywordScore: geminiResult.keywordScore,
-            formatScore: geminiResult.formatScore,
-            contentScore: geminiResult.contentScore,
-            keywords: geminiResult.keywords,
-            formatting: {
-              issues: geminiResult.weaknesses,
-              recommendations: geminiResult.recommendations.slice(0, 3)
-            },
-            content: {
-              strengths: geminiResult.strengths,
-              improvements: geminiResult.weaknesses
-            },
-            recommendations: geminiResult.recommendations,
-            detailedAnalysis: {
-              sections: [
-                {
-                  name: 'AI Optimization',
-                  score: geminiResult.overallScore,
-                  issues: geminiResult.weaknesses,
-                  suggestions: geminiResult.recommendations.slice(0, 3)
-                }
-              ],
-              readabilityScore: geminiResult.readabilityScore,
-              lengthAnalysis: {
-                wordCount: jobDescription.split(' ').length,
-                optimal: true,
-                recommendation: 'Resume length is optimized for ATS processing'
-              }
-            },
-            optimizedResume
-          };
-          
-          toast.success('AI-powered optimized resume generated!');
-        } catch (error) {
-          console.error('Gemini optimization failed:', error);
-          toast.error('AI optimization failed. Using standard optimization.');
-          result = await atsAnalyzer.generateOptimizedResume(resumeData, jobDescription);
-        }
-      } else {
-        result = await atsAnalyzer.generateOptimizedResume(resumeData, jobDescription);
-        if (!geminiStatus.configured) {
-          toast.error('AI optimization unavailable, using standard optimization', { duration: 4000 });
-        }
-      }
-      
-      setOptimizedResult(result);
+      // Since analyzeResumeWithGemini already returns optimized content and ATS letter,
+      // we just need to set the optimized result
+      setOptimizedResult(analysisResult);
       setCurrentStep('optimize');
+      toast.success('ATS-optimized cover letter is ready!');
     } catch (error) {
-      toast.error('Failed to generate optimized resume. Please try again.');
+      toast.error('Failed to prepare optimized content. Please try again.');
     } finally {
       setIsOptimizing(false);
     }
   };
 
-  const createOptimizedResumeFromGemini = (originalResume: ResumeData, geminiAnalysis: GeminiATSAnalysisResult): ResumeData => {
-    return {
-      ...originalResume,
-      summary: geminiAnalysis.optimizedContent.summary,
-      experience: originalResume.experience.map((exp, index) => {
-        const optimizedExp = geminiAnalysis.optimizedContent.experience[index];
-        return optimizedExp ? {
-          ...exp,
-          description: optimizedExp.description
-        } : exp;
-      }),
-      skills: {
-        technical: [...new Set([...(originalResume.skills?.technical || []), ...geminiAnalysis.optimizedContent.skills])],
-        soft: originalResume.skills?.soft || []
-      },
-      additionalKeywords: geminiAnalysis.optimizedContent.additionalKeywords
-    };
-  };
-
-  const extractResumeText = (resumeData: ResumeData): string => {
-    const sections = [
-      resumeData.personalInfo?.name || '',
-      resumeData.summary || '',
-      resumeData.experience?.map(exp => 
-        `${exp.title} ${exp.company} ${exp.description}`
-      ).join(' ') || '',
-      resumeData.education?.map(edu => 
-        `${edu.degree} ${edu.school}`
-      ).join(' ') || '',
-      resumeData.skills?.technical?.join(' ') || '',
-      resumeData.skills?.soft?.join(' ') || ''
-    ];
-    
-    return sections.filter(section => section.trim()).join(' ');
-  };
-
   const handleDownloadOptimized = () => {
-    if (!optimizedResult?.optimizedResume) return;
+    if (!optimizedResult?.atsLetter) {
+      toast.error('No ATS letter available to download');
+      return;
+    }
 
     // Extract first name from the resume data
-    const fullName = optimizedResult.optimizedResume.personalInfo?.name || '';
-    const firstName = fullName.split(' ')[0] || 'resume';
+    const fullName = resumeData?.personalInfo?.name || '';
+    const firstName = fullName.split(' ')[0] || 'cover';
     // Clean the first name to be filename-safe
     const cleanFirstName = firstName.toLowerCase().replace(/[^a-z0-9]/g, '');
     
     const element = document.getElementById('optimized-resume-content');
     if (!element) {
-      toast.error('Resume content not found. Please try again.');
+      toast.error('Cover letter content not found. Please try again.');
       return;
     }
 
@@ -418,10 +258,10 @@ Preferred Qualifications:
           }
         }
         
-        const fileName = `${cleanFirstName}_ats_resume.pdf`;
+        const fileName = `${cleanFirstName}_ats_cover_letter.pdf`;
         pdf.save(fileName);
         
-        toast.success('Optimized resume downloaded as PDF!', { id: 'pdf-generation' });
+        toast.success('ATS-optimized cover letter downloaded as PDF!', { id: 'pdf-generation' });
       } catch (error) {
         console.error('PDF generation error:', error);
         toast.error('Failed to generate PDF. Please try again.', { id: 'pdf-generation' });
@@ -430,43 +270,6 @@ Preferred Qualifications:
       console.error('Canvas generation error:', error);
       toast.error('Failed to generate PDF. Please try again.', { id: 'pdf-generation' });
     });
-  };
-
-  const generateResumeText = (resume: ResumeData): string => {
-    let text = `${resume.personalInfo.name}\n`;
-    text += `${resume.personalInfo.email} | ${resume.personalInfo.phone} | ${resume.personalInfo.location}\n\n`;
-    
-    if (resume.summary) {
-      text += `PROFESSIONAL SUMMARY\n${resume.summary}\n\n`;
-    }
-    
-    if (resume.experience.length > 0) {
-      text += `EXPERIENCE\n`;
-      resume.experience.forEach(exp => {
-        text += `${exp.title} | ${exp.company} | ${exp.startDate} - ${exp.endDate}\n`;
-        text += `${exp.description}\n\n`;
-      });
-    }
-    
-    if (resume.skills.technical.length > 0 || resume.skills.soft.length > 0) {
-      text += `SKILLS\n`;
-      if (resume.skills.technical.length > 0) {
-        text += `Technical: ${resume.skills.technical.join(', ')}\n`;
-      }
-      if (resume.skills.soft.length > 0) {
-        text += `Soft Skills: ${resume.skills.soft.join(', ')}\n`;
-      }
-      text += '\n';
-    }
-    
-    if (resume.education.length > 0) {
-      text += `EDUCATION\n`;
-      resume.education.forEach(edu => {
-        text += `${edu.degree} | ${edu.school} | ${edu.graduationYear}\n`;
-      });
-    }
-    
-    return text;
   };
 
   const getScoreColor = (score: number) => {
@@ -511,7 +314,7 @@ Preferred Qualifications:
   );
 
   const ResumeComparison: React.FC = () => {
-    if (!resumeData || !optimizedResult?.optimizedResume) return null;
+    if (!resumeData || !optimizedResult?.optimizedContent) return null;
 
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -543,28 +346,28 @@ Preferred Qualifications:
         <div className="bg-white rounded-xl shadow-lg border border-green-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <Sparkles className="h-5 w-5 text-green-600 mr-2" />
-            ATS-Optimized Resume
+            ATS-Optimized Content
           </h3>
           <div className="space-y-4 text-sm">
             <div>
-              <h4 className="font-medium text-gray-900">{optimizedResult.optimizedResume.personalInfo.name}</h4>
-              <p className="text-gray-600">{optimizedResult.optimizedResume.personalInfo.email}</p>
+              <h4 className="font-medium text-gray-900">{resumeData.personalInfo.name}</h4>
+              <p className="text-gray-600">{resumeData.personalInfo.email}</p>
             </div>
-            {optimizedResult.optimizedResume.summary && (
+            {optimizedResult.optimizedContent.summary && (
               <div>
                 <h5 className="font-medium text-gray-900">Enhanced Summary</h5>
-                <p className="text-gray-600">{optimizedResult.optimizedResume.summary.substring(0, 150)}...</p>
+                <p className="text-gray-600">{optimizedResult.optimizedContent.summary.substring(0, 150)}...</p>
               </div>
             )}
             <div>
               <h5 className="font-medium text-gray-900">Optimized Skills</h5>
-              <p className="text-gray-600">{optimizedResult.optimizedResume.skills.technical.slice(0, 5).join(', ')}</p>
+              <p className="text-gray-600">{optimizedResult.optimizedContent.skills.slice(0, 5).join(', ')}</p>
             </div>
-            {optimizedResult.optimizedResume.additionalKeywords && (
+            {optimizedResult.optimizedContent.additionalKeywords && (
               <div>
                 <h5 className="font-medium text-green-900">Added Keywords</h5>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {optimizedResult.optimizedResume.additionalKeywords.slice(0, 6).map((keyword, index) => (
+                  {optimizedResult.optimizedContent.additionalKeywords.slice(0, 6).map((keyword, index) => (
                     <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
                       {keyword}
                     </span>
@@ -588,7 +391,7 @@ Preferred Qualifications:
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-900">ATS Resume Builder</h2>
-              <p className="text-gray-600">Generate ATS-optimized resumes tailored to job descriptions</p>
+              <p className="text-gray-600">Generate ATS-optimized resumes and cover letters with Gemini AI</p>
             </div>
           </div>
           <button
@@ -632,7 +435,7 @@ Preferred Qualifications:
               currentStep === 'upload' ? 'Upload Resume' : 
               currentStep === 'analyze' ? 'Add Job Description' : 
               currentStep === 'results' ? 'View Analysis' :
-              'Generate Optimized Resume'
+              'Generate ATS Cover Letter'
             }
           </span>
         </div>
@@ -644,7 +447,7 @@ Preferred Qualifications:
           <div className="text-center mb-8">
             <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 text-sm font-medium mb-4 animate-fade-in">
               <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
-              AI-Powered ATS Resume Builder
+              Gemini AI-Powered ATS Resume Builder
             </div>
             
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4 leading-[1.15] animate-fade-in-up">
@@ -655,59 +458,11 @@ Preferred Qualifications:
             </h1>
             
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-[1.15] animate-fade-in-up delay-200">
-              Upload your existing resume and we'll generate a tailored, ATS-optimized version based on any job description
+              Upload your existing resume and we'll generate a tailored, ATS-optimized version with cover letter using Google Gemini AI
             </p>
           </div>
 
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
-            {/* Gemini AI Status */}
-            <div className="mb-6 p-4 rounded-lg border">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className={`w-3 h-3 rounded-full mr-3 ${geminiStatus.configured ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">Google Gemini AI Status</h3>
-                    <p className="text-sm text-gray-600">{geminiStatus.message}</p>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={useGeminiAI && geminiStatus.configured}
-                      onChange={(e) => setUseGeminiAI(e.target.checked)}
-                      disabled={!geminiStatus.configured}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 disabled:opacity-50"></div>
-                    <span className="ml-3 text-sm font-medium text-gray-900">
-                      {geminiStatus.configured ? 'Use AI Analysis' : 'AI Unavailable'}
-                    </span>
-                  </label>
-                </div>
-              </div>
-              
-              {!geminiStatus.configured && (
-                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="flex items-start">
-                    <AlertCircle className="h-5 w-5 text-yellow-400 mt-0.5 mr-2" />
-                    <div className="text-sm">
-                      <p className="text-yellow-800 font-medium mb-1">Setup Required</p>
-                      <p className="text-yellow-700 mb-2">
-                        To enable AI-powered analysis, please configure your Gemini API key:
-                      </p>
-                      <ol className="text-yellow-700 text-xs space-y-1 ml-4 list-decimal">
-                        <li>Visit <a href="https://makersuite.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline">Google AI Studio</a></li>
-                        <li>Create a new API key</li>
-                        <li>Add it to your .env file as VITE_GEMINI_API_KEY</li>
-                        <li>Restart your development server</li>
-                      </ol>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
             <ResumeUploader 
               onResumeUploaded={handleResumeUpload}
               mode="ats-analysis"
@@ -720,24 +475,24 @@ Preferred Qualifications:
                 <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Target className="h-6 w-6 text-white" />
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Job-Specific Optimization</h3>
-                <p className="text-sm text-gray-600">Tailor your resume to match specific job requirements and keywords</p>
+                <h3 className="font-semibold text-gray-900 mb-2">AI-Powered Analysis</h3>
+                <p className="text-sm text-gray-600">Advanced Gemini AI analyzes your resume against job requirements</p>
               </div>
               
               <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl">
                 <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Zap className="h-6 w-6 text-white" />
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Real-Time Feedback</h3>
-                <p className="text-sm text-gray-600">Get instant suggestions and improvements as you build</p>
+                <h3 className="font-semibold text-gray-900 mb-2">Smart Optimization</h3>
+                <p className="text-sm text-gray-600">Get intelligent suggestions and keyword optimization</p>
               </div>
               
               <div className="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
                 <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Download className="h-6 w-6 text-white" />
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Multiple Formats</h3>
-                <p className="text-sm text-gray-600">Export your optimized resume in TEXT ATS-friendly formats</p>
+                <h3 className="font-semibold text-gray-900 mb-2">ATS Cover Letter</h3>
+                <p className="text-sm text-gray-600">Generate professional cover letters optimized for ATS systems</p>
               </div>
             </div>
           </div>
@@ -759,7 +514,7 @@ Preferred Qualifications:
               </span>
             </h2>
             <p className="text-lg text-gray-600">
-              Provide the job description to generate a tailored, ATS-optimized resume
+              Provide the job description to generate a tailored, ATS-optimized resume and cover letter
             </p>
           </div>
 
@@ -805,8 +560,6 @@ Preferred Qualifications:
                   <div className="font-medium">Paste Text</div>
                   <div className="text-sm text-gray-600">Copy and paste the job description</div>
                 </button>
-                
-               
               </div>
             </div>
 
@@ -824,7 +577,7 @@ Preferred Qualifications:
                   placeholder="Paste the complete job description here including requirements, responsibilities, and qualifications..."
                 />
                 <p className="text-sm text-gray-500 mt-2">
-                  Paste the job description to generate an ATS-optimized resume based on your uploaded resume
+                  Paste the job description to generate an ATS-optimized resume and cover letter using Gemini AI
                 </p>
               </div>
             ) : (
@@ -861,11 +614,11 @@ Preferred Qualifications:
                 {isAnalyzing ? (
                   <>
                     <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
-                    Analyzing...
+                    Analyzing with Gemini AI...
                   </>
                 ) : (
                   <>
-                    Analyze Resume
+                    Analyze with Gemini AI
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </>
                 )}
@@ -880,7 +633,7 @@ Preferred Qualifications:
           <div className="text-center mb-8">
             <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-green-100 to-blue-100 text-green-800 text-sm font-medium mb-4 animate-fade-in">
               <Award className="w-4 h-4 mr-2 animate-pulse" />
-              Analysis Complete
+              Gemini AI Analysis Complete
             </div>
             
             <h2 className="text-4xl font-bold text-gray-900 mb-4 leading-[1.15]">
@@ -890,7 +643,7 @@ Preferred Qualifications:
               </span>
             </h2>
             <p className="text-lg text-gray-600">
-              Review your current ATS score and generate an optimized version
+              Review your current ATS score and generate an optimized cover letter
             </p>
           </div>
 
@@ -922,7 +675,7 @@ Preferred Qualifications:
           </div>
 
           {/* Detailed Scores */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <ScoreCard
               title="Keyword Match"
               score={analysisResult.keywordScore}
@@ -941,6 +694,12 @@ Preferred Qualifications:
               description="Writing quality and impact of your content"
               icon={<TrendingUp className="h-6 w-6 text-purple-600" />}
             />
+            <ScoreCard
+              title="Readability"
+              score={analysisResult.readabilityScore}
+              description="Clarity and professional presentation"
+              icon={<Eye className="h-6 w-6 text-orange-600" />}
+            />
           </div>
 
           {/* Action Buttons */}
@@ -948,38 +707,20 @@ Preferred Qualifications:
             <button
               onClick={handleOptimizeResume}
               disabled={isOptimizing}
-              className={`text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center ${
-                useGeminiAI && geminiStatus.configured 
-                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700' 
-                  : 'bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700'
-              }`}
+              className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-green-700 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
             >
               {isOptimizing ? (
                 <>
                   <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
-                  Generating Optimized Resume...
+                  Preparing ATS Cover Letter...
                 </>
               ) : (
                 <>
                   <Sparkles className="mr-2 h-5 w-5" />
-                  {useGeminiAI && geminiStatus.configured ? 'Generate AI-Optimized Resume' : 'Generate ATS-Optimized Resume'}
+                  Generate ATS Cover Letter
                 </>
               )}
             </button>
-            
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="useGeminiAI"
-                checked={useGeminiAI}
-                onChange={(e) => setUseGeminiAI(e.target.checked)}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <label htmlFor="useGeminiAI" className="text-sm text-gray-700 flex items-center">
-                <Sparkles className="h-4 w-4 text-blue-500 mr-1" />
-                Use Gemini AI
-              </label>
-            </div>
           </div>
 
           {/* Detailed Analysis Toggle */}
@@ -998,60 +739,6 @@ Preferred Qualifications:
           {/* Detailed Analysis */}
           {showDetailedAnalysis && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-              {/* Gemini AI Analysis Results */}
-              {optimizedResult?.geminiAnalysis && (
-                <div className="lg:col-span-2 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl shadow-lg border border-blue-200 p-6 mb-6">
-                  <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
-                    <Sparkles className="h-5 w-5 text-blue-600 mr-2" />
-                    Gemini AI Enhanced Analysis
-                  </h4>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h5 className="font-medium text-green-900 mb-2 flex items-center">
-                        <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
-                        Strengths
-                      </h5>
-                      <ul className="space-y-1">
-                        {optimizedResult.geminiAnalysis.strengths.map((strength, index) => (
-                          <li key={index} className="text-sm text-green-800 flex items-start">
-                            <span className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 mr-2 flex-shrink-0"></span>
-                            {strength}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    
-                    <div>
-                      <h5 className="font-medium text-orange-900 mb-2 flex items-center">
-                        <AlertTriangle className="h-4 w-4 text-orange-600 mr-1" />
-                        Areas for Improvement
-                      </h5>
-                      <ul className="space-y-1">
-                        {optimizedResult.geminiAnalysis.weaknesses.map((weakness, index) => (
-                          <li key={index} className="text-sm text-orange-800 flex items-start">
-                            <span className="w-1.5 h-1.5 bg-orange-600 rounded-full mt-2 mr-2 flex-shrink-0"></span>
-                            {weakness}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4">
-                    <h5 className="font-medium text-blue-900 mb-2">AI Recommendations</h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {optimizedResult.geminiAnalysis.recommendations.map((rec, index) => (
-                        <div key={index} className="flex items-start text-sm text-blue-800">
-                          <Lightbulb className="h-4 w-4 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
-                          {rec}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-              
               {/* Keywords Analysis */}
               <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
                 <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
@@ -1066,7 +753,7 @@ Preferred Qualifications:
                       Found Keywords ({analysisResult.keywords.found.length})
                     </h5>
                     <div className="flex flex-wrap gap-2">
-                      {analysisResult.keywords.found.map((keyword, index) => (
+                      {analysisResult.keywords.found.slice(0, 10).map((keyword, index) => (
                         <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded-full">
                           {keyword}
                         </span>
@@ -1085,7 +772,7 @@ Preferred Qualifications:
                       Missing Keywords ({analysisResult.keywords.missing.length})
                     </h5>
                     <div className="flex flex-wrap gap-2">
-                      {analysisResult.keywords.missing.map((keyword, index) => (
+                      {analysisResult.keywords.missing.slice(0, 8).map((keyword, index) => (
                         <span key={index} className="px-2 py-1 bg-red-100 text-red-800 text-sm rounded-full">
                           {keyword}
                         </span>
@@ -1104,7 +791,7 @@ Preferred Qualifications:
               <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
                 <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
                   <Lightbulb className="h-5 w-5 text-yellow-600 mr-2" />
-                  Optimization Recommendations
+                  AI Recommendations
                 </h4>
                 
                 <div className="space-y-3">
@@ -1126,17 +813,17 @@ Preferred Qualifications:
           <div className="text-center mb-8">
             <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-green-100 to-teal-100 text-green-800 text-sm font-medium mb-4 animate-fade-in">
               <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
-              Optimization Complete
+              ATS Cover Letter Ready
             </div>
             
             <h2 className="text-4xl font-bold text-gray-900 mb-4 leading-[1.15]">
               Your{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 via-teal-600 to-blue-600">
-                ATS-Optimized Resume
+                ATS-Optimized Cover Letter
               </span>
             </h2>
             <p className="text-lg text-gray-600">
-              Review and download your tailored, ATS-optimized resume
+              Review and download your AI-generated, ATS-optimized cover letter
             </p>
           </div>
 
@@ -1144,86 +831,17 @@ Preferred Qualifications:
           <div className="mb-8 p-6 bg-gradient-to-r from-green-50 to-teal-50 rounded-xl border border-green-200">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-green-900 mb-2">ATS Score Improvement</h3>
-                <p className="text-green-800">Your optimized resume is projected to score significantly higher</p>
+                <h3 className="text-lg font-semibold text-green-900 mb-2">ATS-Optimized Cover Letter Generated</h3>
+                <p className="text-green-800">Your cover letter is tailored to the job requirements with optimal keyword density</p>
               </div>
               <div className="text-right">
                 <div className="text-3xl font-bold text-green-600">
-                  {analysisResult ? analysisResult.overallScore : 0}% → 85%+
+                  AI-Generated
                 </div>
-                <div className="text-sm text-green-700">Estimated improvement</div>
+                <div className="text-sm text-green-700">Gemini AI Powered</div>
               </div>
             </div>
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-8">
-            {optimizedResult.atsLetter && (
-              <button
-                onClick={() => setShowATSLetter(!showATSLetter)}
-                className="flex items-center px-6 py-3 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 transition-all duration-300 transform hover:scale-105"
-              >
-                <Mail className="mr-2 h-5 w-5" />
-                {showATSLetter ? 'Hide' : 'View'} ATS Cover Letter
-              </button>
-            )}
-            
-            <button
-              onClick={handleDownloadOptimized}
-              className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-green-700 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center"
-            >
-              <Download className="mr-2 h-5 w-5" />
-              Download Optimized Resume
-            </button>
-          </div>
-
-          {/* ATS Cover Letter Section */}
-          {showATSLetter && optimizedResult.atsLetter && (
-            <div className="mb-8 bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900 flex items-center">
-                  <Mail className="h-6 w-6 text-purple-600 mr-2" />
-                  ATS-Optimized Cover Letter
-                </h3>
-                <div className="flex space-x-3">
-                  <button
-                    onClick={() => navigator.clipboard.writeText(optimizedResult.atsLetter || '')}
-                    className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copy
-                  </button>
-                </div>
-              </div>
-              
-              <div className="bg-gray-50 rounded-lg p-6">
-                <div className="whitespace-pre-wrap font-serif text-gray-900 leading-relaxed">
-                  {optimizedResult.atsLetter}
-                </div>
-              </div>
-              
-              <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                <h4 className="font-medium text-purple-900 mb-2 flex items-center">
-                  <Sparkles className="h-4 w-4 mr-1" />
-                  AI-Generated Features
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-purple-800">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    <span>ATS-optimized keywords</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    <span>Job-specific content</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    <span>Professional formatting</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Comparison Toggle */}
           <div className="mb-6">
@@ -1245,12 +863,12 @@ Preferred Qualifications:
             </div>
           )}
 
-          {/* Optimized Resume Preview */}
+          {/* ATS Cover Letter Preview */}
           <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-gray-900 flex items-center">
                 <FileText className="h-6 w-6 text-green-600 mr-2" />
-                ATS-Optimized Resume Preview
+                ATS-Optimized Cover Letter Preview
               </h3>
               <div className="flex space-x-3">
                 <button
@@ -1270,97 +888,24 @@ Preferred Qualifications:
               </div>
             </div>
 
-            {optimizedResult.optimizedResume && (
+            {optimizedResult.atsLetter && (
               <div className="prose max-w-none">
                 <div id="optimized-resume-content" className="bg-gray-50 p-6 rounded-lg">
-                  <div className="text-center mb-6">
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                      {optimizedResult.optimizedResume.personalInfo.name}
-                    </h1>
-                    <div className="text-gray-600">
-                      {optimizedResult.optimizedResume.personalInfo.email} | {optimizedResult.optimizedResume.personalInfo.phone} | {optimizedResult.optimizedResume.personalInfo.location}
-                    </div>
-                  </div>
-
-                  {optimizedResult.optimizedResume.summary && (
-                    <div className="mb-6">
-                      <h2 className="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-300 pb-1">
-                        PROFESSIONAL SUMMARY
-                      </h2>
-                      <p className="text-gray-700">{optimizedResult.optimizedResume.summary}</p>
-                    </div>
-                  )}
-
-                  {optimizedResult.optimizedResume.experience.length > 0 && (
-                    <div className="mb-6">
-                      <h2 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-1">
-                        EXPERIENCE
-                      </h2>
-                      {optimizedResult.optimizedResume.experience.map((exp, index) => (
-                        <div key={index} className="mb-4">
-                          <div className="flex justify-between items-start mb-1">
-                            <h3 className="font-semibold text-gray-900">{exp.title}</h3>
-                            <span className="text-sm text-gray-600">{exp.startDate} - {exp.endDate}</span>
-                          </div>
-                          <p className="text-gray-700 font-medium mb-2">{exp.company}</p>
-                          <p className="text-gray-600 text-sm">{exp.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {(optimizedResult.optimizedResume.skills.technical.length > 0 || optimizedResult.optimizedResume.skills.soft.length > 0) && (
-                    <div className="mb-6">
-                      <h2 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-1">
-                        SKILLS
-                      </h2>
-                      {optimizedResult.optimizedResume.skills.technical.length > 0 && (
-                        <div className="mb-2">
-                          <strong className="text-gray-900">Technical:</strong>
-                          <span className="text-gray-700 ml-2">{optimizedResult.optimizedResume.skills.technical.join(', ')}</span>
-                        </div>
-                      )}
-                      {optimizedResult.optimizedResume.skills.soft.length > 0 && (
-                        <div>
-                          <strong className="text-gray-900">Soft Skills:</strong>
-                          <span className="text-gray-700 ml-2">{optimizedResult.optimizedResume.skills.soft.join(', ')}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {optimizedResult.optimizedResume.education.length > 0 && (
-                    <div className="mb-6">
-                      <h2 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-1">
-                        EDUCATION
-                      </h2>
-                      {optimizedResult.optimizedResume.education.map((edu, index) => (
-                        <div key={index} className="mb-2">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="font-semibold text-gray-900">{edu.degree}</h3>
-                              <p className="text-gray-700">{edu.school}</p>
-                            </div>
-                            <span className="text-sm text-gray-600">{edu.graduationYear}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {optimizedResult.optimizedResume.additionalKeywords && (
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <h3 className="font-medium text-green-900 mb-2 flex items-center">
-                        <Plus className="h-4 w-4 mr-1" />
-                        Additional Keywords Added
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {optimizedResult.optimizedResume.additionalKeywords.map((keyword, index) => (
-                          <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded-full">
-                            {keyword}
-                          </span>
-                        ))}
-                      </div>
+                  {editingOptimized ? (
+                    <textarea
+                      value={optimizedResult.atsLetter}
+                      onChange={(e) => {
+                        setOptimizedResult({
+                          ...optimizedResult,
+                          atsLetter: e.target.value
+                        });
+                      }}
+                      className="w-full h-96 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 font-serif"
+                      placeholder="Edit your ATS cover letter here..."
+                    />
+                  ) : (
+                    <div className="whitespace-pre-wrap font-serif text-gray-900 leading-relaxed">
+                      {optimizedResult.atsLetter}
                     </div>
                   )}
                 </div>
@@ -1372,18 +917,24 @@ Preferred Qualifications:
           <div className="flex justify-between">
             <button
               onClick={() => setCurrentStep('results')}
-              className="px-6 py-3 text-gray-700 hover:text-blue-600 transition-colors duration-200"
+              className="px-6 py-3 text-gray-700 hover:text-green-600 transition-colors duration-200"
             >
               ← Back to Analysis
             </button>
             
             <div className="flex space-x-4">
               <button
+                onClick={() => setCurrentStep('analyze')}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+              >
+                Analyze Different Job
+              </button>
+              <button
                 onClick={handleDownloadOptimized}
                 className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-green-700 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 flex items-center"
               >
                 <Download className="mr-2 h-5 w-5" />
-                Download Optimized Resume
+                Download Cover Letter
               </button>
             </div>
           </div>
