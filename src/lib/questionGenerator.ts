@@ -16,6 +16,7 @@ export interface GeneratedQuestion {
   category?: string;
   expectedAnswer?: string;
   hints?: string[];
+  professionalGuidance?: string;
 }
 
 export interface QuestionGenerationResult {
@@ -71,6 +72,7 @@ Requirements:
 5. For technical questions: focus on practical coding, system design, problem-solving, and technology-specific knowledge
 6. For HR questions: focus on behavioral, situational, cultural fit, and soft skills
 7. Ensure questions are realistic and commonly asked in actual interviews
+8. For each question, provide professional guidance on how to structure and deliver a strong answer
 
 Difficulty Guidelines:
 - Easy: Basic concepts, simple scenarios, entry-level knowledge
@@ -86,7 +88,8 @@ Format your response as a JSON array with this exact structure:
     "type": "${type}",
     "category": "relevant category (e.g., 'JavaScript', 'System Design', 'Behavioral', 'Leadership')",
     "expectedAnswer": "Brief outline of what a good answer should include",
-    "hints": ["hint1", "hint2", "hint3"]
+    "hints": ["hint1", "hint2", "hint3"],
+    "professionalGuidance": "Professional advice on how to structure and deliver this answer effectively in an interview setting, including tone, key points to emphasize, and presentation tips"
   }
 ]
 
@@ -95,6 +98,7 @@ Important:
 - Ensure all ${count} questions are unique and valuable
 - Make questions specific to the technologies and job requirements mentioned
 - Include practical, real-world scenarios when possible
+- Professional guidance should be actionable and specific to each question
 `;
 
     return basePrompt;
@@ -131,7 +135,8 @@ Important:
         type: q.type || 'technical',
         category: q.category || 'General',
         expectedAnswer: q.expectedAnswer || 'No expected answer provided',
-        hints: Array.isArray(q.hints) ? q.hints : []
+        hints: Array.isArray(q.hints) ? q.hints : [],
+        professionalGuidance: q.professionalGuidance || 'Structure your answer clearly, provide specific examples, and demonstrate your expertise confidently.'
       }));
       
     } catch (error) {
@@ -295,7 +300,8 @@ Important:
         type,
         category: type === 'technical' ? 'General Programming' : 'Behavioral',
         expectedAnswer: 'This is a fallback question. Expected answer would depend on the specific question.',
-        hints: ['Think about your experience', 'Provide specific examples', 'Be honest and authentic']
+        hints: ['Think about your experience', 'Provide specific examples', 'Be honest and authentic'],
+        professionalGuidance: 'Structure your response using the STAR method (Situation, Task, Action, Result) for behavioral questions, or break down technical concepts step-by-step with clear examples.'
       });
     }
     
