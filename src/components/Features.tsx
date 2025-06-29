@@ -165,12 +165,4 @@ const Features: React.FC = () => {
 
               {/* Corner Accent */}
               <div className={`absolute top-0 right-0 w-16 h-16 bg-gradient-to-br ${feature.gradient} opacity-10 rounded-bl-3xl rounded-tr-3xl group-hover:opacity-20 transition-opacity duration-500`}></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
-
 export default Features;

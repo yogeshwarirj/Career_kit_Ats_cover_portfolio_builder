@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, Play, Pause, Volume2, VolumeX, Sparkles, Star, Award, Users, CheckCircle } from 'lucide-react';
+import { ArrowRight, Play, Pause, Volume2, VolumeX, Sparkles, Star, Award, Users, CheckCircle, X } from 'lucide-react';
 import { elevenLabsService, playText, stopAudio, isAudioPlaying } from '../lib/elevenLabsService';
 import toast from 'react-hot-toast';
 
@@ -9,6 +9,7 @@ const Hero: React.FC = () => {
   const [currentMessage, setCurrentMessage] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [showAICharacter, setShowAICharacter] = useState(true);
 
   const messages = [
     {
@@ -137,6 +138,16 @@ const Hero: React.FC = () => {
     toast.success(newMutedState ? 'Voice muted' : 'Voice enabled');
   };
 
+  const closeAICharacter = () => {
+    // Stop any playing audio
+    if (isPlaying) {
+      setIsPlaying(false);
+      stopAudio();
+      setIsSpeaking(false);
+    }
+    setShowAICharacter(false);
+    toast.success('AI Assistant closed');
+  };
   return (
     <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden -mt-16 pt-16">
       {/* Animated Gradient Background */}
@@ -206,10 +217,20 @@ const Hero: React.FC = () => {
           </div>
 
           {/* Right Side - AI Character */}
-          <div className="flex justify-center lg:justify-end">
+          {showAICharacter && (
+            <div className="flex justify-center lg:justify-end">
             <div className="relative">
               {/* AI Character Container */}
               <div className="relative w-80 h-96 bg-gradient-to-br from-white/80 to-gray-50/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
+                {/* Close Button */}
+                <button
+                  onClick={closeAICharacter}
+                  className="absolute top-4 right-4 z-20 p-2 bg-white/80 hover:bg-white rounded-full shadow-lg transition-all duration-200 transform hover:scale-110 group"
+                  title="Close AI Assistant"
+                >
+                  <X className="h-4 w-4 text-gray-600 group-hover:text-red-500 transition-colors duration-200" />
+                </button>
+
                 {/* Character Background */}
                 <div className="absolute inset-0 bg-gradient-to-br from-teal-100/30 to-orange-100/30"></div>
                 
@@ -365,6 +386,25 @@ const Hero: React.FC = () => {
               }`}></div>
             </div>
           </div>
+          )}
+
+          {/* Show AI Character Button (when closed) */}
+          {!showAICharacter && (
+            <div className="flex justify-center lg:justify-end">
+              <button
+                onClick={() => setShowAICharacter(true)}
+                className="group bg-gradient-to-br from-teal-500 to-orange-500 text-white p-8 rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
+              >
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                    <Sparkles className="h-8 w-8 group-hover:animate-pulse" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">Open AI Assistant</h3>
+                  <p className="text-sm opacity-90">Get personalized career guidance</p>
+                </div>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </section>
