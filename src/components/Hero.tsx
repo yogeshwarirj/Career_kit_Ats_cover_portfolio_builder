@@ -261,7 +261,7 @@ const Hero: React.FC = () => {
                       {/* Avatar Face */}
                      <div className="absolute inset-2 rounded-full overflow-hidden shadow-2xl border-4 border-white/90">
                        <img 
-                         src="/image copy.png" 
+                         src="/image.png" 
                          alt="AI Professional Career Coach - Professional Woman in Suit"
                          className="w-full h-full object-cover object-center transition-all duration-300"
                          style={{
