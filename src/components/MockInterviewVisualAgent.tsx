@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Square, RotateCcw, Volume2, VolumeX, Mic, MicOff, MessageCircle, Brain, Star, Award, TrendingUp, CheckCircle, AlertCircle, Lightbulb, ArrowRight, Clock, Target } from 'lucide-react';
+import { Play, Pause, Square, RotateCcw, Volume2, VolumeX, Mic, MicOff, MessageCircle, Brain, Star, Award, TrendingUp, CheckCircle, AlertCircle, Lightbulb, ArrowRight, Clock, Target, Trophy, Zap, Users, BookOpen } from 'lucide-react';
 import { GeneratedQuestion } from '../lib/questionGenerator';
 import { elevenLabsService, playInterviewQuestion, stopAudio, isAudioPlaying } from '../lib/elevenLabsService';
 import { geminiInterviewFeedback, FeedbackResult } from '../lib/geminiInterviewFeedback';
@@ -21,11 +21,15 @@ interface InterviewSession {
   questionStartTime: Date | null;
 }
 
+type InterviewPhase = 'intro' | 'inProgress' | 'completed';
+
 const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
   questions,
   onComplete,
   className = ''
 }) => {
+  const [interviewPhase, setInterviewPhase] = useState<InterviewPhase>('intro');
+  
   const [session, setSession] = useState<InterviewSession>({
     currentQuestionIndex: 0,
     answers: {},
@@ -67,6 +71,49 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
       }
     };
   }, []);
+
+  const startInterview = () => {
+    setInterviewPhase('inProgress');
+    setSession(prev => ({
+      ...prev,
+      sessionStartTime: new Date(),
+      currentQuestionIndex: 0,
+      answers: {},
+      feedback: {},
+      questionStartTime: new Date()
+    }));
+    setCurrentAnswer('');
+    setShowFeedback(false);
+    toast.success('🚀 Interview started! Good luck!');
+  };
+
+  const endInterview = () => {
+    setInterviewPhase('completed');
+    stopAudio();
+    setSession(prev => ({
+      ...prev,
+      isRecording: false,
+      questionStartTime: null
+    }));
+    toast.success('🏁 Interview completed!');
+  };
+
+  const restartInterview = () => {
+    setInterviewPhase('intro');
+    setSession({
+      currentQuestionIndex: 0,
+      answers: {},
+      feedback: {},
+      isRecording: false,
+      isPaused: false,
+      sessionStartTime: new Date(),
+      questionStartTime: null
+    });
+    setCurrentAnswer('');
+    setShowFeedback(false);
+    stopAudio();
+    toast.success('🔄 Interview reset. Ready to start again!');
+  };
 
   const playQuestionAudio = async (text: string) => {
     try {
@@ -193,7 +240,7 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
 
   const nextQuestion = () => {
     if (isLastQuestion) {
-      onComplete?.();
+      endInterview();
       return;
     }
 
@@ -228,6 +275,194 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
     return 'bg-red-100 border-red-200';
   };
 
+  // Intro Phase
+  if (interviewPhase === 'intro') {
+    return (
+      <div className={`max-w-4xl mx-auto ${className}`}>
+        <Toaster position="top-right" />
+        
+        <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-12 text-center">
+          {/* Welcome Section */}
+          <div className="mb-8">
+            <div className="w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
+              <Brain className="h-12 w-12 text-white" />
+            </div>
+            
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Welcome to AI Interview Practice
+            </h1>
+            
+            <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+              Practice your interview skills with AI-generated questions and get real-time feedback from our professional voice coach.
+            </p>
+          </div>
+
+          {/* Interview Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-blue-50 rounded-xl p-6">
+              <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                <MessageCircle className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">{questions.length} Questions</h3>
+              <p className="text-sm text-gray-600">AI-generated interview questions</p>
+            </div>
+            
+            <div className="bg-green-50 rounded-xl p-6">
+              <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Target className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Real-time Feedback</h3>
+              <p className="text-sm text-gray-600">Instant AI analysis of your answers</p>
+            </div>
+            
+            <div className="bg-purple-50 rounded-xl p-6">
+              <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Award className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Performance Tracking</h3>
+              <p className="text-sm text-gray-600">Monitor your improvement over time</p>
+            </div>
+          </div>
+
+          {/* Interview Mode Selection */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Choose Your Interview Mode</h3>
+            <div className="flex justify-center space-x-4">
+              {[
+                { id: 'guided', name: 'Guided Practice', description: 'Step-by-step with hints', icon: BookOpen },
+                { id: 'practice', name: 'Practice Mode', description: 'Standard interview flow', icon: Users },
+                { id: 'timed', name: 'Timed Challenge', description: 'Real interview pressure', icon: Clock }
+              ].map((mode) => (
+                <button
+                  key={mode.id}
+                  onClick={() => setInterviewMode(mode.id as any)}
+                  className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+                    interviewMode === mode.id
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <mode.icon className="h-6 w-6 mx-auto mb-2" />
+                  <div className="font-medium text-sm">{mode.name}</div>
+                  <div className="text-xs opacity-75">{mode.description}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Start Button */}
+          <button
+            onClick={startInterview}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-4 rounded-xl text-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center mx-auto"
+          >
+            <Play className="mr-3 h-6 w-6" />
+            Start Interview
+          </button>
+
+          <p className="text-sm text-gray-500 mt-4">
+            Take your time, practice as much as you need, and build confidence for real interviews!
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Completed Phase
+  if (interviewPhase === 'completed') {
+    return (
+      <div className={`max-w-4xl mx-auto ${className}`}>
+        <Toaster position="top-right" />
+        
+        <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-12 text-center">
+          {/* Completion Header */}
+          <div className="mb-8">
+            <div className="w-24 h-24 bg-gradient-to-r from-green-500 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
+              <Trophy className="h-12 w-12 text-white" />
+            </div>
+            
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Interview Complete! 🎉
+            </h1>
+            
+            <p className="text-xl text-gray-600 mb-8">
+              Great job! You've completed the mock interview session.
+            </p>
+          </div>
+
+          {/* Results Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-blue-50 rounded-xl p-6">
+              <div className="text-3xl font-bold text-blue-600 mb-2">{completedQuestions}</div>
+              <div className="text-sm font-medium text-gray-700">Questions Answered</div>
+            </div>
+            
+            <div className="bg-green-50 rounded-xl p-6">
+              <div className={`text-3xl font-bold mb-2 ${getScoreColor(averageScore)}`}>
+                {Math.round(averageScore)}%
+              </div>
+              <div className="text-sm font-medium text-gray-700">Average Score</div>
+            </div>
+            
+            <div className="bg-purple-50 rounded-xl p-6">
+              <div className="text-3xl font-bold text-purple-600 mb-2">
+                {Math.floor((new Date().getTime() - session.sessionStartTime.getTime()) / 60000)}m
+              </div>
+              <div className="text-sm font-medium text-gray-700">Session Duration</div>
+            </div>
+          </div>
+
+          {/* Performance Insights */}
+          <div className="bg-gray-50 rounded-xl p-6 mb-8 text-left">
+            <h3 className="font-semibold text-gray-900 mb-4 text-center">Session Summary</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Best Question Score:</span>
+                <span className={`font-bold ${getScoreColor(Math.max(...Object.values(session.feedback).map(f => f.score), 0))}`}>
+                  {Math.max(...Object.values(session.feedback).map(f => f.score), 0)}%
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Questions with 80+ Score:</span>
+                <span className="font-bold text-green-600">
+                  {Object.values(session.feedback).filter(f => f.score >= 80).length}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Areas for Improvement:</span>
+                <span className="font-bold text-orange-600">
+                  {Object.values(session.feedback).filter(f => f.score < 70).length}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+            <button
+              onClick={restartInterview}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center"
+            >
+              <RotateCcw className="mr-2 h-5 w-5" />
+              Practice Again
+            </button>
+            
+            <button
+              onClick={() => onComplete?.()}
+              className="border-2 border-gray-300 text-gray-700 px-8 py-3 rounded-xl font-semibold hover:bg-gray-50 transition-all duration-300"
+            >
+              Return to Dashboard
+            </button>
+          </div>
+
+          <p className="text-sm text-gray-500 mt-6">
+            Keep practicing to improve your interview skills and boost your confidence!
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // In Progress Phase
   return (
     <div className={`max-w-6xl mx-auto ${className}`}>
       <Toaster position="top-right" />
@@ -245,7 +480,16 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-6">
+            {/* End Interview Button */}
+            <button
+              onClick={endInterview}
+              className="flex items-center px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors duration-200"
+            >
+              <Square className="h-4 w-4 mr-2" />
+              End Interview
+            </button>
+            
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{session.currentQuestionIndex + 1}</div>
               <div className="text-sm text-gray-500">of {questions.length}</div>
@@ -552,7 +796,7 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
 
         <div className="flex items-center space-x-4">
           <button
-            onClick={() => setSession(prev => ({ ...prev, currentQuestionIndex: 0 }))}
+            onClick={restartInterview}
             className="flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
           >
             <RotateCcw className="h-4 w-4 mr-2" />

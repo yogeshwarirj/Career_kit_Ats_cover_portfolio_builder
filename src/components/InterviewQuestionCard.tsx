@@ -107,10 +107,6 @@ const InterviewQuestionCard: React.FC<InterviewQuestionCardProps> = ({
             )}
             {feedback && (
               <div className={`px-3 py-1 rounded-full font-bold ${getScoreColor(feedback.score)} bg-white`}>
-                {feedback.score}%
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Question Metadata */}
