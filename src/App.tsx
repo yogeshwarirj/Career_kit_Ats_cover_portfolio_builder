@@ -1,6 +1,5 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Hero from './components/Hero';
 import Features from './components/Features';
 import CallToAction from './components/CallToAction';
 import ResumeBuilder from './pages/ResumeBuilder';
@@ -101,7 +100,6 @@ function App() {
               </header>
               
               <main>
-                <Hero />
                 <Features />
                 <CallToAction />
               </main>
