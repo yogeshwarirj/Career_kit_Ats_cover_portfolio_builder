@@ -8,7 +8,6 @@ import CoverLetterGenerator from './pages/CoverLetterGenerator';
 import ATSOptimization from './pages/ATSOptimization';
 import PortfolioBuilder from './pages/PortfolioBuilder';
 import MockInterviewGenerator from './pages/MockInterviewGenerator';
-import TavusAgentExplainer from './components/TavusAgentExplainer';
 import { FileText, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -105,9 +104,6 @@ function App() {
                 <Features />
                 <CallToAction />
               </main>
-              
-              {/* Tavus AI Agent Explainer */}
-              <TavusAgentExplainer />
             </>
           } />
           <Route path="/resume-builder" element={<ResumeBuilder />} />
