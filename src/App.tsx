@@ -105,9 +105,6 @@ function App() {
                 <Features />
                 <CallToAction />
               </main>
-              
-              {/* Tavus AI Agent Explainer */}
-              <TavusAgentExplainer />
             </>
           } />
           <Route path="/resume-builder" element={<ResumeBuilder />} />
@@ -116,6 +113,9 @@ function App() {
           <Route path="/portfolio-builder" element={<PortfolioBuilder />} />
           <Route path="/mock-interview" element={<MockInterviewGenerator />} />
         </Routes>
+        
+        {/* Tavus AI Agent Explainer - appears on all pages */}
+        <TavusAgentExplainer />
       </div>
     </Router>
   );
