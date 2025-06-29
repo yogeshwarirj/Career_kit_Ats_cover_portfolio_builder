@@ -160,7 +160,7 @@ class ElevenLabsService {
   /**
    * Play text as speech
    */
-  async playText(text: string, options?: Partial<TextToSpeechOptions>): Promise<void> {
+  async playText(text: string, options?: Partial<TextToSpeechOptions>, onComplete?: () => void): Promise<void> {
     try {
       // Stop any currently playing audio
       this.stopCurrentAudio();
@@ -171,7 +171,11 @@ class ElevenLabsService {
         this.currentAudio = new Audio(audioUrl);
         
         this.currentAudio.onended = () => {
-          resolve();
+          // Add a short natural pause before calling completion callback
+          setTimeout(() => {
+            if (onComplete) onComplete();
+            resolve();
+          }, 500); // Short 500ms pause between messages for natural flow
         };
         
         this.currentAudio.onerror = () => {
@@ -290,8 +294,8 @@ export const playInterviewQuestion = (text: string): Promise<void> => {
 export const elevenLabsService = ElevenLabsService.getInstance();
 
 // Export the main functions for easy use
-export const playText = (text: string, options?: Partial<TextToSpeechOptions>): Promise<void> => {
-  return elevenLabsService.playText(text, options);
+export const playText = (text: string, options?: Partial<TextToSpeechOptions>, onComplete?: () => void): Promise<void> => {
+  return elevenLabsService.playText(text, options, onComplete);
 };
 
 export const stopAudio = (): void => {

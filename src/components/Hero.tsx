@@ -294,9 +294,18 @@ const Hero: React.FC = () => {
                       {/* Speaking Indicator */}
                       {isSpeaking && (
                         <div className="absolute -bottom-1 right-2 flex space-x-1">
-                          <div className="w-1 h-1 bg-teal-500 rounded-full animate-bounce"></div>
-                          <div className="w-1 h-1 bg-teal-500 rounded-full animate-bounce delay-100"></div>
-                          <div className="w-1 h-1 bg-teal-500 rounded-full animate-bounce delay-200"></div>
+                          <div className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-bounce"></div>
+                          <div className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-bounce delay-75"></div>
+                          <div className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-bounce delay-150"></div>
+                        </div>
+                      )}
+                      
+                      {/* Listening/Processing Indicator when not speaking but playing */}
+                      {isPlaying && !isSpeaking && (
+                        <div className="absolute -bottom-1 right-2 flex space-x-1">
+                          <div className="w-1 h-1 bg-orange-400 rounded-full animate-pulse"></div>
+                          <div className="w-1 h-1 bg-orange-400 rounded-full animate-pulse delay-200"></div>
+                          <div className="w-1 h-1 bg-orange-400 rounded-full animate-pulse delay-400"></div>
                         </div>
                       )}
                     </div>
