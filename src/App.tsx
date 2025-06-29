@@ -63,8 +63,8 @@ function App() {
 
                     {/* Mobile menu button */}
 
-                    {/* Bolt.new Badge - Top Right */}
-                    <div className="absolute top-2 right-2 z-50">
+                    {/* Bolt.new Badge - Bottom Right */}
+                    <div className="fixed bottom-6 right-6 z-50">
                       <a 
                         href="https://bolt.new/" 
                         target="_blank" 
