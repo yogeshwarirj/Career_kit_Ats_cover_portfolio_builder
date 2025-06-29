@@ -1,36 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, Play, Pause, Volume2, VolumeX, Sparkles, Star, Award, Users, CheckCircle } from 'lucide-react';
+import { elevenLabsService, playText, stopAudio, isAudioPlaying } from '../lib/elevenLabsService';
+import toast from 'react-hot-toast';
 
 const Hero: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentMessage, setCurrentMessage] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const messages = [
     {
-      text: "Welcome to CareerKit! I'm your AI career assistant.",
-      duration: 4000
+      text: "Welcome to CareerKit! I'm your AI career assistant, here to help you succeed in your professional journey.",
+      duration: 6000
     },
     {
-      text: "Generate AI-powered cover letters using Gemini AI.",
-      duration: 4000
+      text: "Generate personalized, professional cover letters using Google Gemini AI that perfectly match any job description.",
+      duration: 7000
     },
     {
-      text: "Optimize your resume for ATS systems.",
-      duration: 4000
+      text: "Optimize your resume for ATS systems with detailed scoring and AI-powered recommendations to get more interviews.",
+      duration: 7000
     },
     {
-      text: "Practice interviews with our AI coach.",
-      duration: 4000
+      text: "Practice interviews with our AI coach featuring professional voice feedback and real-time performance analysis.",
+      duration: 7000
     },
     {
-      text: "Create stunning portfolios and deploy instantly.",
-      duration: 4000
+      text: "Create stunning portfolio websites with AI-generated content and deploy them instantly to showcase your work.",
+      duration: 7000
     },
     {
-      text: "Let's accelerate your career success together!",
-      duration: 4000
+      text: "Let's accelerate your career success together with our comprehensive AI-powered toolkit!",
+      duration: 6000
     }
   ];
 
@@ -38,27 +41,93 @@ const Hero: React.FC = () => {
     let interval: NodeJS.Timeout;
     
     if (isPlaying && !isMuted) {
+      const currentMessageData = messages[currentMessage];
+      
+      // Start speaking the current message
+      speakMessage(currentMessageData.text);
+      
       interval = setInterval(() => {
         setIsAnimating(true);
         setTimeout(() => {
           setCurrentMessage((prev) => (prev + 1) % messages.length);
           setIsAnimating(false);
         }, 300);
-      }, messages[currentMessage].duration);
+      }, currentMessageData.duration);
     }
     
-    return () => clearInterval(interval);
-  }, [isPlaying, isMuted, currentMessage, messages]);
+    return () => {
+      clearInterval(interval);
+      if (isSpeaking) {
+        stopAudio();
+        setIsSpeaking(false);
+      }
+    };
+  }, [isPlaying, isMuted, currentMessage]);
+
+  const speakMessage = async (text: string) => {
+    if (isMuted || !elevenLabsService.isConfigured()) {
+      return;
+    }
+
+    try {
+      setIsSpeaking(true);
+      
+      // Use professional female voice settings optimized for clear speech
+      await playText(text, {
+        voiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - professional, clear female voice
+        voiceSettings: {
+          stability: 0.75, // Higher stability for clear, consistent delivery
+          similarity_boost: 0.6, // Natural sound
+          style: 0.0, // Neutral, professional tone
+          use_speaker_boost: true // Enhanced clarity
+        }
+      });
+      
+      setIsSpeaking(false);
+    } catch (error) {
+      console.error('Voice synthesis error:', error);
+      setIsSpeaking(false);
+      
+      // Show user-friendly error message
+      if (error instanceof Error) {
+        if (error.message.includes('ELEVENLABS_NOT_CONFIGURED')) {
+          toast.error('Voice features require Eleven Labs API key. The AI character will display text only.');
+        } else {
+          toast.error('Voice playback failed. Continuing with text display.');
+        }
+      }
+    }
+  };
 
   const togglePlay = () => {
-    setIsPlaying(!isPlaying);
-    if (!isPlaying) {
+    if (isPlaying) {
+      // Stop playing
+      setIsPlaying(false);
+      stopAudio();
+      setIsSpeaking(false);
+    } else {
+      // Start playing
+      setIsPlaying(true);
       setCurrentMessage(0);
+      
+      // Check if Eleven Labs is configured
+      const configStatus = elevenLabsService.getConfigurationStatus();
+      if (!configStatus.configured) {
+        toast.error('Voice features require Eleven Labs API key. Add VITE_ELEVENLABS_API_KEY to your .env file for voice synthesis.');
+      }
     }
   };
 
   const toggleMute = () => {
-    setIsMuted(!isMuted);
+    const newMutedState = !isMuted;
+    setIsMuted(newMutedState);
+    
+    if (newMutedState && isSpeaking) {
+      stopAudio();
+      setIsSpeaking(false);
+    }
+    
+    toast.success(newMutedState ? 'Voice muted' : 'Voice enabled');
   };
 
   return (
@@ -141,7 +210,7 @@ const Hero: React.FC = () => {
                 <div className="relative z-10 flex flex-col items-center justify-center h-full p-6">
                   {/* Avatar */}
                   <div className={`relative w-32 h-32 rounded-full mb-6 transition-all duration-500 ${
-                    isPlaying ? 'animate-pulse' : ''
+                    isSpeaking ? 'animate-pulse scale-110' : isPlaying ? 'animate-pulse' : ''
                   }`}>
                     {/* Avatar Background */}
                     <div className="absolute inset-0 bg-gradient-to-br from-teal-400 to-orange-400 rounded-full"></div>
@@ -149,28 +218,36 @@ const Hero: React.FC = () => {
                     {/* Avatar Face */}
                     <div className="absolute inset-2 bg-gradient-to-br from-teal-300 to-orange-300 rounded-full flex items-center justify-center">
                       <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg">
-                        {/* Simple AI Face */}
+                        {/* Professional AI Woman Face */}
                         <div className="relative">
                           {/* Eyes */}
                           <div className="flex space-x-3 mb-2">
                             <div className={`w-3 h-3 bg-teal-600 rounded-full transition-all duration-300 ${
-                              isPlaying ? 'animate-pulse' : ''
+                              isSpeaking ? 'animate-pulse scale-110' : isPlaying ? 'animate-pulse' : ''
                             }`}></div>
                             <div className={`w-3 h-3 bg-teal-600 rounded-full transition-all duration-300 ${
-                              isPlaying ? 'animate-pulse' : ''
+                              isSpeaking ? 'animate-pulse scale-110' : isPlaying ? 'animate-pulse' : ''
                             }`}></div>
                           </div>
-                          {/* Mouth */}
-                          <div className={`w-4 h-2 bg-orange-500 rounded-full mx-auto transition-all duration-300 ${
-                            isPlaying ? 'animate-bounce' : ''
+                          {/* Mouth - animated when speaking */}
+                          <div className={`w-4 h-2 bg-orange-500 rounded-full mx-auto transition-all duration-200 ${
+                            isSpeaking ? 'animate-bounce scale-125' : isPlaying ? 'animate-pulse' : ''
                           }`}></div>
                         </div>
                       </div>
                     </div>
                     
                     {/* Speaking Animation Ring */}
-                    {isPlaying && !isMuted && (
-                      <div className="absolute inset-0 border-4 border-teal-400 rounded-full animate-ping opacity-75"></div>
+                    {isSpeaking && (
+                      <>
+                        <div className="absolute inset-0 border-4 border-teal-400 rounded-full animate-ping opacity-75"></div>
+                        <div className="absolute inset-0 border-2 border-orange-400 rounded-full animate-pulse opacity-50"></div>
+                      </>
+                    )}
+                    
+                    {/* Playing Animation Ring */}
+                    {isPlaying && !isSpeaking && (
+                      <div className="absolute inset-0 border-2 border-teal-300 rounded-full animate-pulse opacity-60"></div>
                     )}
                   </div>
 
@@ -184,13 +261,22 @@ const Hero: React.FC = () => {
                     
                     {/* Speech Bubble Arrow */}
                     <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white border-l border-t border-gray-200 rotate-45"></div>
+                    
+                    {/* Speaking Indicator */}
+                    {isSpeaking && (
+                      <div className="absolute -bottom-1 right-2 flex space-x-1">
+                        <div className="w-1 h-1 bg-teal-500 rounded-full animate-bounce"></div>
+                        <div className="w-1 h-1 bg-teal-500 rounded-full animate-bounce delay-100"></div>
+                        <div className="w-1 h-1 bg-teal-500 rounded-full animate-bounce delay-200"></div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Controls */}
                   <div className="flex items-center space-x-3 mt-6">
                     <button
                       onClick={togglePlay}
-                      className={`p-3 rounded-full transition-all duration-200 shadow-lg ${
+                      className={`p-3 rounded-full transition-all duration-200 shadow-lg transform hover:scale-105 ${
                         isPlaying 
                           ? 'bg-red-500 hover:bg-red-600 text-white' 
                           : 'bg-teal-500 hover:bg-teal-600 text-white'
@@ -201,7 +287,7 @@ const Hero: React.FC = () => {
                     
                     <button
                       onClick={toggleMute}
-                      className={`p-3 rounded-full transition-all duration-200 shadow-lg ${
+                      className={`p-3 rounded-full transition-all duration-200 shadow-lg transform hover:scale-105 ${
                         isMuted 
                           ? 'bg-gray-400 hover:bg-gray-500 text-white' 
                           : 'bg-orange-500 hover:bg-orange-600 text-white'
@@ -213,30 +299,62 @@ const Hero: React.FC = () => {
 
                   {/* Status Indicator */}
                   <div className="mt-4 text-center">
-                    <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                      isPlaying 
+                    <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
+                      isSpeaking
+                        ? 'bg-blue-100 text-blue-800'
+                        : isPlaying 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-gray-100 text-gray-600'
                     }`}>
-                      <div className={`w-2 h-2 rounded-full mr-2 ${
-                        isPlaying ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
+                      <div className={`w-2 h-2 rounded-full mr-2 transition-all duration-300 ${
+                        isSpeaking
+                          ? 'bg-blue-500 animate-pulse'
+                          : isPlaying 
+                          ? 'bg-green-500 animate-pulse' 
+                          : 'bg-gray-400'
                       }`}></div>
-                      {isPlaying ? 'AI Assistant Active' : 'Click Play to Start'}
+                      {isSpeaking 
+                        ? 'AI Assistant Speaking' 
+                        : isPlaying 
+                        ? 'AI Assistant Active' 
+                        : 'Click Play to Start'
+                      }
                     </div>
                   </div>
+
+                  {/* Voice Configuration Notice */}
+                  {isPlaying && !elevenLabsService.isConfigured() && (
+                    <div className="mt-2 text-center">
+                      <div className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                        <span>Text only - Add API key for voice</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Floating Particles */}
+                {/* Enhanced Floating Particles */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                  <div className="absolute top-4 right-4 w-2 h-2 bg-teal-400 rounded-full animate-ping opacity-60"></div>
-                  <div className="absolute bottom-8 left-6 w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce delay-1000 opacity-60"></div>
-                  <div className="absolute top-1/3 right-8 w-1 h-1 bg-teal-300 rounded-full animate-pulse delay-500 opacity-60"></div>
-                  <div className="absolute bottom-1/4 left-4 w-2.5 h-2.5 bg-orange-300 rounded-full animate-bounce delay-700 opacity-60"></div>
+                  <div className={`absolute top-4 right-4 w-2 h-2 bg-teal-400 rounded-full opacity-60 ${
+                    isSpeaking ? 'animate-ping' : 'animate-pulse'
+                  }`}></div>
+                  <div className={`absolute bottom-8 left-6 w-1.5 h-1.5 bg-orange-400 rounded-full opacity-60 ${
+                    isSpeaking ? 'animate-bounce' : 'animate-bounce delay-1000'
+                  }`}></div>
+                  <div className={`absolute top-1/3 right-8 w-1 h-1 bg-teal-300 rounded-full opacity-60 ${
+                    isSpeaking ? 'animate-pulse' : 'animate-pulse delay-500'
+                  }`}></div>
+                  <div className={`absolute bottom-1/4 left-4 w-2.5 h-2.5 bg-orange-300 rounded-full opacity-60 ${
+                    isSpeaking ? 'animate-bounce delay-300' : 'animate-bounce delay-700'
+                  }`}></div>
                 </div>
               </div>
 
-              {/* Glow Effect */}
-              <div className="absolute inset-0 bg-gradient-to-br from-teal-400/20 to-orange-400/20 rounded-3xl blur-xl -z-10 animate-pulse"></div>
+              {/* Enhanced Glow Effect */}
+              <div className={`absolute inset-0 bg-gradient-to-br rounded-3xl blur-xl -z-10 transition-all duration-500 ${
+                isSpeaking 
+                  ? 'from-teal-400/40 to-orange-400/40 animate-pulse' 
+                  : 'from-teal-400/20 to-orange-400/20 animate-pulse'
+              }`}></div>
             </div>
           </div>
         </div>
