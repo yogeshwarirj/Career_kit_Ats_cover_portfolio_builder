@@ -160,7 +160,7 @@ class ElevenLabsService {
   /**
    * Play text as speech
    */
-  async playText(text: string, options?: Partial<TextToSpeechOptions>, onComplete?: () => void): Promise<void> {
+  async playText(text: string, options?: Partial<TextToSpeechOptions>): Promise<void> {
     try {
       // Stop any currently playing audio
       this.stopCurrentAudio();
@@ -171,18 +171,20 @@ class ElevenLabsService {
         this.currentAudio = new Audio(audioUrl);
         
         this.currentAudio.onended = () => {
-          // Add a short natural pause before calling completion callback
-          setTimeout(() => {
-            if (onComplete) onComplete();
-            resolve();
-          }, 500); // Short 500ms pause between messages for natural flow
+          this.currentAudio = null;
+          resolve();
         };
         
         this.currentAudio.onerror = () => {
+          this.currentAudio = null;
           reject(new Error('Failed to play audio'));
         };
         
-        this.currentAudio.play().catch(reject);
+        // Ensure audio can play
+        const playPromise = this.currentAudio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(reject);
+        }
       });
     } catch (error) {
       console.error('Play text error:', error);
@@ -265,9 +267,9 @@ class ElevenLabsService {
    */
   getProfessionalFemaleVoiceSettings(): VoiceSettings {
     return {
-      stability: 0.71, // High stability for clear, consistent delivery
-      similarity_boost: 0.5, // Natural sound without being too robotic
-      style: 0.0, // Neutral, professional tone
+      stability: 0.75, // Higher stability for clear, consistent delivery
+      similarity_boost: 0.6, // Natural sound
+      style: 0.1, // Slight engagement for better flow
       use_speaker_boost: true // Enhanced clarity for interview context
     };
   }
@@ -294,8 +296,8 @@ export const playInterviewQuestion = (text: string): Promise<void> => {
 export const elevenLabsService = ElevenLabsService.getInstance();
 
 // Export the main functions for easy use
-export const playText = (text: string, options?: Partial<TextToSpeechOptions>, onComplete?: () => void): Promise<void> => {
-  return elevenLabsService.playText(text, options, onComplete);
+export const playText = (text: string, options?: Partial<TextToSpeechOptions>): Promise<void> => {
+  return elevenLabsService.playText(text, options);
 };
 
 export const stopAudio = (): void => {
