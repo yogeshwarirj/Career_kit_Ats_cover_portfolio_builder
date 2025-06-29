@@ -964,7 +964,9 @@ body {
 }
 
 .social-links {
-    display: flex;
+    display
+  }
+}: flex;
     justify-content: center;
     gap: 1rem;
     margin-top: 2rem;
