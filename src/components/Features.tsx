@@ -4,14 +4,6 @@ import { FileText, Target, Briefcase, Search, Mail, ArrowRight, Sparkles, Brain 
 const Features: React.FC = () => {
   const features = [
     {
-      icon: <Briefcase className="h-8 w-8" />,
-      title: "Portfolio Builder",
-      description: "Showcase your work with stunning portfolio websites that highlight your skills and achievements.",
-      gradient: "from-blue-400 via-blue-500 to-blue-600",
-      shadowColor: "shadow-blue-500/25",
-      glowColor: "group-hover:shadow-blue-500/40"
-    },
-    {
       icon: <Mail className="h-8 w-8" />,
       title: "Cover Letter Generator",
       description: "Generate personalized, compelling cover letters that complement your resume perfectly.",
@@ -34,6 +26,14 @@ const Features: React.FC = () => {
       gradient: "from-indigo-400 via-indigo-500 to-indigo-600",
       shadowColor: "shadow-indigo-500/25",
       glowColor: "group-hover:shadow-indigo-500/40"
+    },
+    {
+      icon: <Briefcase className="h-8 w-8" />,
+      title: "Portfolio Builder",
+      description: "Showcase your work with stunning portfolio websites that highlight your skills and achievements.",
+      gradient: "from-blue-400 via-blue-500 to-blue-600",
+      shadowColor: "shadow-blue-500/25",
+      glowColor: "group-hover:shadow-blue-500/40"
     }
   ];
 
