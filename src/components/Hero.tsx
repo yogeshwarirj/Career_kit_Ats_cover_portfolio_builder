@@ -148,6 +148,7 @@ const Hero: React.FC = () => {
     setShowAICharacter(false);
     toast.success('AI Assistant closed');
   };
+
   return (
     <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden -mt-16 pt-16">
       {/* Animated Gradient Background */}
@@ -219,190 +220,172 @@ const Hero: React.FC = () => {
           {/* Right Side - AI Character */}
           {showAICharacter && (
             <div className="flex justify-center lg:justify-end">
-            <div className="relative">
-              {/* AI Character Container */}
-              <div className="relative w-80 h-96 bg-gradient-to-br from-white/80 to-gray-50/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-                {/* Close Button */}
-                <button
-                  onClick={closeAICharacter}
-                  className="absolute top-4 right-4 z-20 p-2 bg-white/80 hover:bg-white rounded-full shadow-lg transition-all duration-200 transform hover:scale-110 group"
-                  title="Close AI Assistant"
-                >
-                  <X className="h-4 w-4 text-gray-600 group-hover:text-red-500 transition-colors duration-200" />
-                </button>
+              <div className="relative">
+                {/* AI Character Container */}
+                <div className="relative w-80 h-96 bg-gradient-to-br from-white/80 to-gray-50/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
+                  {/* Close Button */}
+                  <button
+                    onClick={closeAICharacter}
+                    className="absolute top-4 right-4 z-20 p-2 bg-white/80 hover:bg-white rounded-full shadow-lg transition-all duration-200 transform hover:scale-110 group"
+                    title="Close AI Assistant"
+                  >
+                    <X className="h-4 w-4 text-gray-600 group-hover:text-red-500 transition-colors duration-200" />
+                  </button>
 
-                {/* Character Background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-teal-100/30 to-orange-100/30"></div>
-                
-                {/* AI Character Avatar */}
-                <div className="relative z-10 flex flex-col items-center justify-center h-full p-6">
-                  {/* Avatar */}
-                  <div className={`relative w-32 h-32 rounded-full mb-6 transition-all duration-500 ${
-                    isSpeaking ? 'animate-pulse scale-110' : isPlaying ? 'animate-pulse' : ''
-                  }`}>
-                    {/* Avatar Background */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-teal-400 to-orange-400 rounded-full"></div>
-                    
-                    {/* Avatar Face */}
-                    <div className="absolute inset-2 bg-gradient-to-br from-teal-300 to-orange-300 rounded-full flex items-center justify-center">
-                      <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg">
-                        {/* Professional AI Woman Face */}
-                        <div className="relative">
-                          {/* Eyes */}
-                          <div className="flex space-x-3 mb-2">
-                            <div className={`w-3 h-3 bg-teal-600 rounded-full transition-all duration-300 ${
-                              isSpeaking ? 'animate-pulse scale-110' : isPlaying ? 'animate-pulse' : ''
-                            }`}></div>
-                            <div className={`w-3 h-3 bg-teal-600 rounded-full transition-all duration-300 ${
-                              isSpeaking ? 'animate-pulse scale-110' : isPlaying ? 'animate-pulse' : ''
+                  {/* Character Background */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-teal-100/30 to-orange-100/30"></div>
+                  
+                  {/* AI Character Avatar */}
+                  <div className="relative z-10 flex flex-col items-center justify-center h-full p-6">
+                    {/* Avatar */}
+                    <div className={`relative w-32 h-32 rounded-full mb-6 transition-all duration-500 ${
+                      isSpeaking ? 'animate-pulse scale-110' : isPlaying ? 'animate-pulse' : ''
+                    }`}>
+                      {/* Avatar Background */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-teal-400 to-orange-400 rounded-full"></div>
+                      
+                      {/* Avatar Face */}
+                      <div className="absolute inset-2 bg-gradient-to-br from-teal-300 to-orange-300 rounded-full flex items-center justify-center">
+                        <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg">
+                          {/* Professional AI Woman Face */}
+                          <div className="relative">
+                            {/* Eyes */}
+                            <div className="flex space-x-3 mb-2">
+                              <div className={`w-3 h-3 bg-teal-600 rounded-full transition-all duration-300 ${
+                                isSpeaking ? 'animate-pulse scale-110' : isPlaying ? 'animate-pulse' : ''
+                              }`}></div>
+                              <div className={`w-3 h-3 bg-teal-600 rounded-full transition-all duration-300 ${
+                                isSpeaking ? 'animate-pulse scale-110' : isPlaying ? 'animate-pulse' : ''
+                              }`}></div>
+                            </div>
+                            {/* Mouth - animated when speaking */}
+                            <div className={`w-4 h-2 bg-orange-500 rounded-full mx-auto transition-all duration-200 ${
+                              isSpeaking ? 'animate-bounce scale-125' : isPlaying ? 'animate-pulse' : ''
                             }`}></div>
                           </div>
-                          {/* Mouth - animated when speaking */}
-                          <div className={`w-4 h-2 bg-orange-500 rounded-full mx-auto transition-all duration-200 ${
-                            isSpeaking ? 'animate-bounce scale-125' : isPlaying ? 'animate-pulse' : ''
-                          }`}></div>
                         </div>
                       </div>
+                      
+                      {/* Speaking Animation Ring */}
+                      {isSpeaking && (
+                        <>
+                          <div className="absolute inset-0 border-4 border-teal-400 rounded-full animate-ping opacity-75"></div>
+                          <div className="absolute inset-0 border-2 border-orange-400 rounded-full animate-pulse opacity-50"></div>
+                        </>
+                      )}
+                      
+                      {/* Playing Animation Ring */}
+                      {isPlaying && !isSpeaking && (
+                        <div className="absolute inset-0 border-2 border-teal-300 rounded-full animate-pulse opacity-60"></div>
+                      )}
                     </div>
-                    
-                    {/* Speaking Animation Ring */}
-                    {isSpeaking && (
-                      <>
-                        <div className="absolute inset-0 border-4 border-teal-400 rounded-full animate-ping opacity-75"></div>
-                        <div className="absolute inset-0 border-2 border-orange-400 rounded-full animate-pulse opacity-50"></div>
-                      </>
-                    )}
-                    
-                    {/* Playing Animation Ring */}
-                    {isPlaying && !isSpeaking && (
-                      <div className="absolute inset-0 border-2 border-teal-300 rounded-full animate-pulse opacity-60"></div>
-                    )}
-                  </div>
 
-                  {/* Speech Bubble */}
-                  <div className="relative bg-white rounded-2xl p-4 shadow-lg border border-gray-200 max-w-xs">
-                    <div className={`text-sm text-gray-800 text-center transition-all duration-300 ${
-                      isAnimating ? 'opacity-0 transform scale-95' : 'opacity-100 transform scale-100'
-                    }`}>
-                      {messages[currentMessage].text}
-                    </div>
-                    
-                    {/* Speech Bubble Arrow */}
-                    <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white border-l border-t border-gray-200 rotate-45"></div>
-                    
-                    {/* Speaking Indicator */}
-                    {isSpeaking && (
-                      <div className="absolute -bottom-1 right-2 flex space-x-1">
-                        <div className="w-1 h-1 bg-teal-500 rounded-full animate-bounce"></div>
-                        <div className="w-1 h-1 bg-teal-500 rounded-full animate-bounce delay-100"></div>
-                        <div className="w-1 h-1 bg-teal-500 rounded-full animate-bounce delay-200"></div>
+                    {/* Speech Bubble */}
+                    <div className="relative bg-white rounded-2xl p-4 shadow-lg border border-gray-200 max-w-xs">
+                      <div className={`text-sm text-gray-800 text-center transition-all duration-300 ${
+                        isAnimating ? 'opacity-0 transform scale-95' : 'opacity-100 transform scale-100'
+                      }`}>
+                        {messages[currentMessage].text}
                       </div>
-                    )}
-                  </div>
+                      
+                      {/* Speech Bubble Arrow */}
+                      <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white border-l border-t border-gray-200 rotate-45"></div>
+                      
+                      {/* Speaking Indicator */}
+                      {isSpeaking && (
+                        <div className="absolute -bottom-1 right-2 flex space-x-1">
+                          <div className="w-1 h-1 bg-teal-500 rounded-full animate-bounce"></div>
+                          <div className="w-1 h-1 bg-teal-500 rounded-full animate-bounce delay-100"></div>
+                          <div className="w-1 h-1 bg-teal-500 rounded-full animate-bounce delay-200"></div>
+                        </div>
+                      )}
+                    </div>
 
-                  {/* Controls */}
-                  <div className="flex items-center space-x-3 mt-6">
-                    <button
-                      onClick={togglePlay}
-                      className={`p-3 rounded-full transition-all duration-200 shadow-lg transform hover:scale-105 ${
-                        isPlaying 
-                          ? 'bg-red-500 hover:bg-red-600 text-white' 
-                          : 'bg-teal-500 hover:bg-teal-600 text-white'
-                      }`}
-                    >
-                      {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
-                    </button>
-                    
-                    <button
-                      onClick={toggleMute}
-                      className={`p-3 rounded-full transition-all duration-200 shadow-lg transform hover:scale-105 ${
-                        isMuted 
-                          ? 'bg-gray-400 hover:bg-gray-500 text-white' 
-                          : 'bg-orange-500 hover:bg-orange-600 text-white'
-                      }`}
-                    >
-                      {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-                    </button>
-                  </div>
+                    {/* Controls */}
+                    <div className="flex items-center space-x-3 mt-6">
+                      <button
+                        onClick={togglePlay}
+                        className={`p-3 rounded-full transition-all duration-200 shadow-lg transform hover:scale-105 ${
+                          isPlaying 
+                            ? 'bg-red-500 hover:bg-red-600 text-white' 
+                            : 'bg-teal-500 hover:bg-teal-600 text-white'
+                        }`}
+                      >
+                        {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
+                      </button>
+                      
+                      <button
+                        onClick={toggleMute}
+                        className={`p-3 rounded-full transition-all duration-200 shadow-lg transform hover:scale-105 ${
+                          isMuted 
+                            ? 'bg-gray-400 hover:bg-gray-500 text-white' 
+                            : 'bg-orange-500 hover:bg-orange-600 text-white'
+                        }`}
+                      >
+                        {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                      </button>
+                    </div>
 
-                  {/* Status Indicator */}
-                  <div className="mt-4 text-center">
-                    <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
-                      isSpeaking
-                        ? 'bg-blue-100 text-blue-800'
-                        : isPlaying 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      <div className={`w-2 h-2 rounded-full mr-2 transition-all duration-300 ${
+                    {/* Status Indicator */}
+                    <div className="mt-4 text-center">
+                      <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
                         isSpeaking
-                          ? 'bg-blue-500 animate-pulse'
+                          ? 'bg-blue-100 text-blue-800'
                           : isPlaying 
-                          ? 'bg-green-500 animate-pulse' 
-                          : 'bg-gray-400'
-                      }`}></div>
-                      {isSpeaking 
-                        ? 'AI Assistant Speaking' 
-                        : isPlaying 
-                        ? 'AI Assistant Active' 
-                        : 'Click Play to Start'
-                      }
-                    </div>
-                  </div>
-
-                  {/* Voice Configuration Notice */}
-                  {isPlaying && !elevenLabsService.isConfigured() && (
-                    <div className="mt-2 text-center">
-                      <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs bg-amber-50 text-amber-800 border border-amber-200">
-                        <div className="w-2 h-2 bg-amber-500 rounded-full mr-2 animate-pulse"></div>
-                        <span>🔧 Add API key for voice</span>
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        <div className={`w-2 h-2 rounded-full mr-2 transition-all duration-300 ${
+                          isSpeaking
+                            ? 'bg-blue-500 animate-pulse'
+                            : isPlaying 
+                            ? 'bg-green-500 animate-pulse' 
+                            : 'bg-gray-400'
+                        }`}></div>
+                        {isSpeaking 
+                          ? 'AI Assistant Speaking' 
+                          : isPlaying 
+                          ? 'AI Assistant Active' 
+                          : 'Click Play to Start'
+                        }
                       </div>
                     </div>
-                  )}
-                </div>
 
-                {/* Enhanced Floating Particles */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                  <div className={`absolute top-4 right-4 w-2 h-2 bg-teal-400 rounded-full opacity-60 ${
-                    isSpeaking ? 'animate-ping' : 'animate-pulse'
-                  }`}></div>
-                  <div className={`absolute bottom-8 left-6 w-1.5 h-1.5 bg-orange-400 rounded-full opacity-60 ${
-                    isSpeaking ? 'animate-bounce' : 'animate-bounce delay-1000'
-                  }`}></div>
-                  <div className={`absolute top-1/3 right-8 w-1 h-1 bg-teal-300 rounded-full opacity-60 ${
-                    isSpeaking ? 'animate-pulse' : 'animate-pulse delay-500'
-                  }`}></div>
-                  <div className={`absolute bottom-1/4 left-4 w-2.5 h-2.5 bg-orange-300 rounded-full opacity-60 ${
-                    isSpeaking ? 'animate-bounce delay-300' : 'animate-bounce delay-700'
-                  }`}></div>
-                </div>
-              </div>
-
-              {/* Enhanced Glow Effect */}
-              <div className={`absolute inset-0 bg-gradient-to-br rounded-3xl blur-xl -z-10 transition-all duration-500 ${
-                isSpeaking 
-                  ? 'from-teal-400/40 to-orange-400/40 animate-pulse' 
-                  : 'from-teal-400/20 to-orange-400/20 animate-pulse'
-              }`}></div>
-            </div>
-          </div>
-          )}
-
-          {/* Show AI Character Button (when closed) */}
-          {!showAICharacter && (
-            <div className="flex justify-center lg:justify-end">
-              <button
-                onClick={() => setShowAICharacter(true)}
-                className="group bg-gradient-to-br from-teal-500 to-orange-500 text-white p-8 rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
-              >
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                    <Sparkles className="h-8 w-8 group-hover:animate-pulse" />
+                    {/* Voice Configuration Notice */}
+                    {isPlaying && !elevenLabsService.isConfigured() && (
+                      <div className="mt-2 text-center">
+                        <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs bg-amber-50 text-amber-800 border border-amber-200">
+                          <div className="w-2 h-2 bg-amber-500 rounded-full mr-2 animate-pulse"></div>
+                          <span>🔧 Add API key for voice</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <h3 className="text-xl font-bold mb-2">Open AI Assistant</h3>
-                  <p className="text-sm opacity-90">Get personalized career guidance</p>
+
+                  {/* Enhanced Floating Particles */}
+                  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <div className={`absolute top-4 right-4 w-2 h-2 bg-teal-400 rounded-full opacity-60 ${
+                      isSpeaking ? 'animate-ping' : 'animate-pulse'
+                    }`}></div>
+                    <div className={`absolute bottom-8 left-6 w-1.5 h-1.5 bg-orange-400 rounded-full opacity-60 ${
+                      isSpeaking ? 'animate-bounce' : 'animate-bounce delay-1000'
+                    }`}></div>
+                    <div className={`absolute top-1/3 right-8 w-1 h-1 bg-teal-300 rounded-full opacity-60 ${
+                      isSpeaking ? 'animate-pulse' : 'animate-pulse delay-500'
+                    }`}></div>
+                    <div className={`absolute bottom-1/4 left-4 w-2.5 h-2.5 bg-orange-300 rounded-full opacity-60 ${
+                      isSpeaking ? 'animate-bounce delay-300' : 'animate-bounce delay-700'
+                    }`}></div>
+                  </div>
                 </div>
-              </button>
+
+                {/* Enhanced Glow Effect */}
+                <div className={`absolute inset-0 bg-gradient-to-br rounded-3xl blur-xl -z-10 transition-all duration-500 ${
+                  isSpeaking 
+                    ? 'from-teal-400/40 to-orange-400/40 animate-pulse' 
+                    : 'from-teal-400/20 to-orange-400/20 animate-pulse'
+                }`}></div>
+              </div>
             </div>
           )}
         </div>
