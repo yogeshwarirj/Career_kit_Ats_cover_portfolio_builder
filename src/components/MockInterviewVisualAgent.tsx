@@ -45,8 +45,7 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
   const [audioState, setAudioState] = useState({
     isPlaying: false,
     isMuted: false,
-    currentText: '',
-    progress: 0
+    isAudioPaused: false
   });
 
   const [currentAnswer, setCurrentAnswer] = useState('');
@@ -118,64 +117,29 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
   };
 
   const playQuestionAudio = async (text: string) => {
-    try {
-      setAudioState(prev => ({ ...prev, isPlaying: true, currentText: text, progress: 0 }));
-      
-      // CRITICAL: Stop all other audio first
-      elevenLabsService.stopAllAudio();
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Start progress tracking
-      progressInterval.current = setInterval(() => {
-        setAudioState(prev => ({
-          ...prev,
-          progress: Math.min(prev.progress + 2, 100)
-        }));
-      }, 100);
+    if (audioState.isMuted) return;
 
-      await elevenLabsService.playTextWithId(text, componentId, {
-        voiceId: 'EXAVITQu4vr4xnSDxMaL',
-        voiceSettings: {
-          stability: 0.75,
-          similarity_boost: 0.6,
-          style: 0.1,
-          use_speaker_boost: true
-        }
-      });
-      
-      setAudioState(prev => ({ ...prev, isPlaying: false, progress: 100 }));
-      
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current);
-        progressInterval.current = null;
-      }
+    try {
+      setAudioState(prev => ({ ...prev, isPlaying: true, isAudioPaused: false }));
+      await elevenLabsService.playInterviewQuestion(currentQuestion.question);
     } catch (error) {
       console.error('Audio playback error:', error);
-      setAudioState(prev => ({ ...prev, isPlaying: false }));
-      
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current);
-        progressInterval.current = null;
-      }
-      
-      if (error instanceof Error) {
-        if (error.message.includes('ELEVENLABS_NOT_CONFIGURED')) {
-          toast.error('Voice features require Eleven Labs API key. Please configure in settings.');
-        } else {
-          toast.error('Audio playback failed. Please try again.');
-        }
-      }
+      toast.error('Audio playback failed. Please check your Eleven Labs API key and try again.');
+    } finally {
+      setAudioState(prev => ({ ...prev, isPlaying: false, isAudioPaused: false }));
     }
+  };
+
+  const pauseQuestionAudio = () => {
+    elevenLabsService.stopAllAudio();
+    setAudioState(prev => ({ ...prev, isPlaying: false, isAudioPaused: true }));
+    toast.success('Audio paused (will restart from beginning)');
   };
 
   const stopQuestionAudio = () => {
     elevenLabsService.stopAllAudio();
-    setAudioState(prev => ({ ...prev, isPlaying: false, progress: 0 }));
-    
-    if (progressInterval.current) {
-      clearInterval(progressInterval.current);
-      progressInterval.current = null;
-    }
+    setAudioState(prev => ({ ...prev, isPlaying: false, isAudioPaused: false }));
+    toast.success('Audio stopped');
   };
 
   const toggleMute = () => {
@@ -595,43 +559,43 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
 
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => {
-                // Stop ALL audio first to prevent conflicts
-                elevenLabsService.stopAllAudio();
-                playQuestionAudio(currentQuestion.question);
-              }}
+              onClick={playQuestionAudio}
               disabled={audioState.isPlaying || audioState.isMuted}
               className="flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-medium hover:from-blue-600 hover:to-purple-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Play className="h-5 w-5 mr-2" />
-              Play Question
+              Play
             </button>
 
-            {audioState.isPlaying && (
-              <button
-                onClick={stopQuestionAudio}
-                className="flex items-center px-6 py-3 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors duration-200"
-              >
-                <Square className="h-5 w-5 mr-2" />
-                Stop
-              </button>
-            )}
+            <button
+              onClick={pauseQuestionAudio}
+              disabled={!audioState.isPlaying || audioState.isMuted}
+              className="flex items-center px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Pause className="h-5 w-5 mr-2" />
+              Pause
+            </button>
 
-            <div className="flex-1">
-              {audioState.isPlaying && (
-                <div className="bg-white rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">Playing Question</span>
-                    <span className="text-sm text-gray-500">{audioState.progress}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-100"
-                      style={{ width: `${audioState.progress}%` }}
-                    ></div>
-                  </div>
-                </div>
-              )}
+            <button
+              onClick={stopQuestionAudio}
+              disabled={(!audioState.isPlaying && !audioState.isAudioPaused) || audioState.isMuted}
+              className="flex items-center px-6 py-3 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Square className="h-5 w-5 mr-2" />
+              Stop
+            </button>
+
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={toggleMute}
+                className={`p-2 rounded-lg transition-colors duration-200 ${
+                  audioState.isMuted
+                    ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                }`}
+              >
+                {audioState.isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              </button>
             </div>
           </div>
         </div>
