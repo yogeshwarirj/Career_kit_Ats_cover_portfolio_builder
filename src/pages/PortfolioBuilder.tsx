@@ -1,227 +1,223 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, User, Briefcase, GraduationCap, Award, Eye, Download, Save, Plus, Trash2, Edit3, Globe, Palette, Layout, Settings, Upload, FileText, Mail, Phone, MapPin, Linkedin, Github, Twitter, Target, Zap, Crown, Star, CheckCircle, Sparkles, Users, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Briefcase, User, Target, Palette, Eye, Download, Globe, ExternalLink, CheckCircle, Sparkles, RefreshCw, Code, Zap, Award, Users, Star, Shield, ArrowRight, Copy, Settings, Lightbulb } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
-import { portfolioGenerator, PortfolioData, defaultPortfolioData } from '../lib/portfolioGenerator';
-import { netlifyIntegration } from '../lib/netlifyIntegration';
+import { geminiPortfolioGenerator, PortfolioGenerationParams, GeneratedPortfolio } from '../lib/geminiPortfolioGenerator';
+import { netlifyIntegration, NetlifyDeployment } from '../lib/netlifyIntegration';
+
+interface FormData {
+  personalInfo: {
+    name: string;
+    email: string;
+    phone: string;
+    location: string;
+    linkedin: string;
+    github: string;
+    website: string;
+  };
+  targetRole: string;
+  experience: string;
+  skills: string[];
+  projects: string;
+  achievements: string;
+  preferences: {
+    style: 'modern' | 'classic' | 'creative' | 'minimal';
+    colorScheme: 'blue' | 'green' | 'purple' | 'orange' | 'red';
+    includeTestimonials: boolean;
+  };
+  skillsInput: string;
+}
 
 const PortfolioBuilder: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState<'setup' | 'design' | 'content' | 'preview' | 'deploy'>('setup');
-  const [portfolioData, setPortfolioData] = useState<PortfolioData>(defaultPortfolioData);
-  const [selectedTemplate, setSelectedTemplate] = useState('modern-professional');
-  const [selectedTheme, setSelectedTheme] = useState('light');
+  const [currentStep, setCurrentStep] = useState<'input' | 'preview' | 'deploy' | 'success'>('input');
+  const [isGenerating, setIsGenerating] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
-  const [deploymentUrl, setDeploymentUrl] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState('personal');
+  const [generatedPortfolio, setGeneratedPortfolio] = useState<GeneratedPortfolio | null>(null);
+  const [deploymentResult, setDeploymentResult] = useState<NetlifyDeployment | null>(null);
+  const [deploymentError, setDeploymentError] = useState<string>('');
 
-  // Load saved portfolio data on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('portfolioData');
-    if (saved) {
-      try {
-        const parsedData = JSON.parse(saved);
-        setPortfolioData({ ...defaultPortfolioData, ...parsedData });
-      } catch (error) {
-        console.error('Error loading saved portfolio data:', error);
-      }
-    }
-  }, []);
+  const [formData, setFormData] = useState<FormData>({
+    personalInfo: {
+      name: '',
+      email: '',
+      phone: '',
+      location: '',
+      linkedin: '',
+      github: '',
+      website: ''
+    },
+    targetRole: '',
+    experience: '',
+    skills: [],
+    projects: '',
+    achievements: '',
+    preferences: {
+      style: 'modern',
+      colorScheme: 'blue',
+      includeTestimonials: false
+    },
+    skillsInput: ''
+  });
 
-  // Auto-save portfolio data
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      localStorage.setItem('portfolioData', JSON.stringify(portfolioData));
-    }, 1000);
-
-    return () => clearTimeout(timeoutId);
-  }, [portfolioData]);
-
-  const updatePortfolioData = (updates: Partial<PortfolioData>) => {
-    setPortfolioData(prev => ({
-      ...prev,
-      ...updates,
-      lastModified: new Date().toISOString()
-    }));
-  };
-
-  const updatePersonalInfo = (field: string, value: string) => {
-    setPortfolioData(prev => ({
-      ...prev,
-      personalInfo: {
-        ...prev.personalInfo,
+  const handleInputChange = (field: string, value: string | boolean) => {
+    if (field.startsWith('personalInfo.')) {
+      const personalField = field.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        personalInfo: {
+          ...prev.personalInfo,
+          [personalField]: value
+        }
+      }));
+    } else if (field.startsWith('preferences.')) {
+      const prefField = field.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        preferences: {
+          ...prev.preferences,
+          [prefField]: value
+        }
+      }));
+    } else if (field === 'skillsInput') {
+      const skills = (value as string).split(',').map(skill => skill.trim()).filter(skill => skill.length > 0);
+      setFormData(prev => ({
+        ...prev,
+        skillsInput: value as string,
+        skills
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
         [field]: value
-      }
-    }));
+      }));
+    }
   };
 
-  const updateSections = (section: string, value: any) => {
-    setPortfolioData(prev => ({
-      ...prev,
-      sections: {
-        ...prev.sections,
-        [section]: value
+  const handleGeneratePortfolio = async () => {
+    // Validate required fields
+    if (!formData.personalInfo.name || !formData.personalInfo.email || !formData.targetRole || !formData.experience || formData.skills.length === 0) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setIsGenerating(true);
+
+    try {
+      const params: PortfolioGenerationParams = {
+        personalInfo: formData.personalInfo,
+        targetRole: formData.targetRole,
+        experience: formData.experience,
+        skills: formData.skills,
+        projects: formData.projects,
+        achievements: formData.achievements,
+        preferences: formData.preferences
+      };
+
+      const result = await geminiPortfolioGenerator.generatePortfolio(params);
+
+      if (result.success && result.portfolio) {
+        setGeneratedPortfolio(result.portfolio);
+        setCurrentStep('preview');
+        toast.success('Portfolio generated successfully with Gemini AI!');
+      } else {
+        // Try fallback generation
+        const fallbackPortfolio = geminiPortfolioGenerator.generateFallbackPortfolio(params);
+        setGeneratedPortfolio(fallbackPortfolio);
+        setCurrentStep('preview');
+        toast.success('Portfolio generated with fallback content!');
       }
-    }));
+    } catch (error) {
+      console.error('Portfolio generation error:', error);
+      toast.error('Failed to generate portfolio. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
-  const addExperience = () => {
-    const newExperience = {
-      id: Date.now().toString(),
-      title: '',
-      company: '',
-      startDate: '',
-      endDate: '',
-      current: false,
-      description: ''
-    };
-    
-    setPortfolioData(prev => ({
-      ...prev,
-      sections: {
-        ...prev.sections,
-        experience: [...prev.sections.experience, newExperience]
-      }
-    }));
-  };
-
-  const updateExperience = (index: number, field: string, value: any) => {
-    setPortfolioData(prev => ({
-      ...prev,
-      sections: {
-        ...prev.sections,
-        experience: prev.sections.experience.map((exp, i) => 
-          i === index ? { ...exp, [field]: value } : exp
-        )
-      }
-    }));
-  };
-
-  const removeExperience = (index: number) => {
-    setPortfolioData(prev => ({
-      ...prev,
-      sections: {
-        ...prev.sections,
-        experience: prev.sections.experience.filter((_, i) => i !== index)
-      }
-    }));
-  };
-
-  const addProject = () => {
-    const newProject = {
-      id: Date.now().toString(),
-      title: '',
-      description: '',
-      technologies: [],
-      liveUrl: '',
-      githubUrl: '',
-      imageUrl: ''
-    };
-    
-    setPortfolioData(prev => ({
-      ...prev,
-      sections: {
-        ...prev.sections,
-        projects: [...(prev.sections.projects || []), newProject]
-      }
-    }));
-  };
-
-  const updateProject = (index: number, field: string, value: any) => {
-    setPortfolioData(prev => ({
-      ...prev,
-      sections: {
-        ...prev.sections,
-        projects: (prev.sections.projects || []).map((project, i) => 
-          i === index ? { ...project, [field]: value } : project
-        )
-      }
-    }));
-  };
-
-  const removeProject = (index: number) => {
-    setPortfolioData(prev => ({
-      ...prev,
-      sections: {
-        ...prev.sections,
-        projects: (prev.sections.projects || []).filter((_, i) => i !== index)
-      }
-    }));
-  };
-
-  const addEducation = () => {
-    const newEducation = {
-      id: Date.now().toString(),
-      degree: '',
-      school: '',
-      graduationYear: '',
-      gpa: ''
-    };
-    
-    setPortfolioData(prev => ({
-      ...prev,
-      sections: {
-        ...prev.sections,
-        education: [...prev.sections.education, newEducation]
-      }
-    }));
-  };
-
-  const updateEducation = (index: number, field: string, value: any) => {
-    setPortfolioData(prev => ({
-      ...prev,
-      sections: {
-        ...prev.sections,
-        education: prev.sections.education.map((edu, i) => 
-          i === index ? { ...edu, [field]: value } : edu
-        )
-      }
-    }));
-  };
-
-  const removeEducation = (index: number) => {
-    setPortfolioData(prev => ({
-      ...prev,
-      sections: {
-        ...prev.sections,
-        education: prev.sections.education.filter((_, i) => i !== index)
-      }
-    }));
-  };
-
-  const handleDeploy = async () => {
-    if (!portfolioData.personalInfo.name || !portfolioData.sections.about) {
-      toast.error('Please fill in your name and about section before deploying');
+  const handleDeployPortfolio = async () => {
+    if (!generatedPortfolio) {
+      toast.error('No portfolio to deploy');
       return;
     }
 
     setIsDeploying(true);
-    try {
-      // Generate slug if not exists
-      if (!portfolioData.slug) {
-        const slug = portfolioGenerator.generateSlug(portfolioData.personalInfo.name);
-        updatePortfolioData({ slug });
-      }
+    setDeploymentError('');
 
-      // Deploy to Netlify
-      const deployment = await portfolioGenerator.deployToNetlify(portfolioData);
-      setDeploymentUrl(deployment.url);
-      updatePortfolioData({ 
-        isPublished: true, 
-        publishedUrl: deployment.url 
-      });
+    try {
+      // Generate portfolio files
+      const portfolioFiles = netlifyIntegration.generatePortfolioFiles(generatedPortfolio);
       
-      toast.success('Portfolio deployed successfully!');
-      setCurrentStep('deploy');
+      // Optimize for performance
+      const optimizedFiles = netlifyIntegration.optimizeForPerformance(portfolioFiles);
+      
+      // Deploy to Netlify
+      const deployment = await netlifyIntegration.deployPortfolio(
+        generatedPortfolio,
+        optimizedFiles,
+        { production: true }
+      );
+
+      setDeploymentResult(deployment);
+      setCurrentStep('success');
+      toast.success('Portfolio deployed successfully to Netlify!');
     } catch (error) {
       console.error('Deployment error:', error);
-      toast.error('Failed to deploy portfolio. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to deploy portfolio';
+      setDeploymentError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsDeploying(false);
     }
   };
 
-  const templates = portfolioGenerator.getTemplates();
-  const themes = portfolioGenerator.getThemes();
+  const copyPortfolioUrl = () => {
+    if (deploymentResult?.url) {
+      navigator.clipboard.writeText(deploymentResult.url);
+      toast.success('Portfolio URL copied to clipboard!');
+    }
+  };
+
+  const features = [
+    {
+      icon: <Sparkles className="h-8 w-8" />,
+      title: "AI-Generated Content",
+      description: "Gemini AI creates personalized, professional content tailored to your role",
+      gradient: "from-blue-500 to-blue-600"
+    },
+    {
+      icon: <Palette className="h-8 w-8" />,
+      title: "Custom Design",
+      description: "Choose from multiple styles and color schemes to match your personality",
+      gradient: "from-purple-500 to-purple-600"
+    },
+    {
+      icon: <Globe className="h-8 w-8" />,
+      title: "Instant Deployment",
+      description: "Deploy directly to Netlify with a custom URL and global CDN",
+      gradient: "from-green-500 to-green-600"
+    },
+    {
+      icon: <Zap className="h-8 w-8" />,
+      title: "Performance Optimized",
+      description: "Fast loading, SEO-friendly, and mobile-responsive portfolios",
+      gradient: "from-orange-500 to-orange-600"
+    }
+  ];
+
+  const styleOptions = [
+    { id: 'modern', name: 'Modern', description: 'Clean, contemporary design with bold typography' },
+    { id: 'classic', name: 'Classic', description: 'Timeless, professional layout with elegant styling' },
+    { id: 'creative', name: 'Creative', description: 'Artistic, unique design for creative professionals' },
+    { id: 'minimal', name: 'Minimal', description: 'Simple, focused design that lets content shine' }
+  ];
+
+  const colorOptions = [
+    { id: 'blue', name: 'Ocean Blue', color: '#2563eb' },
+    { id: 'green', name: 'Forest Green', color: '#059669' },
+    { id: 'purple', name: 'Royal Purple', color: '#7c3aed' },
+    { id: 'orange', name: 'Sunset Orange', color: '#ea580c' },
+    { id: 'red', name: 'Crimson Red', color: '#dc2626' }
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 relative overflow-hidden">
@@ -229,9 +225,9 @@ const PortfolioBuilder: React.FC = () => {
       
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-96 h-96 bg-gradient-to-r from-purple-100/30 to-pink-100/30 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
-        <div className="absolute top-40 right-10 w-96 h-96 bg-gradient-to-r from-blue-100/30 to-teal-100/30 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-gradient-to-r from-green-100/30 to-yellow-100/30 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
+        <div className="absolute top-20 left-10 w-96 h-96 bg-gradient-to-r from-blue-100/30 to-purple-100/30 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
+        <div className="absolute top-40 right-10 w-96 h-96 bg-gradient-to-r from-green-100/30 to-teal-100/30 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-gradient-to-r from-orange-100/30 to-red-100/30 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
       </div>
 
       {/* Header */}
@@ -240,30 +236,10 @@ const PortfolioBuilder: React.FC = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Link to="/" className="flex items-center group">
-                <ArrowLeft className="h-5 w-5 text-gray-600 mr-3 group-hover:text-purple-600 transition-colors duration-200" />
-                <User className="h-8 w-8 text-purple-600" />
+                <ArrowLeft className="h-5 w-5 text-gray-600 mr-3 group-hover:text-blue-600 transition-colors duration-200" />
+                <Briefcase className="h-8 w-8 text-blue-600" />
                 <span className="ml-2 text-xl font-bold text-gray-900">Portfolio Builder</span>
               </Link>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={handleDeploy}
-                disabled={isDeploying}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              >
-                {isDeploying ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Deploying...
-                  </>
-                ) : (
-                  <>
-                    <Globe className="h-4 w-4 mr-2" />
-                    Deploy Portfolio
-                  </>
-                )}
-              </button>
             </div>
           </div>
         </div>
@@ -274,20 +250,20 @@ const PortfolioBuilder: React.FC = () => {
         {/* Progress Indicator */}
         <div className="mb-8">
           <div className="flex items-center justify-center space-x-4">
-            {['setup', 'design', 'content', 'preview', 'deploy'].map((step, index) => (
+            {['input', 'preview', 'deploy', 'success'].map((step, index) => (
               <div key={step} className="flex items-center">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
                   currentStep === step 
-                    ? 'bg-purple-600 text-white shadow-lg' 
-                    : index < ['setup', 'design', 'content', 'preview', 'deploy'].indexOf(currentStep)
+                    ? 'bg-blue-600 text-white shadow-lg' 
+                    : index < ['input', 'preview', 'deploy', 'success'].indexOf(currentStep)
                     ? 'bg-green-500 text-white'
                     : 'bg-gray-200 text-gray-600'
                 }`}>
                   {index + 1}
                 </div>
-                {index < 4 && (
+                {index < 3 && (
                   <div className={`w-16 h-1 mx-2 transition-all duration-300 ${
-                    index < ['setup', 'design', 'content', 'preview', 'deploy'].indexOf(currentStep)
+                    index < ['input', 'preview', 'deploy', 'success'].indexOf(currentStep)
                       ? 'bg-green-500'
                       : 'bg-gray-200'
                   }`}></div>
@@ -297,734 +273,550 @@ const PortfolioBuilder: React.FC = () => {
           </div>
           <div className="flex justify-center mt-4">
             <span className="text-sm text-gray-600 capitalize">
-              Step {['setup', 'design', 'content', 'preview', 'deploy'].indexOf(currentStep) + 1}: {
-                currentStep === 'setup' ? 'Basic Setup' : 
-                currentStep === 'design' ? 'Choose Design' : 
-                currentStep === 'content' ? 'Add Content' :
-                currentStep === 'preview' ? 'Preview Portfolio' :
-                'Deploy & Share'
+              Step {['input', 'preview', 'deploy', 'success'].indexOf(currentStep) + 1}: {
+                currentStep === 'input' ? 'Portfolio Details' : 
+                currentStep === 'preview' ? 'Review Portfolio' : 
+                currentStep === 'deploy' ? 'Deploy to Netlify' :
+                'Portfolio Live'
               }
             </span>
           </div>
         </div>
 
         {/* Step Content */}
-        {currentStep === 'setup' && (
+        {currentStep === 'input' && (
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-8">
-              <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 text-sm font-medium mb-4 animate-fade-in">
+              <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 text-sm font-medium mb-4 animate-fade-in">
                 <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
-                Professional Portfolio Builder
+                AI-Powered Portfolio Builder
               </div>
               
               <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4 leading-[1.15] animate-fade-in-up">
                 Create Your{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 animate-gradient-x">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600 animate-gradient-x">
                   Professional Portfolio
                 </span>
               </h1>
               
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-[1.15] animate-fade-in-up delay-200">
-                Build a stunning portfolio website that showcases your skills, experience, and projects
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-[1.15] animate-fade-in-up delay-200">
+                Generate a stunning portfolio website with AI and deploy it instantly to Netlify
               </p>
             </div>
 
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Basic Information</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
-                  <input
-                    type="text"
-                    value={portfolioData.personalInfo.name}
-                    onChange={(e) => updatePersonalInfo('name', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                    placeholder="John Doe"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
-                  <input
-                    type="email"
-                    value={portfolioData.personalInfo.email}
-                    onChange={(e) => updatePersonalInfo('email', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                    placeholder="john@example.com"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                  <input
-                    type="tel"
-                    value={portfolioData.personalInfo.phone}
-                    onChange={(e) => updatePersonalInfo('phone', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                    placeholder="+1 (555) 123-4567"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                  <input
-                    type="text"
-                    value={portfolioData.personalInfo.location}
-                    onChange={(e) => updatePersonalInfo('location', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                    placeholder="San Francisco, CA"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Website/Portfolio</label>
-                  <input
-                    type="url"
-                    value={portfolioData.personalInfo.website}
-                    onChange={(e) => updatePersonalInfo('website', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                    placeholder="https://johndoe.com"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">LinkedIn Profile</label>
-                  <input
-                    type="url"
-                    value={portfolioData.personalInfo.linkedin}
-                    onChange={(e) => updatePersonalInfo('linkedin', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                    placeholder="https://linkedin.com/in/johndoe"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">About Me *</label>
-                <textarea
-                  rows={4}
-                  value={portfolioData.sections.about}
-                  onChange={(e) => updateSections('about', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Write a brief introduction about yourself, your skills, and what you're passionate about..."
-                  required
-                />
-              </div>
-
-              <div className="mt-8 flex justify-end">
-                <button
-                  onClick={() => setCurrentStep('design')}
-                  disabled={!portfolioData.personalInfo.name || !portfolioData.personalInfo.email || !portfolioData.sections.about}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            {/* Features Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+              {features.map((feature, index) => (
+                <div
+                  key={index}
+                  className={`group bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 animate-fade-in-up`}
+                  style={{ animationDelay: `${index * 100}ms` }}
                 >
-                  Continue to Design
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {currentStep === 'design' && (
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Choose Your Design</h2>
-              <p className="text-lg text-gray-600">Select a template and theme that represents your style</p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Templates */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                  <Layout className="h-5 w-5 mr-2 text-purple-600" />
-                  Templates
-                </h3>
-                
-                <div className="grid grid-cols-1 gap-4">
-                  {templates.map((template) => (
-                    <div
-                      key={template.id}
-                      onClick={() => {
-                        setSelectedTemplate(template.id);
-                        updatePortfolioData({ template: template.id });
-                      }}
-                      className={`cursor-pointer border-2 rounded-lg p-4 transition-all duration-200 ${
-                        selectedTemplate === template.id
-                          ? 'border-purple-500 bg-purple-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-semibold text-gray-900">{template.name}</h4>
-                          <p className="text-sm text-gray-600">{template.description}</p>
-                        </div>
-                        {selectedTemplate === template.id && (
-                          <CheckCircle className="h-5 w-5 text-purple-600" />
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                  <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${feature.gradient} flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                    {feature.icon}
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                  <p className="text-gray-600 text-sm">{feature.description}</p>
                 </div>
-              </div>
-
-              {/* Themes */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                  <Palette className="h-5 w-5 mr-2 text-purple-600" />
-                  Color Themes
-                </h3>
-                
-                <div className="grid grid-cols-1 gap-4">
-                  {themes.map((theme) => (
-                    <div
-                      key={theme.id}
-                      onClick={() => {
-                        setSelectedTheme(theme.id);
-                        updatePortfolioData({ theme: theme.id });
-                      }}
-                      className={`cursor-pointer border-2 rounded-lg p-4 transition-all duration-200 ${
-                        selectedTheme === theme.id
-                          ? 'border-purple-500 bg-purple-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-semibold text-gray-900">{theme.name}</h4>
-                          <p className="text-sm text-gray-600">{theme.description}</p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <div 
-                            className="w-6 h-6 rounded-full border border-gray-200"
-                            style={{ backgroundColor: theme.colors.background }}
-                          ></div>
-                          <div 
-                            className="w-6 h-6 rounded-full border border-gray-200"
-                            style={{ backgroundColor: theme.colors.surface }}
-                          ></div>
-                          {selectedTheme === theme.id && (
-                            <CheckCircle className="h-5 w-5 text-purple-600" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
 
-            <div className="mt-8 flex justify-between">
-              <button
-                onClick={() => setCurrentStep('setup')}
-                className="px-6 py-3 text-gray-700 hover:text-purple-600 transition-colors duration-200"
-              >
-                ← Back to Setup
-              </button>
+            {/* Form */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Portfolio Information</h2>
               
-              <button
-                onClick={() => setCurrentStep('content')}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105"
-              >
-                Continue to Content
-              </button>
+              <div className="space-y-8">
+                {/* Personal Information */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <User className="h-5 w-5 mr-2 text-blue-600" />
+                    Personal Information
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                      <input
+                        type="text"
+                        value={formData.personalInfo.name}
+                        onChange={(e) => handleInputChange('personalInfo.name', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        placeholder="John Doe"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
+                      <input
+                        type="email"
+                        value={formData.personalInfo.email}
+                        onChange={(e) => handleInputChange('personalInfo.email', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        placeholder="john@example.com"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                      <input
+                        type="tel"
+                        value={formData.personalInfo.phone}
+                        onChange={(e) => handleInputChange('personalInfo.phone', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        placeholder="+1 (555) 123-4567"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                      <input
+                        type="text"
+                        value={formData.personalInfo.location}
+                        onChange={(e) => handleInputChange('personalInfo.location', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        placeholder="San Francisco, CA"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">LinkedIn Profile</label>
+                      <input
+                        type="url"
+                        value={formData.personalInfo.linkedin}
+                        onChange={(e) => handleInputChange('personalInfo.linkedin', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        placeholder="https://linkedin.com/in/johndoe"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">GitHub Profile</label>
+                      <input
+                        type="url"
+                        value={formData.personalInfo.github}
+                        onChange={(e) => handleInputChange('personalInfo.github', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        placeholder="https://github.com/johndoe"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Professional Information */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Target className="h-5 w-5 mr-2 text-blue-600" />
+                    Professional Information
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Target Role/Title *</label>
+                      <input
+                        type="text"
+                        value={formData.targetRole}
+                        onChange={(e) => handleInputChange('targetRole', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        placeholder="Full Stack Developer"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Experience & Background *</label>
+                      <textarea
+                        rows={4}
+                        value={formData.experience}
+                        onChange={(e) => handleInputChange('experience', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        placeholder="Describe your professional experience, background, and career journey..."
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Skills & Technologies *</label>
+                      <input
+                        type="text"
+                        value={formData.skillsInput}
+                        onChange={(e) => handleInputChange('skillsInput', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        placeholder="JavaScript, React, Node.js, Python, AWS, Docker, etc."
+                        required
+                      />
+                      <p className="text-sm text-gray-500 mt-1">Separate skills with commas</p>
+                      {formData.skills.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {formData.skills.map((skill, index) => (
+                            <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Projects Description</label>
+                      <textarea
+                        rows={4}
+                        value={formData.projects}
+                        onChange={(e) => handleInputChange('projects', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        placeholder="Describe your key projects, what you built, technologies used, and outcomes..."
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Key Achievements</label>
+                      <textarea
+                        rows={3}
+                        value={formData.achievements}
+                        onChange={(e) => handleInputChange('achievements', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        placeholder="List your key achievements, awards, certifications, or notable accomplishments..."
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Design Preferences */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Palette className="h-5 w-5 mr-2 text-blue-600" />
+                    Design Preferences
+                  </h3>
+                  
+                  <div className="space-y-6">
+                    {/* Style Selection */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">Portfolio Style</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {styleOptions.map((style) => (
+                          <div
+                            key={style.id}
+                            onClick={() => handleInputChange('preferences.style', style.id)}
+                            className={`cursor-pointer p-4 rounded-lg border-2 transition-all duration-200 ${
+                              formData.preferences.style === style.id
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-300 hover:border-gray-400'
+                            }`}
+                          >
+                            <h4 className="font-medium text-gray-900 mb-1">{style.name}</h4>
+                            <p className="text-sm text-gray-600">{style.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Color Scheme */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">Color Scheme</label>
+                      <div className="flex flex-wrap gap-4">
+                        {colorOptions.map((color) => (
+                          <div
+                            key={color.id}
+                            onClick={() => handleInputChange('preferences.colorScheme', color.id)}
+                            className={`cursor-pointer flex items-center space-x-3 p-3 rounded-lg border-2 transition-all duration-200 ${
+                              formData.preferences.colorScheme === color.id
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-300 hover:border-gray-400'
+                            }`}
+                          >
+                            <div 
+                              className="w-6 h-6 rounded-full border border-gray-200"
+                              style={{ backgroundColor: color.color }}
+                            ></div>
+                            <span className="text-sm font-medium text-gray-900">{color.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Additional Options */}
+                    <div>
+                      <label className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          checked={formData.preferences.includeTestimonials}
+                          onChange={(e) => handleInputChange('preferences.includeTestimonials', e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Include testimonials section</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* AI Notice */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <Lightbulb className="h-5 w-5 text-blue-400" />
+                    </div>
+                    <div className="ml-3">
+                      <h4 className="text-sm font-medium text-blue-800 mb-1">
+                        Powered by Google Gemini AI
+                      </h4>
+                      <p className="text-sm text-blue-700">
+                        Your portfolio content will be generated using advanced AI to create professional, 
+                        engaging content tailored to your role and experience.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Generate Button */}
+                <div className="flex justify-center pt-4">
+                  <button
+                    onClick={handleGeneratePortfolio}
+                    disabled={isGenerating || !formData.personalInfo.name || !formData.personalInfo.email || !formData.targetRole || !formData.experience || formData.skills.length === 0}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                        Generating Portfolio...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-5 w-5 mr-2" />
+                        Generate Portfolio with AI
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
 
-        {currentStep === 'content' && (
+        {currentStep === 'preview' && generatedPortfolio && (
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-8">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Add Your Content</h2>
-              <p className="text-lg text-gray-600">Fill in your professional information</p>
+              <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-green-100 to-teal-100 text-green-800 text-sm font-medium mb-4 animate-fade-in">
+                <CheckCircle className="w-4 h-4 mr-2 animate-pulse" />
+                Portfolio Generated Successfully
+              </div>
+              
+              <h2 className="text-4xl font-bold text-gray-900 mb-4 leading-[1.15]">
+                Your{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 via-teal-600 to-blue-600">
+                  Portfolio Preview
+                </span>
+              </h2>
+              <p className="text-lg text-gray-600">
+                Review your AI-generated portfolio before deploying to Netlify
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              {/* Sidebar Navigation */}
-              <div className="lg:col-span-1">
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 sticky top-24">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Sections</h3>
-                  
-                  <div className="space-y-2">
-                    {[
-                      { id: 'experience', label: 'Experience', icon: Briefcase },
-                      { id: 'projects', label: 'Projects', icon: Target },
-                      { id: 'education', label: 'Education', icon: GraduationCap },
-                      { id: 'skills', label: 'Skills', icon: Zap },
-                    ].map((section) => (
-                      <button
-                        key={section.id}
-                        onClick={() => setActiveSection(section.id)}
-                        className={`w-full flex items-center p-3 rounded-lg transition-all duration-200 ${
-                          activeSection === section.id
-                            ? 'bg-purple-600 text-white'
-                            : 'text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        <section.icon className="h-5 w-5 mr-3" />
-                        {section.label}
-                      </button>
+            {/* Portfolio Preview */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">Portfolio Preview</h3>
+                <div className="flex space-x-3">
+                  <button className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200">
+                    <Eye className="h-4 w-4 mr-2" />
+                    Full Preview
+                  </button>
+                </div>
+              </div>
+
+              {/* Portfolio Content Preview */}
+              <div className="space-y-6">
+                {/* Header */}
+                <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">{generatedPortfolio.personalInfo.name}</h1>
+                  <p className="text-xl text-gray-600 mb-4">{formData.targetRole}</p>
+                  <div className="flex justify-center space-x-4 text-sm text-gray-600">
+                    <span>{generatedPortfolio.personalInfo.email}</span>
+                    {generatedPortfolio.personalInfo.phone && <span>{generatedPortfolio.personalInfo.phone}</span>}
+                    {generatedPortfolio.personalInfo.location && <span>{generatedPortfolio.personalInfo.location}</span>}
+                  </div>
+                </div>
+
+                {/* About Section */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">About</h3>
+                  <p className="text-gray-700">{generatedPortfolio.sections.about}</p>
+                </div>
+
+                {/* Projects Preview */}
+                {generatedPortfolio.sections.projects.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Projects ({generatedPortfolio.sections.projects.length})</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {generatedPortfolio.sections.projects.slice(0, 2).map((project, index) => (
+                        <div key={project.id} className="border border-gray-200 rounded-lg p-4">
+                          <h4 className="font-medium text-gray-900 mb-2">{project.title}</h4>
+                          <p className="text-sm text-gray-600 mb-3">{project.description.substring(0, 100)}...</p>
+                          <div className="flex flex-wrap gap-1">
+                            {project.technologies.slice(0, 3).map((tech, techIndex) => (
+                              <span key={techIndex} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                {tech}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Skills Preview */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Skills</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {generatedPortfolio.sections.skills.technical.slice(0, 8).map((skill, index) => (
+                      <span key={index} className="px-3 py-1 bg-gray-100 text-gray-800 text-sm rounded-full">
+                        {skill}
+                      </span>
                     ))}
                   </div>
                 </div>
               </div>
-
-              {/* Main Content */}
-              <div className="lg:col-span-3">
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
-                  {activeSection === 'experience' && (
-                    <div>
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-2xl font-bold text-gray-900 flex items-center">
-                          <Briefcase className="h-6 w-6 mr-2 text-purple-600" />
-                          Work Experience
-                        </h3>
-                        <button
-                          onClick={addExperience}
-                          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors duration-200 flex items-center"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Experience
-                        </button>
-                      </div>
-
-                      <div className="space-y-6">
-                        {portfolioData.sections.experience.map((exp, index) => (
-                          <div key={exp.id || index} className="border border-gray-200 rounded-lg p-6">
-                            <div className="flex items-center justify-between mb-4">
-                              <h4 className="text-lg font-semibold text-gray-900">Experience #{index + 1}</h4>
-                              <button
-                                onClick={() => removeExperience(index)}
-                                className="text-red-600 hover:text-red-700 transition-colors duration-200"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Job Title</label>
-                                <input
-                                  type="text"
-                                  value={exp.title || ''}
-                                  onChange={(e) => updateExperience(index, 'title', e.target.value)}
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                  placeholder="Software Engineer"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
-                                <input
-                                  type="text"
-                                  value={exp.company || ''}
-                                  onChange={(e) => updateExperience(index, 'company', e.target.value)}
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                  placeholder="Tech Company Inc."
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
-                                <input
-                                  type="text"
-                                  value={exp.startDate || ''}
-                                  onChange={(e) => updateExperience(index, 'startDate', e.target.value)}
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                  placeholder="January 2022"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
-                                <input
-                                  type="text"
-                                  value={exp.endDate || ''}
-                                  onChange={(e) => updateExperience(index, 'endDate', e.target.value)}
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                  placeholder="Present"
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="mt-4">
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                              <textarea
-                                rows={4}
-                                value={exp.description || ''}
-                                onChange={(e) => updateExperience(index, 'description', e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                placeholder="Describe your key responsibilities and achievements..."
-                              />
-                            </div>
-                          </div>
-                        ))}
-
-                        {portfolioData.sections.experience.length === 0 && (
-                          <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-                            <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <h4 className="text-lg font-medium text-gray-900 mb-2">No experience added yet</h4>
-                            <p className="text-gray-600 mb-4">Add your work experience to showcase your professional background</p>
-                            <button
-                              onClick={addExperience}
-                              className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors duration-200"
-                            >
-                              Add Your First Experience
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {activeSection === 'projects' && (
-                    <div>
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-2xl font-bold text-gray-900 flex items-center">
-                          <Target className="h-6 w-6 mr-2 text-purple-600" />
-                          Projects
-                        </h3>
-                        <button
-                          onClick={addProject}
-                          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors duration-200 flex items-center"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Project
-                        </button>
-                      </div>
-
-                      <div className="space-y-6">
-                        {(portfolioData.sections.projects || []).map((project, index) => (
-                          <div key={project.id || index} className="border border-gray-200 rounded-lg p-6">
-                            <div className="flex items-center justify-between mb-4">
-                              <h4 className="text-lg font-semibold text-gray-900">Project #{index + 1}</h4>
-                              <button
-                                onClick={() => removeProject(index)}
-                                className="text-red-600 hover:text-red-700 transition-colors duration-200"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Project Title</label>
-                                <input
-                                  type="text"
-                                  value={project.title || ''}
-                                  onChange={(e) => updateProject(index, 'title', e.target.value)}
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                  placeholder="My Awesome Project"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Technologies</label>
-                                <input
-                                  type="text"
-                                  value={Array.isArray(project.technologies) ? project.technologies.join(', ') : project.technologies || ''}
-                                  onChange={(e) => updateProject(index, 'technologies', e.target.value.split(',').map(t => t.trim()))}
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                  placeholder="React, Node.js, MongoDB"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Live URL</label>
-                                <input
-                                  type="url"
-                                  value={project.liveUrl || ''}
-                                  onChange={(e) => updateProject(index, 'liveUrl', e.target.value)}
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                  placeholder="https://myproject.com"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">GitHub URL</label>
-                                <input
-                                  type="url"
-                                  value={project.githubUrl || ''}
-                                  onChange={(e) => updateProject(index, 'githubUrl', e.target.value)}
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                  placeholder="https://github.com/username/project"
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="mt-4">
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                              <textarea
-                                rows={4}
-                                value={project.description || ''}
-                                onChange={(e) => updateProject(index, 'description', e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                placeholder="Describe your project, its features, and your role..."
-                              />
-                            </div>
-                          </div>
-                        ))}
-
-                        {(!portfolioData.sections.projects || portfolioData.sections.projects.length === 0) && (
-                          <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-                            <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <h4 className="text-lg font-medium text-gray-900 mb-2">No projects added yet</h4>
-                            <p className="text-gray-600 mb-4">Showcase your best work and projects</p>
-                            <button
-                              onClick={addProject}
-                              className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors duration-200"
-                            >
-                              Add Your First Project
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {activeSection === 'education' && (
-                    <div>
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-2xl font-bold text-gray-900 flex items-center">
-                          <GraduationCap className="h-6 w-6 mr-2 text-purple-600" />
-                          Education
-                        </h3>
-                        <button
-                          onClick={addEducation}
-                          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors duration-200 flex items-center"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Education
-                        </button>
-                      </div>
-
-                      <div className="space-y-6">
-                        {portfolioData.sections.education.map((edu, index) => (
-                          <div key={edu.id || index} className="border border-gray-200 rounded-lg p-6">
-                            <div className="flex items-center justify-between mb-4">
-                              <h4 className="text-lg font-semibold text-gray-900">Education #{index + 1}</h4>
-                              <button
-                                onClick={() => removeEducation(index)}
-                                className="text-red-600 hover:text-red-700 transition-colors duration-200"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Degree</label>
-                                <input
-                                  type="text"
-                                  value={edu.degree || ''}
-                                  onChange={(e) => updateEducation(index, 'degree', e.target.value)}
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                  placeholder="Bachelor of Science in Computer Science"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">School/University</label>
-                                <input
-                                  type="text"
-                                  value={edu.school || ''}
-                                  onChange={(e) => updateEducation(index, 'school', e.target.value)}
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                  placeholder="University of Technology"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Graduation Year</label>
-                                <input
-                                  type="text"
-                                  value={edu.graduationYear || ''}
-                                  onChange={(e) => updateEducation(index, 'graduationYear', e.target.value)}
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                  placeholder="2023"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">GPA (Optional)</label>
-                                <input
-                                  type="text"
-                                  value={edu.gpa || ''}
-                                  onChange={(e) => updateEducation(index, 'gpa', e.target.value)}
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                  placeholder="3.8/4.0"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-
-                        {portfolioData.sections.education.length === 0 && (
-                          <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-                            <GraduationCap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <h4 className="text-lg font-medium text-gray-900 mb-2">No education added yet</h4>
-                            <p className="text-gray-600 mb-4">Add your educational background</p>
-                            <button
-                              onClick={addEducation}
-                              className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors duration-200"
-                            >
-                              Add Your Education
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {activeSection === 'skills' && (
-                    <div>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                        <Zap className="h-6 w-6 mr-2 text-purple-600" />
-                        Skills & Expertise
-                      </h3>
-
-                      <div className="space-y-6">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Technical Skills</label>
-                          <input
-                            type="text"
-                            value={portfolioData.sections.skills.technical.join(', ')}
-                            onChange={(e) => updateSections('skills', {
-                              ...portfolioData.sections.skills,
-                              technical: e.target.value.split(',').map(skill => skill.trim()).filter(skill => skill)
-                            })}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            placeholder="JavaScript, React, Node.js, Python, SQL..."
-                          />
-                          <p className="text-sm text-gray-500 mt-1">Separate skills with commas</p>
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Soft Skills</label>
-                          <input
-                            type="text"
-                            value={portfolioData.sections.skills.soft.join(', ')}
-                            onChange={(e) => updateSections('skills', {
-                              ...portfolioData.sections.skills,
-                              soft: e.target.value.split(',').map(skill => skill.trim()).filter(skill => skill)
-                            })}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            placeholder="Leadership, Communication, Problem Solving, Teamwork..."
-                          />
-                          <p className="text-sm text-gray-500 mt-1">Separate skills with commas</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
 
-            <div className="mt-8 flex justify-between">
-              <button
-                onClick={() => setCurrentStep('design')}
-                className="px-6 py-3 text-gray-700 hover:text-purple-600 transition-colors duration-200"
-              >
-                ← Back to Design
-              </button>
-              
-              <button
-                onClick={() => setCurrentStep('preview')}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105"
-              >
-                Preview Portfolio
-              </button>
-            </div>
-          </div>
-        )}
-
-        {currentStep === 'preview' && (
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Preview Your Portfolio</h2>
-              <p className="text-lg text-gray-600">See how your portfolio will look to visitors</p>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-8 mb-8">
-              <div className="prose max-w-none">
-                <div dangerouslySetInnerHTML={{ 
-                  __html: portfolioGenerator.generatePortfolioHTML(portfolioData) 
-                }} />
-              </div>
-            </div>
-
+            {/* Action Buttons */}
             <div className="flex justify-between">
               <button
-                onClick={() => setCurrentStep('content')}
-                className="px-6 py-3 text-gray-700 hover:text-purple-600 transition-colors duration-200"
+                onClick={() => setCurrentStep('input')}
+                className="px-6 py-3 text-gray-700 hover:text-blue-600 transition-colors duration-200"
               >
-                ← Back to Content
+                ← Edit Portfolio
               </button>
               
-              <div className="flex space-x-4">
-                <button
-                  onClick={() => setCurrentStep('content')}
-                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
-                >
-                  Edit Content
-                </button>
-                <button
-                  onClick={handleDeploy}
-                  disabled={isDeploying}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isDeploying ? 'Deploying...' : 'Deploy Portfolio'}
-                </button>
-              </div>
+              <button
+                onClick={handleDeployPortfolio}
+                disabled={isDeploying}
+                className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-green-700 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center"
+              >
+                {isDeploying ? (
+                  <>
+                    <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                    Deploying to Netlify...
+                  </>
+                ) : (
+                  <>
+                    <Globe className="h-5 w-5 mr-2" />
+                    Deploy to Netlify
+                  </>
+                )}
+              </button>
             </div>
+
+            {deploymentError && (
+              <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-800">{deploymentError}</p>
+              </div>
+            )}
           </div>
         )}
 
-        {currentStep === 'deploy' && (
+        {currentStep === 'success' && deploymentResult && (
           <div className="max-w-4xl mx-auto text-center">
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-12">
-              <div className="w-24 h-24 bg-gradient-to-r from-green-400 to-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-24 h-24 bg-gradient-to-r from-green-500 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-6">
                 <CheckCircle className="h-12 w-12 text-white" />
               </div>
               
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Portfolio Deployed Successfully!</h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Portfolio Deployed Successfully!</h2>
               <p className="text-lg text-gray-600 mb-8">
-                Your portfolio is now live and accessible to the world
+                Your portfolio is now live on Netlify and accessible worldwide.
               </p>
               
-              {deploymentUrl && (
-                <div className="bg-gray-50 rounded-lg p-6 mb-8">
-                  <p className="text-sm text-gray-600 mb-2">Your portfolio is live at:</p>
-                  <a 
-                    href={deploymentUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-purple-600 hover:text-purple-700 font-medium text-lg break-all"
+              <div className="bg-gray-50 rounded-xl p-6 mb-8">
+                <div className="flex items-center justify-center space-x-4">
+                  <Globe className="h-6 w-6 text-green-600" />
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Your Portfolio URL:</p>
+                    <a 
+                      href={deploymentResult.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-lg font-medium text-blue-600 hover:text-blue-700 transition-colors duration-200"
+                    >
+                      {deploymentResult.url}
+                    </a>
+                  </div>
+                  <button
+                    onClick={copyPortfolioUrl}
+                    className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors duration-200"
                   >
-                    {deploymentUrl}
-                  </a>
+                    <Copy className="h-4 w-4" />
+                  </button>
                 </div>
-              )}
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Zap className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <h3 className="font-medium text-gray-900 mb-1">Fast Loading</h3>
+                  <p className="text-sm text-gray-600">Optimized for performance</p>
+                </div>
+                
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Shield className="h-6 w-6 text-green-600" />
+                  </div>
+                  <h3 className="font-medium text-gray-900 mb-1">Secure HTTPS</h3>
+                  <p className="text-sm text-gray-600">SSL certificate included</p>
+                </div>
+                
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Globe className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <h3 className="font-medium text-gray-900 mb-1">Global CDN</h3>
+                  <p className="text-sm text-gray-600">Worldwide accessibility</p>
+                </div>
+              </div>
               
               <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                {deploymentUrl && (
-                  <a
-                    href={deploymentUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105 inline-flex items-center justify-center"
-                  >
-                    <Eye className="mr-2 h-5 w-5" />
-                    View Portfolio
-                  </a>
-                )}
-                <button
-                  onClick={() => setCurrentStep('content')}
-                  className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-50 transition-all duration-300"
+                <a
+                  href={deploymentResult.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-green-700 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center"
                 >
-                  Edit Portfolio
+                  <ExternalLink className="h-5 w-5 mr-2" />
+                  View Live Portfolio
+                </a>
+                <button
+                  onClick={() => {
+                    setCurrentStep('input');
+                    setGeneratedPortfolio(null);
+                    setDeploymentResult(null);
+                    setFormData({
+                      personalInfo: {
+                        name: '',
+                        email: '',
+                        phone: '',
+                        location: '',
+                        linkedin: '',
+                        github: '',
+                        website: ''
+                      },
+                      targetRole: '',
+                      experience: '',
+                      skills: [],
+                      projects: '',
+                      achievements: '',
+                      preferences: {
+                        style: 'modern',
+                        colorScheme: 'blue',
+                        includeTestimonials: false
+                      },
+                      skillsInput: ''
+                    });
+                  }}
+                  className="border-2 border-gray-300 text-gray-700 px-8 py-3 rounded-xl font-semibold hover:bg-gray-50 transition-all duration-300"
+                >
+                  Create Another Portfolio
                 </button>
               </div>
             </div>
