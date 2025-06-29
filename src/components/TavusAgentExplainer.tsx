@@ -111,6 +111,11 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
         try {
           setIsSpeaking(true);
           
+          // CRITICAL: Ensure only this component plays
+          // Stop any other audio that might be playing
+          elevenLabsService.stopAllAudio();
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
           // Show speaking status
           toast.loading(`Speaking: ${feature.title}`, {
             id: 'speaking-status',
@@ -189,7 +194,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
       // Pause
       setIsPaused(true);
       setIsPlaying(false);
-      elevenLabsService.stopComponentAudio(componentId);
+      elevenLabsService.stopAllAudio();
       setIsSpeaking(false);
       playbackRef.current = false;
       toast.success('⏸️ AI presentation paused');
@@ -223,7 +228,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
     
     // Stop any current audio when muting
     if (newMutedState && isSpeaking) {
-      elevenLabsService.stopComponentAudio(componentId);
+      elevenLabsService.stopAllAudio();
       setIsSpeaking(false);
     }
 
@@ -234,7 +239,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
     // Stop any playing audio
     if (isPlaying) {
       setIsPlaying(false);
-      elevenLabsService.stopComponentAudio(componentId);
+      elevenLabsService.stopAllAudio();
       setIsSpeaking(false);
       playbackRef.current = false;
     }
@@ -245,7 +250,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
   const goToFeature = (index: number) => {
     // Stop current playback
     playbackRef.current = false;
-    elevenLabsService.stopComponentAudio(componentId);
+    elevenLabsService.stopAllAudio();
     setIsSpeaking(false);
     setIsPlaying(false);
     setIsPaused(false);

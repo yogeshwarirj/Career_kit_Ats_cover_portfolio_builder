@@ -33,8 +33,8 @@ class ElevenLabsService {
   private audioCache: Map<string, string> = new Map();
   private currentAudio: HTMLAudioElement | null = null;
   private isGloballyPlaying: boolean = false;
-  private audioQueue: Array<{ text: string; options?: Partial<TextToSpeechOptions>; resolve: () => void; reject: (error: Error) => void }> = [];
   private currentPlaybackId: string | null = null;
+  private activeComponents: Set<string> = new Set();
 
   constructor() {
     this.config = {
@@ -83,6 +83,47 @@ class ElevenLabsService {
   }
 
   /**
+   * GLOBAL AUDIO CONTROL - Stops ALL audio across ALL components
+   */
+  stopAllAudio(): void {
+    // Stop current audio immediately
+    if (this.currentAudio) {
+      try {
+        this.currentAudio.pause();
+        this.currentAudio.currentTime = 0;
+        this.currentAudio.onended = null;
+        this.currentAudio.onerror = null;
+        this.currentAudio.src = '';
+      } catch (error) {
+        console.warn('Error stopping audio:', error);
+      } finally {
+        this.currentAudio = null;
+      }
+    }
+
+    // Reset all state
+    this.isGloballyPlaying = false;
+    this.currentPlaybackId = null;
+    this.activeComponents.clear();
+
+    // Stop any other audio elements that might be playing
+    try {
+      const audioElements = document.querySelectorAll('audio');
+      audioElements.forEach(audio => {
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.src = '';
+        } catch (e) {
+          // Ignore errors on cleanup
+        }
+      });
+    } catch (error) {
+      console.warn('Error cleaning up audio elements:', error);
+    }
+  }
+
+  /**
    * Check if any audio is currently playing globally
    */
   isGloballyPlaying(): boolean {
@@ -90,13 +131,19 @@ class ElevenLabsService {
   }
 
   /**
-   * Stop all audio playback globally
+   * Check if a specific component is currently playing
    */
-  stopAllAudio(): void {
-    this.stopCurrentAudio();
-    this.audioQueue = [];
-    this.isGloballyPlaying = false;
-    this.currentPlaybackId = null;
+  isComponentPlaying(componentId: string): boolean {
+    return this.isGloballyPlaying && this.currentPlaybackId === componentId;
+  }
+
+  /**
+   * Stop audio if it belongs to a specific component
+   */
+  stopComponentAudio(componentId: string): void {
+    if (this.currentPlaybackId === componentId || this.activeComponents.has(componentId)) {
+      this.stopAllAudio();
+    }
   }
 
   /**
@@ -178,144 +225,90 @@ class ElevenLabsService {
   }
 
   /**
-   * Play text as speech
+   * Play text with component identification to prevent conflicts
+   * This is the MAIN method all components should use
    */
-  async playText(text: string, options?: Partial<TextToSpeechOptions>, playbackId?: string): Promise<void> {
-    // If there's already audio playing globally, stop it first
-    if (this.isGloballyPlaying) {
-      this.stopAllAudio();
-      // Small delay to ensure cleanup
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-
-    // Set global playing state and playback ID
+  async playTextWithId(text: string, componentId: string, options?: Partial<TextToSpeechOptions>): Promise<void> {
+    // CRITICAL: Stop ALL audio before starting new audio
+    this.stopAllAudio();
+    
+    // Wait a moment for cleanup to complete
+    await new Promise(resolve => setTimeout(resolve, 150));
+    
+    // Set new playback state
     this.isGloballyPlaying = true;
-    this.currentPlaybackId = playbackId || null;
+    this.currentPlaybackId = componentId;
+    this.activeComponents.add(componentId);
 
     try {
       const audioUrl = await this.textToSpeech({ text, ...options });
       
       return new Promise((resolve, reject) => {
+        // Double-check that we should still be playing (user might have stopped)
+        if (!this.isGloballyPlaying || this.currentPlaybackId !== componentId) {
+          resolve();
+          return;
+        }
+
         this.currentAudio = new Audio(audioUrl);
         
+        // Set volume to ensure it's audible but not too loud
+        this.currentAudio.volume = 0.8;
+        
         this.currentAudio.onended = () => {
-          this.currentAudio = null;
-          this.isGloballyPlaying = false;
-          this.currentPlaybackId = null;
+          if (this.currentPlaybackId === componentId) {
+            this.currentAudio = null;
+            this.isGloballyPlaying = false;
+            this.currentPlaybackId = null;
+            this.activeComponents.delete(componentId);
+          }
           resolve();
         };
         
-        this.currentAudio.onerror = () => {
-          this.currentAudio = null;
-          this.isGloballyPlaying = false;
-          this.currentPlaybackId = null;
+        this.currentAudio.onerror = (error) => {
+          console.error('Audio playback error:', error);
+          if (this.currentPlaybackId === componentId) {
+            this.currentAudio = null;
+            this.isGloballyPlaying = false;
+            this.currentPlaybackId = null;
+            this.activeComponents.delete(componentId);
+          }
           reject(new Error('Failed to play audio'));
         };
         
+        // Start playback
         this.currentAudio.play().catch((error) => {
-          this.currentAudio = null;
-          this.isGloballyPlaying = false;
-          this.currentPlaybackId = null;
+          console.error('Audio play failed:', error);
+          if (this.currentPlaybackId === componentId) {
+            this.currentAudio = null;
+            this.isGloballyPlaying = false;
+            this.currentPlaybackId = null;
+            this.activeComponents.delete(componentId);
+          }
           reject(error);
         });
       });
     } catch (error) {
       this.isGloballyPlaying = false;
       this.currentPlaybackId = null;
+      this.activeComponents.delete(componentId);
       console.error('Play text error:', error);
       throw error;
     }
   }
 
   /**
-   * Play text with component identification to prevent conflicts
+   * Legacy method - redirects to component-based method
    */
-  async playTextWithId(text: string, componentId: string, options?: Partial<TextToSpeechOptions>): Promise<void> {
-    return this.playText(text, options, componentId);
+  async playText(text: string, options?: Partial<TextToSpeechOptions>): Promise<void> {
+    return this.playTextWithId(text, 'legacy-player', options);
   }
 
   /**
-   * Check if a specific component is currently playing
+   * Check if audio is currently playing (legacy method)
    */
-  isComponentPlaying(componentId: string): boolean {
-    return this.isGloballyPlaying && this.currentPlaybackId === componentId;
-  }
-
-  /**
-   * Stop audio if it belongs to a specific component
-   */
-  stopComponentAudio(componentId: string): void {
-    if (this.currentPlaybackId === componentId) {
-      this.stopAllAudio();
-    }
-  }
-
-  /**
-   * Queue audio for sequential playback (useful for multiple messages)
-   */
-  async queueText(text: string, options?: Partial<TextToSpeechOptions>): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.audioQueue.push({ text, options, resolve, reject });
-      
-      // If nothing is playing, start the queue
-      if (!this.isGloballyPlaying) {
-        this.processAudioQueue();
-      }
-    });
-  }
-
-  /**
-   * Process the audio queue sequentially
-   */
-  private async processAudioQueue(): Promise<void> {
-    while (this.audioQueue.length > 0) {
-      const item = this.audioQueue.shift();
-      if (!item) break;
-
-      try {
-        await this.playText(item.text, item.options);
-        item.resolve();
-      } catch (error) {
-        item.reject(error instanceof Error ? error : new Error('Audio playback failed'));
-        // Continue with next item even if one fails
-      }
-
-      // Small delay between queue items
-      if (this.audioQueue.length > 0) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-    }
-  }
-
-  /**
-   * Clear the audio queue
-   */
-  clearQueue(): void {
-    // Reject all pending promises
-    this.audioQueue.forEach(item => {
-      item.reject(new Error('Audio queue cleared'));
-    });
-    this.audioQueue = [];
-  }
-
-  /**
-   * Enhanced stop current audio with better cleanup
-   */
-  stopCurrentAudio(): void {
-    if (this.currentAudio) {
-      try {
-        this.currentAudio.pause();
-        this.currentAudio.currentTime = 0;
-        this.currentAudio.onended = null;
-        this.currentAudio.onerror = null;
-      } catch (error) {
-        console.warn('Error stopping audio:', error);
-      } finally {
-        this.currentAudio = null;
-        this.isGloballyPlaying = false;
-        this.currentPlaybackId = null;
-      }
-    }
+  isPlaying(): boolean {
+    return this.isGloballyPlaying && this.currentAudio !== null && !this.currentAudio.paused;
   }
 
   /**
@@ -324,31 +317,13 @@ class ElevenLabsService {
   getPlaybackStatus(): {
     isPlaying: boolean;
     componentId: string | null;
-    queueLength: number;
+    activeComponents: string[];
   } {
     return {
       isPlaying: this.isGloballyPlaying,
       componentId: this.currentPlaybackId,
-      queueLength: this.audioQueue.length
+      activeComponents: Array.from(this.activeComponents)
     };
-  }
-
-  /**
-   * Stop currently playing audio
-   */
-  stopCurrentAudio(): void {
-    if (this.currentAudio) {
-      this.currentAudio.pause();
-      this.currentAudio.currentTime = 0;
-      this.currentAudio = null;
-    }
-  }
-
-  /**
-   * Check if audio is currently playing
-   */
-  isPlaying(): boolean {
-    return this.currentAudio !== null && !this.currentAudio.paused;
   }
 
   /**
@@ -384,7 +359,11 @@ class ElevenLabsService {
   clearCache(): void {
     // Revoke all cached URLs to free memory
     this.audioCache.forEach(url => {
-      URL.revokeObjectURL(url);
+      try {
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        // Ignore errors
+      }
     });
     this.audioCache.clear();
   }
@@ -421,17 +400,12 @@ class ElevenLabsService {
   async playInterviewQuestion(text: string): Promise<void> {
     const professionalSettings = this.getProfessionalFemaleVoiceSettings();
     
-    return this.playText(text, {
+    return this.playTextWithId(text, 'interview-question', {
       voiceSettings: professionalSettings,
       voiceId: 'EXAVITQu4vr4xnSDxMaL' // Bella - professional, clear female voice
     });
   }
 }
-
-// Export additional professional voice functions
-export const playInterviewQuestion = (text: string): Promise<void> => {
-  return elevenLabsService.playInterviewQuestion(text);
-};
 
 // Export singleton instance
 export const elevenLabsService = ElevenLabsService.getInstance();
@@ -442,9 +416,14 @@ export const playText = (text: string, options?: Partial<TextToSpeechOptions>): 
 };
 
 export const stopAudio = (): void => {
-  elevenLabsService.stopCurrentAudio();
+  elevenLabsService.stopAllAudio();
 };
 
 export const isAudioPlaying = (): boolean => {
   return elevenLabsService.isPlaying();
+};
+
+// Export additional professional voice functions
+export const playInterviewQuestion = (text: string): Promise<void> => {
+  return elevenLabsService.playInterviewQuestion(text);
 };

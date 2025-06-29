@@ -91,7 +91,7 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
 
   const endInterview = () => {
     setInterviewPhase('completed');
-    elevenLabsService.stopComponentAudio(componentId);
+    elevenLabsService.stopAllAudio();
     setSession(prev => ({
       ...prev,
       isRecording: false,
@@ -120,6 +120,10 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
   const playQuestionAudio = async (text: string) => {
     try {
       setAudioState(prev => ({ ...prev, isPlaying: true, currentText: text, progress: 0 }));
+      
+      // CRITICAL: Stop all other audio first
+      elevenLabsService.stopAllAudio();
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Start progress tracking
       progressInterval.current = setInterval(() => {
@@ -165,7 +169,7 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
   };
 
   const stopQuestionAudio = () => {
-    elevenLabsService.stopComponentAudio(componentId);
+    elevenLabsService.stopAllAudio();
     setAudioState(prev => ({ ...prev, isPlaying: false, progress: 0 }));
     
     if (progressInterval.current) {
@@ -592,7 +596,7 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
           <div className="flex items-center space-x-4">
             <button
               onClick={() => {
-                // Stop any other audio first
+                // Stop ALL audio first to prevent conflicts
                 elevenLabsService.stopAllAudio();
                 playQuestionAudio(currentQuestion.question);
               }}
@@ -723,7 +727,7 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
             {/* Play Feedback Button */}
             <button
               onClick={() => {
-                // Stop any other audio first
+                // Stop ALL audio first to prevent conflicts
                 elevenLabsService.stopAllAudio();
                 playQuestionAudio(session.feedback[currentQuestion.id].overallFeedback);
               }}
