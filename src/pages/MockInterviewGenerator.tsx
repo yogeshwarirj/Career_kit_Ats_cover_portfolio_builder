@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Brain, FileText, Download, Settings, Zap, Target, Users, Award, CheckCircle, Sparkles, Clock, BookOpen, TrendingUp, Star, Shield, Eye, Copy, RefreshCw, AlertCircle, Lightbulb } from 'lucide-react';
+import { ArrowLeft, Brain, FileText, Download, Settings, Zap, Target, Users, Award, CheckCircle, Sparkles, Clock, BookOpen, TrendingUp, Star, Shield, Eye, Copy, RefreshCw, AlertCircle, Lightbulb, Play, Pause, Volume2, ChevronDown, ChevronUp, Mic } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { generateQuestions, QuestionGenerationParams, GeneratedQuestion } from '../lib/questionGenerator';
+import { elevenLabsService, playText, stopAudio, isAudioPlaying } from '../lib/elevenLabsService';
 import jsPDF from 'jspdf';
 
 interface FormData {
@@ -18,6 +19,10 @@ const MockInterviewGenerator: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestion[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [playingQuestionId, setPlayingQuestionId] = useState<string | null>(null);
+  const [playingGuidanceId, setPlayingGuidanceId] = useState<string | null>(null);
+  const [expandedGuidance, setExpandedGuidance] = useState<Set<string>>(new Set());
+  const [elevenLabsConfigured, setElevenLabsConfigured] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     jobDescription: '',
@@ -41,6 +46,89 @@ const MockInterviewGenerator: React.FC = () => {
         [field]: value
       }));
     }
+  };
+
+  // Check Eleven Labs configuration on component mount
+  React.useEffect(() => {
+    const configStatus = elevenLabsService.getConfigurationStatus();
+    setElevenLabsConfigured(configStatus.configured);
+  }, []);
+
+  const handlePlayQuestion = async (questionId: string, questionText: string) => {
+    try {
+      if (playingQuestionId === questionId && isAudioPlaying()) {
+        stopAudio();
+        setPlayingQuestionId(null);
+        return;
+      }
+
+      // Stop any currently playing audio
+      stopAudio();
+      setPlayingQuestionId(null);
+      setPlayingGuidanceId(null);
+
+      setPlayingQuestionId(questionId);
+      
+      await playText(questionText);
+      
+      setPlayingQuestionId(null);
+    } catch (error) {
+      console.error('Error playing question:', error);
+      setPlayingQuestionId(null);
+      
+      if (error instanceof Error) {
+        switch (error.message) {
+          case 'Eleven Labs is not configured. Please add your API key.':
+            toast.error('Eleven Labs API key not configured. Please add VITE_ELEVENLABS_API_KEY to your .env file.');
+            break;
+          case 'Invalid Eleven Labs API key. Please check your configuration.':
+            toast.error('Invalid Eleven Labs API key. Please check your configuration.');
+            break;
+          case 'Eleven Labs quota exceeded. Please try again later.':
+            toast.error('Eleven Labs quota exceeded. Please try again later.');
+            break;
+          default:
+            toast.error('Failed to play question audio. Please try again.');
+        }
+      } else {
+        toast.error('Failed to play question audio. Please try again.');
+      }
+    }
+  };
+
+  const handlePlayGuidance = async (questionId: string, guidanceText: string) => {
+    try {
+      if (playingGuidanceId === questionId && isAudioPlaying()) {
+        stopAudio();
+        setPlayingGuidanceId(null);
+        return;
+      }
+
+      // Stop any currently playing audio
+      stopAudio();
+      setPlayingQuestionId(null);
+      setPlayingGuidanceId(null);
+
+      setPlayingGuidanceId(questionId);
+      
+      await playText(guidanceText);
+      
+      setPlayingGuidanceId(null);
+    } catch (error) {
+      console.error('Error playing guidance:', error);
+      setPlayingGuidanceId(null);
+      toast.error('Failed to play guidance audio. Please try again.');
+    }
+  };
+
+  const toggleGuidanceExpansion = (questionId: string) => {
+    const newExpanded = new Set(expandedGuidance);
+    if (newExpanded.has(questionId)) {
+      newExpanded.delete(questionId);
+    } else {
+      newExpanded.add(questionId);
+    }
+    setExpandedGuidance(newExpanded);
   };
 
   const handleGenerateQuestions = async () => {
@@ -172,6 +260,18 @@ const MockInterviewGenerator: React.FC = () => {
           });
         }
 
+        // Professional Guidance (if available)
+        if (question.professionalGuidance) {
+          yPosition += lineHeight * 0.5;
+          pdf.setFontSize(9);
+          pdf.setFont('helvetica', 'italic');
+          pdf.text('Professional Guidance:', margin, yPosition);
+          yPosition += lineHeight;
+          const guidanceLines = pdf.splitTextToSize(question.professionalGuidance, pageWidth - 2 * margin);
+          pdf.text(guidanceLines, margin, yPosition);
+          yPosition += lineHeight * guidanceLines.length;
+        }
+
         yPosition += lineHeight * 1.5; // Space between questions
       });
 
@@ -181,7 +281,7 @@ const MockInterviewGenerator: React.FC = () => {
         pdf.setPage(i);
         pdf.setFontSize(8);
         pdf.setFont('helvetica', 'normal');
-        pdf.text(`Generated by CareerKit | Page ${i} of ${totalPages}`, pageWidth - margin - 50, pageHeight - 10);
+        pdf.text(`Generated by CareerKit with AI Voice Features | Page ${i} of ${totalPages}`, pageWidth - margin - 80, pageHeight - 10);
       }
 
       // Generate filename
@@ -204,10 +304,10 @@ const MockInterviewGenerator: React.FC = () => {
     }
 
     const questionsText = generatedQuestions.map((q, index) => 
-      `${index + 1}. [${q.category}] ${q.question}\n${q.expectedAnswer ? `Expected Answer: ${q.expectedAnswer}\n` : ''}${q.hints && q.hints.length > 0 ? `Hints: ${q.hints.join(', ')}\n` : ''}\n`
+      `${index + 1}. [${q.category}] ${q.question}\n${q.expectedAnswer ? `Expected Answer: ${q.expectedAnswer}\n` : ''}${q.hints && q.hints.length > 0 ? `Hints: ${q.hints.join(', ')}\n` : ''}${q.professionalGuidance ? `Professional Guidance: ${q.professionalGuidance}\n` : ''}\n`
     ).join('');
 
-    const fullText = `Mock Interview Questions\n${formData.type.toUpperCase()} | ${formData.difficulty.toUpperCase()} Level\nTechnologies: ${formData.technologies.join(', ')}\n\n${questionsText}`;
+    const fullText = `Mock Interview Questions\n${formData.type.toUpperCase()} | ${formData.difficulty.toUpperCase()} Level\nTechnologies: ${formData.technologies.join(', ')}\n\nGenerated with AI-powered professional guidance\n\n${questionsText}`;
 
     navigator.clipboard.writeText(fullText);
     toast.success('Questions copied to clipboard!');
@@ -237,6 +337,12 @@ const MockInterviewGenerator: React.FC = () => {
       title: "Technical & HR",
       description: "Comprehensive coverage of both technical skills and behavioral questions",
       gradient: "from-orange-500 to-orange-600"
+    },
+    {
+      icon: <Volume2 className="h-8 w-8" />,
+      title: "Voice-Enabled Practice",
+      description: "Listen to questions and professional guidance with AI-powered text-to-speech",
+      gradient: "from-purple-500 to-purple-600"
     }
   ];
 
@@ -244,7 +350,7 @@ const MockInterviewGenerator: React.FC = () => {
     { number: "30", label: "Questions Generated", description: "Per session" },
     { number: "2", label: "Question Types", description: "Technical & HR" },
     { number: "3", label: "Difficulty Levels", description: "Easy, Medium, Hard" },
-    { number: "100%", label: "AI-Generated", description: "Original content" }
+    { number: "AI", label: "Voice-Enabled", description: "Text-to-speech ready" }
   ];
 
   return (
@@ -334,7 +440,7 @@ const MockInterviewGenerator: React.FC = () => {
             </div>
 
             {/* Features Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-12">
               {features.map((feature, index) => (
                 <div
                   key={index}
@@ -437,7 +543,6 @@ const MockInterviewGenerator: React.FC = () => {
                     </select>
                     <p className="text-sm text-gray-500 mt-1">
                       {formData.difficulty === 'easy' && 'Basic concepts and simple scenarios'}
-                      {formData.difficulty === 'easy' && 'Basic concepts and simple scenarios'}
                       {formData.difficulty === 'medium' && 'Intermediate concepts and problem-solving'}
                       {formData.difficulty === 'hard' && 'Advanced concepts and complex scenarios'}
                     </p>
@@ -452,11 +557,19 @@ const MockInterviewGenerator: React.FC = () => {
                     </div>
                     <div className="ml-3">
                       <h4 className="text-sm font-medium text-blue-800 mb-1">
-                        AI-Powered Generation
+                        AI-Powered Generation & Voice Features
                       </h4>
                       <p className="text-sm text-blue-700">
-                        Questions are generated using Google's Gemini AI for maximum relevance and quality. 
-                        If API is unavailable, fallback questions will be provided.
+                        Questions are generated using Google's Gemini AI for maximum relevance and quality.
+                        {elevenLabsConfigured ? (
+                          <span className="block mt-1 text-green-700 font-medium">
+                            ✓ Eleven Labs voice features are enabled for audio playback.
+                          </span>
+                        ) : (
+                          <span className="block mt-1 text-orange-700">
+                            Add VITE_ELEVENLABS_API_KEY to enable voice features.
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -579,27 +692,87 @@ const MockInterviewGenerator: React.FC = () => {
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
                 <h3 className="text-xl font-semibold text-gray-900 mb-6">Questions Preview</h3>
                 
-                <div className="space-y-6 max-h-96 overflow-y-auto">
+                <div className="space-y-6 max-h-[600px] overflow-y-auto">
                   {generatedQuestions.slice(0, 10).map((question, index) => (
-                    <div key={question.id} className="border-l-4 border-blue-500 pl-4 py-2">
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-medium text-gray-900">
+                    <div key={question.id} className="border-l-4 border-blue-500 pl-6 py-4 bg-gray-50 rounded-r-lg">
+                      <div className="flex items-start justify-between mb-3">
+                        <h4 className="font-medium text-gray-900 flex-1 pr-4">
                           {index + 1}. {question.question}
                         </h4>
-                        <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full ml-4 flex-shrink-0">
-                          {question.category}
-                        </span>
+                        <div className="flex items-center space-x-2 flex-shrink-0">
+                          {elevenLabsConfigured && (
+                            <button
+                              onClick={() => handlePlayQuestion(question.id, question.question)}
+                              disabled={playingQuestionId === question.id}
+                              className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50"
+                              title="Play question"
+                            >
+                              {playingQuestionId === question.id ? (
+                                <Pause className="h-4 w-4" />
+                              ) : (
+                                <Play className="h-4 w-4" />
+                              )}
+                            </button>
+                          )}
+                          <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                            {question.category}
+                          </span>
+                        </div>
                       </div>
                       
                       {question.expectedAnswer && question.expectedAnswer !== 'No expected answer provided' && (
-                        <div className="mt-2 text-sm text-gray-600">
+                        <div className="mt-3 text-sm text-gray-600">
                           <strong>Expected Answer:</strong> {question.expectedAnswer.substring(0, 150)}...
                         </div>
                       )}
                       
                       {question.hints && question.hints.length > 0 && (
-                        <div className="mt-2 text-sm text-gray-500">
+                        <div className="mt-3 text-sm text-gray-500">
                           <strong>Hints:</strong> {question.hints.slice(0, 2).join(', ')}
+                        </div>
+                      )}
+                      
+                      {/* Professional Guidance Section */}
+                      {question.professionalGuidance && (
+                        <div className="mt-4 border-t border-gray-200 pt-3">
+                          <button
+                            onClick={() => toggleGuidanceExpansion(question.id)}
+                            className="flex items-center justify-between w-full text-left"
+                          >
+                            <span className="text-sm font-medium text-purple-700 flex items-center">
+                              <Mic className="h-4 w-4 mr-2" />
+                              Professional Interview Guidance
+                            </span>
+                            {expandedGuidance.has(question.id) ? (
+                              <ChevronUp className="h-4 w-4 text-gray-500" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-gray-500" />
+                            )}
+                          </button>
+                          
+                          {expandedGuidance.has(question.id) && (
+                            <div className="mt-3 p-3 bg-purple-50 rounded-lg">
+                              <div className="flex items-start justify-between">
+                                <p className="text-sm text-purple-800 flex-1 pr-4">
+                                  {question.professionalGuidance}
+                                </p>
+                                {elevenLabsConfigured && (
+                                  <button
+                                    onClick={() => handlePlayGuidance(question.id, question.professionalGuidance!)}
+                                    disabled={playingGuidanceId === question.id}
+                                    className="p-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors duration-200 disabled:opacity-50 flex-shrink-0"
+                                    title="Play guidance"
+                                  >
+                                    {playingGuidanceId === question.id ? (
+                                      <Pause className="h-3 w-3" />
+                                    ) : (
+                                      <Play className="h-3 w-3" />
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
