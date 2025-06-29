@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Brain, FileText, Download, Settings, Zap, Target, Users, Award, CheckCircle, Sparkles, Clock, BookOpen, TrendingUp, Star, Shield, Eye, Copy, RefreshCw, AlertCircle, Lightbulb, Play, Pause, Volume2, ChevronDown, ChevronUp, Mic } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { generateQuestions, QuestionGenerationParams, GeneratedQuestion } from '../lib/questionGenerator';
-import { elevenLabsService, playText, stopAudio, isAudioPlaying } from '../lib/elevenLabsService';
+import { elevenLabsService, playText, stopAudio, isAudioPlaying, playInterviewQuestion } from '../lib/elevenLabsService';
 import jsPDF from 'jspdf';
 
 interface FormData {
@@ -69,7 +69,7 @@ const MockInterviewGenerator: React.FC = () => {
 
       setPlayingQuestionId(questionId);
       
-      await playText(questionText);
+      await playInterviewQuestion(questionText);
       
       setPlayingQuestionId(null);
     } catch (error) {
@@ -111,7 +111,7 @@ const MockInterviewGenerator: React.FC = () => {
 
       setPlayingGuidanceId(questionId);
       
-      await playText(guidanceText);
+      await playInterviewQuestion(guidanceText);
       
       setPlayingGuidanceId(null);
     } catch (error) {
@@ -340,7 +340,7 @@ const MockInterviewGenerator: React.FC = () => {
     },
     {
       icon: <Volume2 className="h-8 w-8" />,
-      title: "Voice-Enabled Practice",
+      title: "Professional Voice Coach",
       description: "Listen to questions and professional guidance with AI-powered text-to-speech",
       gradient: "from-purple-500 to-purple-600"
     }
@@ -350,7 +350,7 @@ const MockInterviewGenerator: React.FC = () => {
     { number: "30", label: "Questions Generated", description: "Per session" },
     { number: "2", label: "Question Types", description: "Technical & HR" },
     { number: "3", label: "Difficulty Levels", description: "Easy, Medium, Hard" },
-    { number: "AI", label: "Voice-Enabled", description: "Text-to-speech ready" }
+    { number: "AI", label: "Voice Coach", description: "Professional female voice" }
   ];
 
   return (
@@ -557,17 +557,17 @@ const MockInterviewGenerator: React.FC = () => {
                     </div>
                     <div className="ml-3">
                       <h4 className="text-sm font-medium text-blue-800 mb-1">
-                        AI-Powered Generation & Voice Features
+                        AI-Powered Generation & Professional Voice Coach
                       </h4>
                       <p className="text-sm text-blue-700">
                         Questions are generated using Google's Gemini AI for maximum relevance and quality.
                         {elevenLabsConfigured ? (
                           <span className="block mt-1 text-green-700 font-medium">
-                            ✓ Eleven Labs voice features are enabled for audio playback.
+                            ✓ Professional female voice coach is enabled for realistic interview practice.
                           </span>
                         ) : (
                           <span className="block mt-1 text-orange-700">
-                            Add VITE_ELEVENLABS_API_KEY to enable voice features.
+                            Add VITE_ELEVENLABS_API_KEY to enable professional voice coach.
                           </span>
                         )}
                       </p>
@@ -705,7 +705,7 @@ const MockInterviewGenerator: React.FC = () => {
                               onClick={() => handlePlayQuestion(question.id, question.question)}
                               disabled={playingQuestionId === question.id}
                               className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50"
-                              title="Play question"
+                              title="Listen to question (Professional female voice)"
                             >
                               {playingQuestionId === question.id ? (
                                 <Pause className="h-4 w-4" />
@@ -741,7 +741,7 @@ const MockInterviewGenerator: React.FC = () => {
                           >
                             <span className="text-sm font-medium text-purple-700 flex items-center">
                               <Mic className="h-4 w-4 mr-2" />
-                              Professional Interview Guidance
+                              Professional Voice Guidance
                             </span>
                             {expandedGuidance.has(question.id) ? (
                               <ChevronUp className="h-4 w-4 text-gray-500" />
@@ -761,7 +761,7 @@ const MockInterviewGenerator: React.FC = () => {
                                     onClick={() => handlePlayGuidance(question.id, question.professionalGuidance!)}
                                     disabled={playingGuidanceId === question.id}
                                     className="p-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors duration-200 disabled:opacity-50 flex-shrink-0"
-                                    title="Play guidance"
+                                    title="Listen to professional guidance"
                                   >
                                     {playingGuidanceId === question.id ? (
                                       <Pause className="h-3 w-3" />
@@ -812,9 +812,9 @@ const MockInterviewGenerator: React.FC = () => {
                 <CheckCircle className="h-12 w-12 text-white" />
               </div>
               
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Questions Downloaded Successfully!</h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Interview Questions Ready!</h2>
               <p className="text-lg text-gray-600 mb-8">
-                Your {generatedQuestions.length} {formData.difficulty} {formData.type} questions have been saved as a PDF.
+                Your {generatedQuestions.length} {formData.difficulty} {formData.type} questions with professional voice guidance are ready.
               </p>
               
               <div className="bg-gray-50 rounded-xl p-6 mb-8 text-left">
@@ -827,6 +827,10 @@ const MockInterviewGenerator: React.FC = () => {
                   <div className="flex items-center">
                     <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
                     <span>Practice your answers out loud or with a friend</span>
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span>Use the professional voice coach to simulate real interview conditions</span>
                   </div>
                   <div className="flex items-center">
                     <CheckCircle className="h-4 w-4 text-green-500 mr-2" />

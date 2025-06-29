@@ -10,7 +10,7 @@ export interface VoiceSettings {
   stability: number;
   similarity_boost: number;
   style?: number;
-  use_speaker_boost?: boolean;
+  use_speaker_boost: boolean;
 }
 
 export interface TextToSpeechOptions {
@@ -36,8 +36,8 @@ class ElevenLabsService {
   constructor() {
     this.config = {
       apiKey: import.meta.env.VITE_ELEVENLABS_API_KEY || '',
-      voiceId: 'EXAVITQu4vr4xnSDxMaL', // Default professional voice (Bella)
-      model: 'eleven_monolingual_v1'
+      voiceId: 'EXAVITQu4vr4xnSDxMaL', // Professional female voice (Bella) - clear, articulate, professional
+      model: 'eleven_multilingual_v2' // Better quality model
     };
   }
 
@@ -90,10 +90,10 @@ class ElevenLabsService {
 
     try {
       const voiceSettings: VoiceSettings = {
-        stability: 0.5,
-        similarity_boost: 0.75,
-        style: 0.0,
-        use_speaker_boost: true,
+        stability: 0.71, // Higher stability for professional, consistent delivery
+        similarity_boost: 0.5, // Balanced for natural sound
+        style: 0.0, // Neutral style for professional context
+        use_speaker_boost: true, // Enhanced clarity
         ...options.voiceSettings
       };
 
@@ -248,6 +248,35 @@ class ElevenLabsService {
   getVoiceId(): string {
     return this.config.voiceId;
   }
+
+  /**
+   * Get professional female voice settings optimized for interview questions
+   */
+  getProfessionalFemaleVoiceSettings(): VoiceSettings {
+    return {
+      stability: 0.71, // High stability for clear, consistent delivery
+      similarity_boost: 0.5, // Natural sound without being too robotic
+      style: 0.0, // Neutral, professional tone
+      use_speaker_boost: true // Enhanced clarity for interview context
+    };
+  }
+
+  /**
+   * Play interview question with optimized professional female voice
+   */
+  async playInterviewQuestion(text: string): Promise<void> {
+    const professionalSettings = this.getProfessionalFemaleVoiceSettings();
+    
+    return this.playText(text, {
+      voiceSettings: professionalSettings,
+      voiceId: 'EXAVITQu4vr4xnSDxMaL' // Bella - professional, clear female voice
+    });
+  }
+}
+
+// Export additional professional voice functions
+export const playInterviewQuestion = (text: string): Promise<void> => {
+  return elevenLabsService.playInterviewQuestion(text);
 }
 
 // Export singleton instance
