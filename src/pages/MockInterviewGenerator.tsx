@@ -434,14 +434,12 @@ const MockInterviewGenerator: React.FC = () => {
                       <option value="easy">Easy (Entry Level)</option>
                       <option value="medium">Medium (Intermediate)</option>
                       <option value="hard">Hard (Senior Level)</option>
-                      Google Gemini AI Integration
+                    </select>
                     <p className="text-sm text-gray-500 mt-1">
                       {formData.difficulty === 'easy' && 'Basic concepts and simple scenarios'}
-                      Questions are generated using Google's Gemini AI for maximum relevance and quality.
-                    </p>
-                    <p className="text-xs text-blue-600 mt-2">
-                      <strong>Setup:</strong> Add your Gemini API key to .env file as VITE_GEMINI_API_KEY. 
-                      Get your key from <a href="https://makersuite.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline">Google AI Studio</a>.
+                      {formData.difficulty === 'easy' && 'Basic concepts and simple scenarios'}
+                      {formData.difficulty === 'medium' && 'Intermediate concepts and problem-solving'}
+                      {formData.difficulty === 'hard' && 'Advanced concepts and complex scenarios'}
                     </p>
                   </div>
                 </div>
