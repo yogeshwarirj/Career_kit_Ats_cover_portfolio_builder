@@ -5,6 +5,7 @@ import { Toaster, toast } from 'react-hot-toast';
 import { generateQuestions, QuestionGenerationParams, GeneratedQuestion } from '../lib/questionGenerator';
 import { elevenLabsService, playText, stopAudio, isAudioPlaying, playInterviewQuestion } from '../lib/elevenLabsService';
 import { geminiInterviewFeedback, FeedbackResult } from '../lib/geminiInterviewFeedback';
+import MockInterviewVisualAgent from '../components/MockInterviewVisualAgent';
 import jsPDF from 'jspdf';
 
 interface FormData {
@@ -16,7 +17,7 @@ interface FormData {
 }
 
 const MockInterviewGenerator: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState<'input' | 'preview' | 'download'>('input');
+  const [currentStep, setCurrentStep] = useState<'input' | 'preview' | 'practice' | 'download'>('input');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestion[]>([]);
   const [showPreview, setShowPreview] = useState(false);
@@ -516,20 +517,20 @@ const MockInterviewGenerator: React.FC = () => {
         {/* Progress Indicator */}
         <div className="mb-8">
           <div className="flex items-center justify-center space-x-4">
-            {['input', 'preview', 'download'].map((step, index) => (
+            {['input', 'preview', 'practice', 'download'].map((step, index) => (
               <div key={step} className="flex items-center">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
                   currentStep === step 
                     ? 'bg-blue-600 text-white shadow-lg' 
-                    : index < ['input', 'preview', 'download'].indexOf(currentStep)
+                    : index < ['input', 'preview', 'practice', 'download'].indexOf(currentStep)
                     ? 'bg-green-500 text-white'
                     : 'bg-gray-200 text-gray-600'
                 }`}>
                   {index + 1}
                 </div>
-                {index < 2 && (
+                {index < 3 && (
                   <div className={`w-16 h-1 mx-2 transition-all duration-300 ${
-                    index < ['input', 'preview', 'download'].indexOf(currentStep)
+                    index < ['input', 'preview', 'practice', 'download'].indexOf(currentStep)
                       ? 'bg-green-500'
                       : 'bg-gray-200'
                   }`}></div>
@@ -539,9 +540,10 @@ const MockInterviewGenerator: React.FC = () => {
           </div>
           <div className="flex justify-center mt-4">
             <span className="text-sm text-gray-600 capitalize">
-              Step {['input', 'preview', 'download'].indexOf(currentStep) + 1}: {
+              Step {['input', 'preview', 'practice', 'download'].indexOf(currentStep) + 1}: {
                 currentStep === 'input' ? 'Configure Questions' : 
                 currentStep === 'preview' ? 'Review Questions' : 
+                currentStep === 'practice' ? 'Practice Interview' :
                 'Download & Share'
               }
             </span>
@@ -802,6 +804,14 @@ const MockInterviewGenerator: React.FC = () => {
                 </button>
                 
                 <button
+                  onClick={() => setCurrentStep('practice')}
+                  className="flex items-center px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200"
+                >
+                  <Brain className="h-4 w-4 mr-2" />
+                  Start Practice
+                </button>
+                
+                <button
                   onClick={copyQuestionsToClipboard}
                   className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
                 >
@@ -942,6 +952,48 @@ const MockInterviewGenerator: React.FC = () => {
                 className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-green-700 hover:to-teal-700 transition-all duration-300 transform hover:scale-105"
               >
                 Download PDF
+              </button>
+            </div>
+          </div>
+        )}
+
+        {currentStep === 'practice' && (
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 text-sm font-medium mb-4 animate-fade-in">
+                <Brain className="w-4 h-4 mr-2 animate-pulse" />
+                AI Interview Practice Session
+              </div>
+              
+              <h2 className="text-4xl font-bold text-gray-900 mb-4 leading-[1.15]">
+                Practice with{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-red-600">
+                  AI Voice Coach
+                </span>
+              </h2>
+              <p className="text-lg text-gray-600">
+                Interactive interview practice with professional female voice coach and real-time AI feedback
+              </p>
+            </div>
+
+            <MockInterviewVisualAgent 
+              questions={generatedQuestions}
+              onComplete={() => setCurrentStep('download')}
+            />
+
+            <div className="mt-8 flex justify-between">
+              <button
+                onClick={() => setCurrentStep('preview')}
+                className="px-6 py-3 text-gray-700 hover:text-purple-600 transition-colors duration-200"
+              >
+                ← Back to Preview
+              </button>
+              
+              <button
+                onClick={() => setCurrentStep('download')}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+              >
+                Skip to Download
               </button>
             </div>
           </div>
@@ -1166,6 +1218,12 @@ const MockInterviewGenerator: React.FC = () => {
                   className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
                 >
                   Generate More Questions
+                </button>
+                <button
+                  onClick={() => setCurrentStep('practice')}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105"
+                >
+                  Practice Again
                 </button>
                 <button
                   onClick={downloadQuestionsAsPDF}
