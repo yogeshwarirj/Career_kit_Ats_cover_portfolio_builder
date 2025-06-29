@@ -33,14 +33,6 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
       duration: 8000
     },
     {
-      id: 'resume-builder',
-      title: 'Resume Builder',
-      description: 'Create stunning, ATS-optimized resumes with our collection of 12+ professional templates. Choose from modern, executive, creative, and industry-specific designs that get you noticed.',
-      icon: <FileText className="h-6 w-6" />,
-      benefits: ['12+ professional templates', 'ATS-optimized formatting', 'Industry-specific designs', 'Real-time preview'],
-      duration: 10000
-    },
-    {
       id: 'cover-letter',
       title: 'AI Cover Letter Generator',
       description: 'Generate personalized, compelling cover letters using Google Gemini AI. Simply upload your resume and job description, and get a tailored cover letter that highlights your perfect fit.',
