@@ -303,7 +303,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
 
   if (!isVisible) {
     return (
-      <div className={`fixed bottom-6 right-6 z-50 ${className}`}>
+      <div className={`fixed bottom-6 left-6 z-50 ${className}`}>
         <button
           onClick={toggleVisibility}
           className="group bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 animate-pulse"
@@ -327,7 +327,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
   }
 
   return (
-    <div className={`fixed ${isExpanded ? 'inset-4' : 'bottom-6 right-6 w-96'} z-50 ${className}`}>
+    <div className={`fixed ${isExpanded ? 'inset-4' : 'bottom-6 left-6 w-96'} z-50 ${className}`}>
       <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 overflow-hidden h-full flex flex-col">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 text-white">
