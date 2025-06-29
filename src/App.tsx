@@ -21,7 +21,11 @@ function App() {
             <div className="flex items-center h-16 relative">
               {/* Logo */}
               <Link to="/" className="flex items-center space-x-2 mr-12">
-                <FileText className="h-8 w-8 text-teal-600" />
+                <img 
+                  src="/image copy copy copy copy copy copy.png" 
+                  alt="CareerKit Logo" 
+                  className="h-8 w-8 object-contain"
+                />
                 <span className="text-xl font-bold text-gray-900">CareerKit</span>
               </Link>
 
