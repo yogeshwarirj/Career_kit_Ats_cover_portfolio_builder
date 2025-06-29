@@ -36,13 +36,14 @@ class QuestionGenerator {
     try {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       
-      if (!apiKey) {
+      if (!apiKey || apiKey === 'your_gemini_api_key_here' || apiKey.trim() === '') {
         console.warn('Gemini API key not found. Please set VITE_GEMINI_API_KEY in your environment variables.');
         return;
       }
 
       this.genAI = new GoogleGenerativeAI(apiKey);
       this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      console.log('Gemini AI initialized for question generation');
     } catch (error) {
       console.error('Failed to initialize Gemini AI:', error);
     }
@@ -145,7 +146,7 @@ Important:
         return {
           success: false,
           questions: [],
-          error: 'Gemini AI is not properly configured. Please check your API key.'
+          error: 'Gemini AI is not configured. Please add your API key to the .env file and restart the server.'
         };
       }
 
@@ -181,7 +182,7 @@ Important:
       
       if (error instanceof Error) {
         if (error.message.includes('API key')) {
-          errorMessage = 'Invalid API key. Please check your Gemini API configuration.';
+          errorMessage = 'Invalid Gemini API key. Please check your configuration in the .env file.';
         } else if (error.message.includes('quota') || error.message.includes('limit')) {
           errorMessage = 'API quota exceeded. Please try again later.';
         } else if (error.message.includes('network') || error.message.includes('fetch')) {

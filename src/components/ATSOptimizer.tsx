@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileText, Target, Zap, Shield, TrendingUp, CheckCircle, AlertTriangle, XCircle, Download, Copy, Eye, EyeOff, RefreshCw, Star, Award, Users, Lightbulb, ArrowRight, BarChart3, PieChart, Activity, Sparkles, Edit3, Save, Plus, Mail } from 'lucide-react';
+import { Upload, FileText, Target, Zap, Shield, TrendingUp, CheckCircle, AlertTriangle, XCircle, Download, Copy, Eye, EyeOff, RefreshCw, Star, Award, Users, Lightbulb, ArrowRight, BarChart3, PieChart, Activity, Sparkles, Edit3, Save, Plus, Mail, AlertCircle } from 'lucide-react';
 import { ResumeData } from '../lib/localStorage';
 import { ATSAnalyzer, ATSAnalysisResult } from '../lib/atsAnalyzer';
 import { geminiATSAnalyzer, GeminiATSAnalysisResult } from '../lib/geminiATSAnalyzer';
@@ -36,6 +36,7 @@ const ATSOptimizer: React.FC<ATSOptimizerProps> = ({ onClose, initialResumeData,
   const [showATSLetter, setShowATSLetter] = useState(false);
   const [editingOptimized, setEditingOptimized] = useState(false);
   const [useGeminiAI, setUseGeminiAI] = useState(true);
+  const [geminiStatus, setGeminiStatus] = useState<{ configured: boolean; message: string }>({ configured: false, message: '' });
 
   const atsAnalyzer = ATSAnalyzer.getInstance();
 
@@ -43,6 +44,11 @@ const ATSOptimizer: React.FC<ATSOptimizerProps> = ({ onClose, initialResumeData,
     if (initialResumeData) {
       setCurrentStep('analyze');
     }
+    
+    // Check Gemini configuration status
+    const status = geminiATSAnalyzer.getConfigurationStatus();
+    setGeminiStatus(status);
+    setUseGeminiAI(status.configured);
   }, [initialResumeData]);
 
   const handleResumeUpload = (parsedResume: ParsedResume) => {
@@ -132,52 +138,78 @@ Preferred Qualifications:
 
     try {
       let result: ATSAnalysisResult;
-      let geminiAnalysis: GeminiATSAnalysisResult | undefined;
       
-      if (useGeminiAI) {
+      if (useGeminiAI && geminiATSAnalyzer.isConfigured()) {
         try {
-          geminiAnalysis = await geminiATSAnalyzer.analyzeResumeWithGemini(resumeData, finalJobDescription);
-          // Convert Gemini analysis to standard format
+          console.log('Using Gemini AI for analysis...');
+          const geminiResult = await geminiATSAnalyzer.analyzeResumeWithGemini(resumeData, finalJobDescription);
+          
+          // Convert Gemini result to standard format
           result = {
-            overallScore: geminiAnalysis.overallScore,
-            keywordScore: geminiAnalysis.keywordScore,
-            formatScore: geminiAnalysis.formatScore,
-            contentScore: geminiAnalysis.contentScore,
-            keywords: geminiAnalysis.keywords,
+            overallScore: geminiResult.overallScore,
+            keywordScore: geminiResult.keywordScore,
+            formatScore: geminiResult.formatScore,
+            contentScore: geminiResult.contentScore,
+            keywords: geminiResult.keywords,
             formatting: {
-              issues: geminiAnalysis.weaknesses,
-              recommendations: geminiAnalysis.recommendations.slice(0, 3)
+              issues: geminiResult.weaknesses,
+              recommendations: geminiResult.recommendations.slice(0, 3)
             },
             content: {
-              strengths: geminiAnalysis.strengths,
-              improvements: geminiAnalysis.weaknesses
+              strengths: geminiResult.strengths,
+              improvements: geminiResult.weaknesses
             },
-            recommendations: geminiAnalysis.recommendations,
+            recommendations: geminiResult.recommendations,
             detailedAnalysis: {
-              sections: [],
-              readabilityScore: geminiAnalysis.readabilityScore,
+              sections: [
+                {
+                  name: 'AI Analysis',
+                  score: geminiResult.overallScore,
+                  issues: geminiResult.weaknesses,
+                  suggestions: geminiResult.recommendations.slice(0, 3)
+                }
+              ],
+              readabilityScore: geminiResult.readabilityScore,
               lengthAnalysis: {
-                wordCount: this.extractResumeText(resumeData).split(' ').length,
+                wordCount: finalJobDescription.split(' ').length,
                 optimal: true,
-                recommendation: 'Resume length is appropriate'
+                recommendation: 'Resume length is appropriate for ATS processing'
               }
             }
           };
-        } catch (geminiError) {
-          console.warn('Gemini AI analysis failed, falling back to standard analysis:', geminiError);
-          toast.error('AI analysis unavailable, using standard analysis');
+          
+          toast.success('AI-powered ATS analysis completed!');
+        } catch (error) {
+          console.error('Gemini analysis failed:', error);
+          
+          // Handle specific error types
+          if (error instanceof Error) {
+            if (error.message === 'GEMINI_NOT_CONFIGURED') {
+              toast.error('Gemini AI not configured. Using standard analysis.');
+            } else if (error.message === 'INVALID_API_KEY') {
+              toast.error('Invalid Gemini API key. Using standard analysis.');
+            } else if (error.message === 'QUOTA_EXCEEDED') {
+              toast.error('Gemini API quota exceeded. Using standard analysis.');
+            } else if (error.message === 'NETWORK_ERROR') {
+              toast.error('Network error. Using standard analysis.');
+            } else {
+              toast.error('AI analysis failed. Using standard analysis.');
+            }
+          }
+          
+          // Fallback to standard analysis
           result = await atsAnalyzer.analyzeResume(resumeData, finalJobDescription);
         }
       } else {
+        console.log('Using standard analysis...');
         result = await atsAnalyzer.analyzeResume(resumeData, finalJobDescription);
+        if (!geminiStatus.configured) {
+          toast.error('AI analysis unavailable, using standard analysis', { duration: 4000 });
+        }
       }
       
       setAnalysisResult(result);
-      if (geminiAnalysis) {
-        setOptimizedResult({ ...result, geminiAnalysis, atsLetter: geminiAnalysis.atsLetter });
-      }
       setCurrentStep('results');
-      toast.success('ATS analysis completed!');
     } catch (error) {
       toast.error('Analysis failed. Please try again.');
     } finally {
@@ -196,51 +228,79 @@ Preferred Qualifications:
     try {
       let result: OptimizedResumeResult;
       
-      if (useGeminiAI) {
+      if (useGeminiAI && geminiATSAnalyzer.isConfigured()) {
         try {
-          const geminiAnalysis = await geminiATSAnalyzer.analyzeResumeWithGemini(resumeData, jobDescription);
-          const optimizedResume = this.createOptimizedResumeFromGemini(resumeData, geminiAnalysis);
+          console.log('Using Gemini AI for optimization...');
+          const geminiResult = await geminiATSAnalyzer.analyzeResumeWithGemini(resumeData, jobDescription);
           
+          // Create optimized resume from Gemini suggestions
+          const optimizedResume = { ...resumeData };
+          
+          if (geminiResult.optimizedContent.summary) {
+            optimizedResume.summary = geminiResult.optimizedContent.summary;
+          }
+          
+          if (geminiResult.optimizedContent.skills.length > 0) {
+            optimizedResume.skills = {
+              ...optimizedResume.skills,
+              technical: [...new Set([...optimizedResume.skills.technical, ...geminiResult.optimizedContent.skills])]
+            };
+          }
+          
+          if (geminiResult.optimizedContent.additionalKeywords.length > 0) {
+            (optimizedResume as any).additionalKeywords = geminiResult.optimizedContent.additionalKeywords;
+          }
+          
+          // Convert to expected format
           result = {
-            overallScore: geminiAnalysis.overallScore,
-            keywordScore: geminiAnalysis.keywordScore,
-            formatScore: geminiAnalysis.formatScore,
-            contentScore: geminiAnalysis.contentScore,
-            keywords: geminiAnalysis.keywords,
+            overallScore: geminiResult.overallScore,
+            keywordScore: geminiResult.keywordScore,
+            formatScore: geminiResult.formatScore,
+            contentScore: geminiResult.contentScore,
+            keywords: geminiResult.keywords,
             formatting: {
-              issues: geminiAnalysis.weaknesses,
-              recommendations: geminiAnalysis.recommendations.slice(0, 3)
+              issues: geminiResult.weaknesses,
+              recommendations: geminiResult.recommendations.slice(0, 3)
             },
             content: {
-              strengths: geminiAnalysis.strengths,
-              improvements: geminiAnalysis.weaknesses
+              strengths: geminiResult.strengths,
+              improvements: geminiResult.weaknesses
             },
-            recommendations: geminiAnalysis.recommendations,
+            recommendations: geminiResult.recommendations,
             detailedAnalysis: {
-              sections: [],
-              readabilityScore: geminiAnalysis.readabilityScore,
+              sections: [
+                {
+                  name: 'AI Optimization',
+                  score: geminiResult.overallScore,
+                  issues: geminiResult.weaknesses,
+                  suggestions: geminiResult.recommendations.slice(0, 3)
+                }
+              ],
+              readabilityScore: geminiResult.readabilityScore,
               lengthAnalysis: {
-                wordCount: this.extractResumeText(resumeData).split(' ').length,
+                wordCount: jobDescription.split(' ').length,
                 optimal: true,
-                recommendation: 'Resume length is appropriate'
+                recommendation: 'Resume length is optimized for ATS processing'
               }
             },
-            optimizedResume,
-            geminiAnalysis,
-            atsLetter: geminiAnalysis.atsLetter
+            optimizedResume
           };
-        } catch (geminiError) {
-          console.warn('Gemini AI optimization failed, falling back to standard optimization:', geminiError);
-          toast.error('AI optimization unavailable, using standard optimization');
+          
+          toast.success('AI-powered optimized resume generated!');
+        } catch (error) {
+          console.error('Gemini optimization failed:', error);
+          toast.error('AI optimization failed. Using standard optimization.');
           result = await atsAnalyzer.generateOptimizedResume(resumeData, jobDescription);
         }
       } else {
         result = await atsAnalyzer.generateOptimizedResume(resumeData, jobDescription);
+        if (!geminiStatus.configured) {
+          toast.error('AI optimization unavailable, using standard optimization', { duration: 4000 });
+        }
       }
       
       setOptimizedResult(result);
       setCurrentStep('optimize');
-      toast.success('Optimized resume generated successfully!');
     } catch (error) {
       toast.error('Failed to generate optimized resume. Please try again.');
     } finally {
@@ -600,6 +660,54 @@ Preferred Qualifications:
           </div>
 
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+            {/* Gemini AI Status */}
+            <div className="mb-6 p-4 rounded-lg border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className={`w-3 h-3 rounded-full mr-3 ${geminiStatus.configured ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  <div>
+                    <h3 className="font-medium text-gray-900">Google Gemini AI Status</h3>
+                    <p className="text-sm text-gray-600">{geminiStatus.message}</p>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useGeminiAI && geminiStatus.configured}
+                      onChange={(e) => setUseGeminiAI(e.target.checked)}
+                      disabled={!geminiStatus.configured}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 disabled:opacity-50"></div>
+                    <span className="ml-3 text-sm font-medium text-gray-900">
+                      {geminiStatus.configured ? 'Use AI Analysis' : 'AI Unavailable'}
+                    </span>
+                  </label>
+                </div>
+              </div>
+              
+              {!geminiStatus.configured && (
+                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-start">
+                    <AlertCircle className="h-5 w-5 text-yellow-400 mt-0.5 mr-2" />
+                    <div className="text-sm">
+                      <p className="text-yellow-800 font-medium mb-1">Setup Required</p>
+                      <p className="text-yellow-700 mb-2">
+                        To enable AI-powered analysis, please configure your Gemini API key:
+                      </p>
+                      <ol className="text-yellow-700 text-xs space-y-1 ml-4 list-decimal">
+                        <li>Visit <a href="https://makersuite.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline">Google AI Studio</a></li>
+                        <li>Create a new API key</li>
+                        <li>Add it to your .env file as VITE_GEMINI_API_KEY</li>
+                        <li>Restart your development server</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <ResumeUploader 
               onResumeUploaded={handleResumeUpload}
               mode="ats-analysis"
@@ -840,7 +948,11 @@ Preferred Qualifications:
             <button
               onClick={handleOptimizeResume}
               disabled={isOptimizing}
-              className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-green-700 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center relative"
+              className={`text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center ${
+                useGeminiAI && geminiStatus.configured 
+                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700' 
+                  : 'bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700'
+              }`}
             >
               {isOptimizing ? (
                 <>
@@ -850,13 +962,8 @@ Preferred Qualifications:
               ) : (
                 <>
                   <Sparkles className="mr-2 h-5 w-5" />
-                  {useGeminiAI ? 'Generate AI-Optimized Resume' : 'Generate ATS-Optimized Resume'}
+                  {useGeminiAI && geminiStatus.configured ? 'Generate AI-Optimized Resume' : 'Generate ATS-Optimized Resume'}
                 </>
-              )}
-              {useGeminiAI && (
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                  <Sparkles className="h-3 w-3 text-white" />
-                </div>
               )}
             </button>
             
