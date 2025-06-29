@@ -20,15 +20,15 @@ function App() {
             <>
               <header className="bg-white shadow-sm border-b border-gray-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                  <div className="flex justify-between items-center h-16 relative">
+                  <div className="flex items-center h-16 relative">
                     {/* Logo */}
-                    <Link to="/" className="flex items-center space-x-2">
+                    <Link to="/" className="flex items-center space-x-2 mr-12">
                       <FileText className="h-8 w-8 text-teal-600" />
                       <span className="text-xl font-bold text-gray-900">CareerKit</span>
                     </Link>
 
                     {/* Desktop Navigation */}
-                    <nav className="hidden md:flex items-center space-x-8">
+                    <nav className="hidden md:flex items-center space-x-6 flex-1">
                       <Link 
                         to="/" 
                         className="text-gray-700 hover:text-teal-600 transition-colors duration-200"
@@ -62,9 +62,16 @@ function App() {
                     </nav>
 
                     {/* Mobile menu button */}
+                    <div className="md:hidden ml-auto">
+                      <button className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100">
+                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                      </button>
+                    </div>
 
-                    {/* Bolt.new Badge - Bottom Right */}
-                    <div className="fixed bottom-6 right-6 z-50">
+                    {/* Bolt.new Badge - Top Right */}
+                    <div className="absolute top-3 right-3 z-50">
                       <a 
                         href="https://bolt.new/" 
                         target="_blank" 
@@ -75,7 +82,7 @@ function App() {
                         <img 
                           src="/white_circle_360x360.png" 
                           alt="Built with Bolt.new" 
-                          className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full shadow-lg hover:shadow-xl transition-shadow duration-200"
+                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full shadow-lg hover:shadow-xl transition-shadow duration-200"
                         />
                       </a>
                     </div>
