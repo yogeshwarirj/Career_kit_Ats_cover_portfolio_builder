@@ -303,97 +303,97 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
 
   if (!isVisible) {
     return (
-      <div className={`fixed bottom-6 left-6 z-50 ${className}`}>
+      <div className={`fixed bottom-4 left-4 z-50 ${className}`}>
         <button
           onClick={toggleVisibility}
-          className="group bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 animate-pulse"
+          className="group bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110"
         >
           <div className="flex items-center">
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mr-3">
-              <MessageCircle className="h-6 w-6" />
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center mr-2">
+              <MessageCircle className="h-4 w-4" />
             </div>
             <div className="text-left">
-              <div className="font-semibold text-sm">AI Career Coach</div>
-              <div className="text-xs opacity-90">Learn about CareerKit</div>
+              <div className="font-semibold text-xs">AI Career Coach</div>
+              <div className="text-xs opacity-90">Learn CareerKit</div>
             </div>
           </div>
           
           {/* Floating particles */}
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-ping"></div>
-          <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-yellow-400 rounded-full animate-bounce delay-300"></div>
+          <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full"></div>
+          <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5 bg-yellow-400 rounded-full"></div>
         </button>
       </div>
     );
   }
 
   return (
-    <div className={`fixed ${isExpanded ? 'inset-4' : 'bottom-6 left-6 w-96'} z-50 ${className}`}>
+    <div className={`fixed ${isExpanded ? 'inset-4' : 'bottom-4 left-4 w-80'} z-50 ${className}`}>
       <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 overflow-hidden h-full flex flex-col">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                <MessageCircle className="h-5 w-5" />
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                <MessageCircle className="h-4 w-4" />
               </div>
               <div>
-                <h3 className="font-semibold">AI Career Coach</h3>
+                <h3 className="font-semibold text-sm">AI Career Coach</h3>
                 <p className="text-xs opacity-90">
                   {isSpeaking ? 'Speaking...' : isPlaying ? 'Active' : 'Ready'}
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1">
               <button
                 onClick={toggleMute}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors duration-200"
+                className="p-1.5 hover:bg-white/20 rounded-lg transition-colors duration-200"
                 title={isMuted ? "Unmute voice" : "Mute voice"}
               >
-                {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                {isMuted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
               </button>
               
               <button
                 onClick={toggleExpanded}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors duration-200"
+                className="p-1.5 hover:bg-white/20 rounded-lg transition-colors duration-200"
                 title={isExpanded ? "Minimize view" : "Expand view"}
               >
-                {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                {isExpanded ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
               </button>
               
               <button
                 onClick={minimizeToButton}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors duration-200"
+                className="p-1.5 hover:bg-white/20 rounded-lg transition-colors duration-200"
                 title="Minimize to button"
               >
-                <Minimize className="h-4 w-4" />
+                <Minimize className="h-3 w-3" />
               </button>
             </div>
           </div>
         </div>
 
         {/* Video/Avatar Area */}
-        <div className="relative bg-gradient-to-br from-blue-50 to-purple-50 p-6 flex-1 flex items-center justify-center">
+        <div className="relative bg-gradient-to-br from-blue-50 to-purple-50 p-4 flex-1 flex items-center justify-center">
           {/* Simulated Video Avatar */}
           <div className="relative">
             <div className={`w-32 h-32 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center shadow-2xl transition-transform duration-300 ${
               isSpeaking ? 'scale-110' : ''
             }`}>
-              <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center">
+              <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center">
                 {features[currentFeature].icon}
               </div>
               
               {/* Speaking animation */}
               {isSpeaking && (
                 <>
-                  <div className="absolute inset-0 border-4 border-white/50 rounded-full animate-ping"></div>
-                  <div className="absolute inset-0 border-2 border-green-400 rounded-full animate-pulse"></div>
+                  <div className="absolute inset-0 border-4 border-white/50 rounded-full"></div>
+                  <div className="absolute inset-0 border-2 border-green-400 rounded-full"></div>
                 </>
               )}
               
               {/* Playing but not speaking animation */}
               {isPlaying && !isSpeaking && (
-                <div className="absolute inset-0 border-2 border-blue-400 rounded-full animate-pulse opacity-60"></div>
+                <div className="absolute inset-0 border-2 border-blue-400 rounded-full opacity-60"></div>
               )}
             </div>
             
@@ -402,7 +402,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
               isSpeaking ? 'bg-green-500' : isPlaying ? 'bg-blue-500' : 'bg-gray-400'
             }`}>
               {isSpeaking ? (
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                <div className="w-2 h-2 bg-white rounded-full"></div>
               ) : isPlaying ? (
                 <Play className="h-3 w-3 text-white" />
               ) : (
@@ -416,18 +416,18 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
             onClick={togglePlayPause}
             className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/10 transition-colors duration-200 rounded-lg"
           >
-            <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg opacity-0 hover:opacity-100 transition-opacity duration-200">
-              {isPlaying ? <Pause className="h-6 w-6 text-gray-700" /> : <Play className="h-6 w-6 text-gray-700 ml-1" />}
+            <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg opacity-0 hover:opacity-100 transition-opacity duration-200">
+              {isPlaying ? <Pause className="h-4 w-4 text-gray-700" /> : <Play className="h-4 w-4 text-gray-700 ml-1" />}
             </div>
           </button>
         </div>
 
         {/* Content Area */}
-        <div className="p-6 bg-white">
+        <div className="p-4 bg-white">
           {/* Feature Indicator */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-xs font-medium text-gray-700">
                 Feature {currentFeature + 1} of {features.length}
               </span>
               <div className={`text-xs px-2 py-1 rounded-full ${
@@ -444,12 +444,12 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
 
           {/* Current Feature */}
           <div className="mb-4">
-            <h4 className="font-bold text-lg text-gray-900 mb-2 flex items-center">
+            <h4 className="font-bold text-sm text-gray-900 mb-2 flex items-center">
               {features[currentFeature].icon}
               <span className="ml-2">{features[currentFeature].title}</span>
             </h4>
             
-            <p className="text-gray-700 text-sm leading-relaxed mb-3">
+            <p className="text-gray-700 text-xs leading-relaxed mb-3">
               {features[currentFeature].description}
             </p>
 
@@ -457,7 +457,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
             <div className="space-y-1">
               {features[currentFeature].benefits.map((benefit, index) => (
                 <div key={index} className="flex items-center text-xs text-gray-600">
-                  <CheckCircle className="h-3 w-3 text-green-500 mr-2 flex-shrink-0" />
+                  <CheckCircle className="h-2 w-2 text-green-500 mr-2 flex-shrink-0" />
                   {benefit}
                 </div>
               ))}
@@ -467,53 +467,53 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
           {/* Controls */}
           <div className="flex items-center justify-between">
             {/* Navigation Controls */}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1">
               <button
                 onClick={handlePrevious}
                 disabled={currentFeature === 0}
-                className={`p-2 rounded-lg transition-all duration-200 ${
+                className={`p-1.5 rounded-lg transition-all duration-200 ${
                   currentFeature === 0
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                 }`}
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-3 w-3" />
               </button>
               
               <button
                 onClick={togglePlayPause}
-                className={`flex items-center px-3 py-2 rounded-lg font-medium transition-all duration-200 ${
+                className={`flex items-center px-2 py-1.5 rounded-lg font-medium transition-all duration-200 ${
                   isPlaying 
                     ? 'bg-red-100 text-red-700 hover:bg-red-200' 
                     : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                 }`}
               >
-                {isPlaying ? <Pause className="h-4 w-4 mr-1" /> : <Play className="h-4 w-4 mr-1" />}
+                {isPlaying ? <Pause className="h-3 w-3 mr-1" /> : <Play className="h-3 w-3 mr-1" />}
                 <span className="text-xs">{isPlaying ? 'Pause' : 'Play'}</span>
               </button>
               
               <button
                 onClick={handleNext}
                 disabled={currentFeature === features.length - 1}
-                className={`p-2 rounded-lg transition-all duration-200 ${
+                className={`p-1.5 rounded-lg transition-all duration-200 ${
                   currentFeature === features.length - 1
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                 }`}
               >
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="h-3 w-3" />
               </button>
             </div>
 
             {/* Feature Dots */}
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-0.5">
               {features.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => goToFeature(index)}
-                  className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                  className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${
                     index === currentFeature 
-                      ? 'bg-blue-500 w-6' 
+                      ? 'bg-blue-500 w-4' 
                       : index < currentFeature 
                       ? 'bg-green-500' 
                       : 'bg-gray-300'
@@ -525,9 +525,9 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
 
           {/* Voice Configuration Notice */}
           {isPlaying && !elevenLabsService.isConfigured() && (
-            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <div className="flex items-center text-xs text-amber-800">
-                <div className="w-2 h-2 bg-amber-500 rounded-full mr-2 animate-pulse"></div>
+            <div className="mt-2 text-center">
+              <div className="inline-flex items-center px-2 py-1 rounded-lg text-xs bg-amber-50 text-amber-800 border border-amber-200">
+                <div className="w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></div>
                 <div>
                   <div className="font-medium">🔧 Voice Setup Needed</div>
                   <div className="mt-1">Add your free Eleven Labs API key for voice features</div>
@@ -538,16 +538,16 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
 
           {/* Speaking Status */}
           {isSpeaking && (
-            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
               <div className="flex items-center text-xs text-green-800">
-                <div className="flex space-x-1 mr-2">
-                  <div className="w-1 h-1 bg-green-500 rounded-full animate-bounce"></div>
-                  <div className="w-1 h-1 bg-green-500 rounded-full animate-bounce delay-100"></div>
-                  <div className="w-1 h-1 bg-green-500 rounded-full animate-bounce delay-200"></div>
+                <div className="flex space-x-0.5 mr-2">
+                  <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                  <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                  <div className="w-1 h-1 bg-green-500 rounded-full"></div>
                 </div>
                 <div>
                   <div className="font-medium">🎤 AI Coach Speaking</div>
-                  <div className="mt-1">Wait for completion before advancing...</div>
+                  <div className="mt-0.5">Wait for completion...</div>
                 </div>
               </div>
             </div>
@@ -555,12 +555,12 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
           
           {/* Processing Status */}
           {isProcessing && !isSpeaking && (
-            <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
               <div className="flex items-center text-xs text-yellow-800">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2 animate-pulse"></div>
+                <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full mr-2"></div>
                 <div>
                   <div className="font-medium">⚙️ Processing Audio</div>
-                  <div className="mt-1">Preparing next feature...</div>
+                  <div className="mt-0.5">Preparing next feature...</div>
                 </div>
               </div>
             </div>
@@ -569,22 +569,22 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
 
         {/* Feature Navigation (Expanded View) */}
         {isExpanded && (
-          <div className="border-t border-gray-200 p-4 bg-gray-50">
-            <h5 className="font-semibold text-gray-900 mb-3">Quick Navigation</h5>
+          <div className="border-t border-gray-200 p-3 bg-gray-50">
+            <h5 className="font-semibold text-gray-900 mb-2 text-sm">Quick Navigation</h5>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {features.map((feature, index) => (
                 <button
                   key={feature.id}
                   onClick={() => goToFeature(index)}
-                  className={`p-3 rounded-lg text-left transition-all duration-200 ${
+                  className={`p-2 rounded-lg text-left transition-all duration-200 ${
                     index === currentFeature
                       ? 'bg-blue-100 border-2 border-blue-500 text-blue-700'
                       : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  <div className="flex items-center mb-1">
+                  <div className="flex items-center mb-0.5">
                     {feature.icon}
-                    <span className="ml-2 font-medium text-sm">{feature.title}</span>
+                    <span className="ml-1 font-medium text-xs">{feature.title}</span>
                   </div>
                   <p className="text-xs opacity-75 line-clamp-2">{feature.description}</p>
                 </button>
