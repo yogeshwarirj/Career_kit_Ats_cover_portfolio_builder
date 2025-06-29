@@ -1922,23 +1922,6 @@ const PortfolioBuilder: React.FC = () => {
             Build a stunning portfolio website that showcases your skills, projects, and achievements. Stand out from the crowd with a professional online presence.
           </p>
 
-          {/* Stats */}
-          <div className="flex justify-center items-center space-x-8 text-sm text-gray-500 mb-8">
-            <div className="flex items-center">
-              <Users className="h-4 w-4 text-blue-500 mr-1" />
-              <span>10K+ Portfolios Created</span>
-            </div>
-            <div className="flex items-center">
-              <Star className="h-4 w-4 text-yellow-400 mr-1" />
-              <span>4.9 User Rating</span>
-            </div>
-            <div className="flex items-center">
-              <Award className="h-4 w-4 text-green-500 mr-1" />
-              <span>Professional Quality</span>
-            </div>
-          </div>
-        </div>
-
         {/* Progress Steps */}
         <div className="mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4 overflow-x-auto pb-2">
