@@ -113,7 +113,14 @@ const Hero: React.FC = () => {
       // Check if Eleven Labs is configured
       const configStatus = elevenLabsService.getConfigurationStatus();
       if (!configStatus.configured) {
-        toast.error('Voice features require Eleven Labs API key. Add VITE_ELEVENLABS_API_KEY to your .env file for voice synthesis.');
+        toast.error('🎤 Voice features need setup! Get your free API key from ElevenLabs.io and add it to your .env file.', {
+          duration: 5000,
+          style: {
+            background: '#3B82F6',
+            color: 'white',
+            fontWeight: '500'
+          }
+        });
       }
     }
   };
@@ -325,9 +332,9 @@ const Hero: React.FC = () => {
                   {/* Voice Configuration Notice */}
                   {isPlaying && !elevenLabsService.isConfigured() && (
                     <div className="mt-2 text-center">
-                      <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs bg-blue-50 text-blue-800 border border-blue-200">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
-                        <span>Voice setup needed - See setup guide</span>
+                      <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs bg-amber-50 text-amber-800 border border-amber-200">
+                        <div className="w-2 h-2 bg-amber-500 rounded-full mr-2 animate-pulse"></div>
+                        <span>🔧 Add API key for voice</span>
                       </div>
                     </div>
                   )}

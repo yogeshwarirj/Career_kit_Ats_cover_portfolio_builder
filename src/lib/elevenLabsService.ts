@@ -52,17 +52,24 @@ class ElevenLabsService {
    * Check if Eleven Labs is properly configured
    */
   isConfigured(): boolean {
-    return this.config.apiKey !== '' && this.config.apiKey !== 'your_elevenlabs_api_key_here';
+    return this.config.apiKey !== '' && 
+           this.config.apiKey !== 'your_elevenlabs_api_key_here' && 
+           this.config.apiKey !== null && 
+           this.config.apiKey !== undefined &&
+           this.config.apiKey.length > 10;
   }
 
   /**
    * Get configuration status
    */
   getConfigurationStatus(): { configured: boolean; message: string } {
-    if (!this.config.apiKey || this.config.apiKey === 'your_elevenlabs_api_key_here') {
+    if (!this.config.apiKey || 
+        this.config.apiKey === 'your_elevenlabs_api_key_here' || 
+        this.config.apiKey === '' ||
+        this.config.apiKey.length < 10) {
       return {
         configured: false,
-        message: 'Eleven Labs API key not configured. Please add VITE_ELEVENLABS_API_KEY to your .env file.'
+        message: 'Eleven Labs API key not configured. Please add your API key to the .env file and restart the server.'
       };
     }
     
