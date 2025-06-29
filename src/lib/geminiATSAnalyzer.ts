@@ -34,6 +34,7 @@ export interface ATSLetterParams {
   companyName: string;
   jobTitle: string;
   applicantName: string;
+  achievements?: string;
 }
 
 class GeminiATSAnalyzer {
@@ -144,6 +145,7 @@ Return ONLY the JSON object, no additional text.
     const address = params.resumeData.personalInfo?.address || '';
     const email = params.resumeData.personalInfo?.email || '';
     const phone = params.resumeData.personalInfo?.phone || '';
+    const achievements = params.achievements || '';
     
     return `
 You are an expert cover letter writer specializing in ATS-optimized application letters. Create a professional, compelling cover letter that maximizes ATS compatibility while maintaining human readability.
@@ -154,6 +156,7 @@ Address: ${address}
 Email: ${email}
 Phone: ${phone}
 Resume Content: ${resumeText}
+${achievements ? `Key Achievements & Impact: ${achievements}` : ''}
 
 JOB INFORMATION:
 Company: ${params.companyName}
@@ -163,10 +166,12 @@ Job Description: ${params.jobDescription}
 Create a concise, ATS-optimized cover letter that:
 1. Uses keywords from the job description naturally
 2. Highlights relevant experience and skills from the resume
-3. Demonstrates clear value proposition
-4. Maintains professional tone and structure
-5. Is optimized for ATS scanning while remaining engaging for human readers
-6. MUST be exactly 3 paragraphs long (no more, no less)
+3. Incorporates specific achievements and quantifiable impact where provided
+4. Demonstrates clear value proposition with concrete examples
+5. Maintains professional tone and structure
+6. Is optimized for ATS scanning while remaining engaging for human readers
+7. MUST be exactly 3 paragraphs long (no more, no less)
+8. Uses specific achievements and metrics when available to demonstrate impact
 
 Format the cover letter as a complete, professional business letter including:
 - Proper header with applicant contact information (name, address, email, phone)
@@ -174,11 +179,17 @@ Format the cover letter as a complete, professional business letter including:
 - Company address line (use "[Company Name] Hiring Team" if specific address not provided)
 - Professional salutation
 - EXACTLY 3 compelling paragraphs:
-  * Paragraph 1: Opening statement expressing interest and brief overview of qualifications
-  * Paragraph 2: Specific examples of relevant experience and skills that match job requirements
+  * Paragraph 1: Opening statement expressing interest and brief overview of qualifications with a standout achievement if provided
+  * Paragraph 2: Specific examples of relevant experience, skills, and quantifiable achievements that match job requirements
   * Paragraph 3: Closing statement with call to action and professional sign-off
 - Professional closing
 - Signature line
+
+IMPORTANT GUIDELINES:
+- If achievements are provided, weave them naturally into the letter with specific metrics and results
+- Use action verbs and quantifiable results (percentages, dollar amounts, timeframes, team sizes, etc.)
+- Connect achievements directly to how they would benefit the target company
+- Maintain professional tone while showcasing measurable impact
 
 IMPORTANT: The letter should be approximately 250-350 words total and MUST contain exactly 3 paragraphs in the body. Do not exceed 3 paragraphs under any circumstances.
 

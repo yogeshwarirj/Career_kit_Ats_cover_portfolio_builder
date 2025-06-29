@@ -61,7 +61,8 @@ const CoverLetterGenerator: React.FC = () => {
     },
     skills: [] as string[],
     jobDescription: '',
-    skillsInput: ''
+    skillsInput: '',
+    achievements: ''
   });
 
   const [currentLetter, setCurrentLetter] = useState<CoverLetterData | null>(null);
@@ -170,7 +171,8 @@ const CoverLetterGenerator: React.FC = () => {
         jobDescription: formData.jobDescription,
         companyName: formData.companyName,
         jobTitle: formData.jobTitle,
-        applicantName: formData.personalInfo.name
+        applicantName: formData.personalInfo.name,
+        achievements: formData.achievements
       };
 
       // Generate cover letter using Gemini AI
@@ -619,6 +621,21 @@ const CoverLetterGenerator: React.FC = () => {
                     </div>
                     
                     <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Key Achievements & Impact *</label>
+                      <textarea
+                        rows={4}
+                        value={formData.achievements}
+                        onChange={(e) => handleInputChange('achievements', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
+                        placeholder="• Increased sales by 25% through implementation of new CRM system&#10;• Led team of 8 developers to deliver project 2 weeks ahead of schedule&#10;• Reduced processing time by 40% by automating manual workflows&#10;• Managed $2M budget and delivered all projects within budget constraints"
+                        required
+                      />
+                      <p className="text-sm text-gray-500 mt-1">
+                        List your key achievements, quantifiable results, and impact from previous roles. Use bullet points and include specific numbers/percentages when possible.
+                      </p>
+                    </div>
+                    
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Job Description *</label>
                       <textarea
                         rows={8}
@@ -654,7 +671,7 @@ const CoverLetterGenerator: React.FC = () => {
               <div className="mt-8 flex justify-end">
                 <button
                   onClick={() => setCurrentStep('template')}
-                  disabled={!formData.personalInfo.name || !formData.personalInfo.email || !formData.personalInfo.phone || !formData.personalInfo.address || !formData.jobTitle || !formData.companyName || formData.skills.length === 0 || !formData.jobDescription}
+                  disabled={!formData.personalInfo.name || !formData.personalInfo.email || !formData.personalInfo.phone || !formData.personalInfo.address || !formData.jobTitle || !formData.companyName || formData.skills.length === 0 || !formData.jobDescription || !formData.achievements}
                   className="bg-gradient-to-r from-teal-600 to-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-teal-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   Continue to Templates
@@ -830,6 +847,7 @@ const CoverLetterGenerator: React.FC = () => {
                           <p><strong>Position:</strong> {formData.jobTitle}</p>
                           <p><strong>Company:</strong> {formData.companyName}</p>
                           <p><strong>Key Skills:</strong> {formData.skills.slice(0, 3).join(', ')}</p>
+                          <p><strong>Achievements:</strong> {formData.achievements.substring(0, 100)}...</p>
                           <p><strong>AI Engine:</strong> Google Gemini AI</p>
                         </div>
                       </div>
