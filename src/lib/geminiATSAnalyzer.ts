@@ -48,13 +48,14 @@ class GeminiATSAnalyzer {
     try {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       
-      if (!apiKey || apiKey === 'your_gemini_api_key_here') {
+      if (!apiKey || apiKey === 'your_gemini_api_key_here' || apiKey.trim() === '') {
         console.warn('Gemini API key not found. Please set VITE_GEMINI_API_KEY in your environment variables.');
         return;
       }
 
       this.genAI = new GoogleGenerativeAI(apiKey);
       this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      console.log('Gemini AI initialized successfully');
     } catch (error) {
       console.error('Failed to initialize Gemini AI:', error);
     }
@@ -177,7 +178,7 @@ Return only the complete cover letter text, properly formatted.
 
   async analyzeResumeWithGemini(resumeData: ResumeData, jobDescription: string): Promise<GeminiATSAnalysisResult> {
     if (!this.model) {
-      throw new Error('Gemini AI is not properly configured. Please check your API key.');
+      throw new Error('GEMINI_NOT_CONFIGURED');
     }
 
     try {
@@ -215,13 +216,25 @@ Return only the complete cover letter text, properly formatted.
       
     } catch (error) {
       console.error('Error analyzing resume with Gemini:', error);
-      throw new Error(`Failed to analyze resume: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Handle specific error types
+      if (error instanceof Error) {
+        if (error.message.includes('API_KEY_INVALID') || error.message.includes('401')) {
+          throw new Error('INVALID_API_KEY');
+        } else if (error.message.includes('QUOTA_EXCEEDED') || error.message.includes('429')) {
+          throw new Error('QUOTA_EXCEEDED');
+        } else if (error.message.includes('NETWORK') || error.message.includes('fetch')) {
+          throw new Error('NETWORK_ERROR');
+        }
+      }
+      
+      throw new Error('ANALYSIS_FAILED');
     }
   }
 
   async generateATSLetter(params: ATSLetterParams): Promise<string> {
     if (!this.model) {
-      throw new Error('Gemini AI is not properly configured. Please check your API key.');
+      throw new Error('GEMINI_NOT_CONFIGURED');
     }
 
     try {
@@ -241,7 +254,7 @@ Return only the complete cover letter text, properly formatted.
       
     } catch (error) {
       console.error('Error generating ATS letter:', error);
-      throw new Error(`Failed to generate ATS letter: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error('LETTER_GENERATION_FAILED');
     }
   }
 
@@ -291,6 +304,35 @@ Return only the complete cover letter text, properly formatted.
       console.error('Error parsing Gemini analysis response:', error);
       throw new Error('Failed to parse AI analysis response. Please try again.');
     }
+  }
+
+  // Check if Gemini is properly configured
+  isConfigured(): boolean {
+    return this.model !== null;
+  }
+
+  // Get configuration status
+  getConfigurationStatus(): { configured: boolean; message: string } {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    
+    if (!apiKey || apiKey === 'your_gemini_api_key_here' || apiKey.trim() === '') {
+      return {
+        configured: false,
+        message: 'Gemini API key not configured. Please add your API key to the .env file.'
+      };
+    }
+    
+    if (!this.model) {
+      return {
+        configured: false,
+        message: 'Gemini AI failed to initialize. Please check your API key.'
+      };
+    }
+    
+    return {
+      configured: true,
+      message: 'Gemini AI is properly configured and ready to use.'
+    };
   }
 
   // Fallback method when API is not available
