@@ -523,25 +523,30 @@ const CoverLetterGenerator: React.FC = () => {
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
                       <input
                         type="tel"
                         value={formData.personalInfo.phone}
                         onChange={(e) => handleInputChange('personalInfo.phone', e.target.value)}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
                         placeholder="+1 (555) 123-4567"
+                        required
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
                       <input
                         type="text"
                         value={formData.personalInfo.address}
                         onChange={(e) => handleInputChange('personalInfo.address', e.target.value)}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
-                        placeholder="City, State, Country"
+                        placeholder="123 Main Street, City, State 12345"
+                        required
                       />
+                      <p className="text-sm text-gray-500 mt-1">
+                        Full address including street, city, state, and zip code
+                      </p>
                     </div>
                     
                     <div>
@@ -649,7 +654,7 @@ const CoverLetterGenerator: React.FC = () => {
               <div className="mt-8 flex justify-end">
                 <button
                   onClick={() => setCurrentStep('template')}
-                  disabled={!formData.personalInfo.name || !formData.personalInfo.email || !formData.jobTitle || !formData.companyName || formData.skills.length === 0 || !formData.jobDescription}
+                  disabled={!formData.personalInfo.name || !formData.personalInfo.email || !formData.personalInfo.phone || !formData.personalInfo.address || !formData.jobTitle || !formData.companyName || formData.skills.length === 0 || !formData.jobDescription}
                   className="bg-gradient-to-r from-teal-600 to-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-teal-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   Continue to Templates

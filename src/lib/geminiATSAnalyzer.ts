@@ -141,12 +141,18 @@ Return ONLY the JSON object, no additional text.
 
   private buildATSLetterPrompt(params: ATSLetterParams): string {
     const resumeText = this.extractResumeText(params.resumeData);
+    const address = params.resumeData.personalInfo?.address || '';
+    const email = params.resumeData.personalInfo?.email || '';
+    const phone = params.resumeData.personalInfo?.phone || '';
     
     return `
 You are an expert cover letter writer specializing in ATS-optimized application letters. Create a professional, compelling cover letter that maximizes ATS compatibility while maintaining human readability.
 
 APPLICANT INFORMATION:
 Name: ${params.applicantName}
+Address: ${address}
+Email: ${email}
+Phone: ${phone}
 Resume Content: ${resumeText}
 
 JOB INFORMATION:
@@ -154,23 +160,27 @@ Company: ${params.companyName}
 Position: ${params.jobTitle}
 Job Description: ${params.jobDescription}
 
-Create an ATS-optimized cover letter that:
+Create a concise, ATS-optimized cover letter that:
 1. Uses keywords from the job description naturally
 2. Highlights relevant experience and skills from the resume
 3. Demonstrates clear value proposition
 4. Maintains professional tone and structure
 5. Is optimized for ATS scanning while remaining engaging for human readers
+6. MUST be exactly 3 paragraphs long (no more, no less)
 
 Format the cover letter as a complete, professional business letter including:
-- Proper header with applicant contact information
+- Proper header with applicant contact information (name, address, email, phone)
 - Date
-- Company address (use placeholder if not provided)
+- Company address line (use "[Company Name] Hiring Team" if specific address not provided)
 - Professional salutation
-- 3-4 compelling paragraphs
+- EXACTLY 3 compelling paragraphs:
+  * Paragraph 1: Opening statement expressing interest and brief overview of qualifications
+  * Paragraph 2: Specific examples of relevant experience and skills that match job requirements
+  * Paragraph 3: Closing statement with call to action and professional sign-off
 - Professional closing
 - Signature line
 
-The letter should be approximately 300-400 words and directly address the job requirements while showcasing the applicant's qualifications from their resume.
+IMPORTANT: The letter should be approximately 250-350 words total and MUST contain exactly 3 paragraphs in the body. Do not exceed 3 paragraphs under any circumstances.
 
 Return only the complete cover letter text, properly formatted.
 `;
