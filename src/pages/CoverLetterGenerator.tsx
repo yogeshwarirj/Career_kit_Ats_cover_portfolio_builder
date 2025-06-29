@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, FileText, User, Building, Briefcase, Sparkles, Download, Copy, Eye, EyeOff, Save, Clock, Crown, Shield, Zap, CheckCircle, Star, Award, Users, Target, Edit3, Palette, Layout, BookOpen, Mail, Phone, MapPin, Globe, Linkedin } from 'lucide-react';
+import { ArrowLeft, FileText, User, Building, Briefcase, Sparkles, Download, Copy, Eye, EyeOff, Save, Clock, Crown, Shield, Zap, CheckCircle, Star, Award, Users, Target, Edit3, Palette, Layout, BookOpen, Mail, Phone, MapPin, Globe, Linkedin, XCircle } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { geminiATSAnalyzer, ATSLetterParams } from '../lib/geminiATSAnalyzer';
 import { ResumeData } from '../lib/localStorage';
@@ -354,6 +354,20 @@ const CoverLetterGenerator: React.FC = () => {
     
     navigator.clipboard.writeText(currentLetter.generatedLetter);
     toast.success('Cover letter copied to clipboard!');
+  };
+
+  const handleDeleteLetter = (letterId: string) => {
+    const updatedLetters = savedLetters.filter(letter => letter.id !== letterId);
+    setSavedLetters(updatedLetters);
+    saveToLocalStorage(updatedLetters, subscription);
+    
+    // If the deleted letter is currently being viewed, clear it
+    if (currentLetter?.id === letterId) {
+      setCurrentLetter(null);
+      setCurrentStep('input');
+    }
+    
+    toast.success('Cover letter deleted successfully!');
   };
 
   const templates = [
@@ -1030,7 +1044,7 @@ const CoverLetterGenerator: React.FC = () => {
                           setCurrentLetter(letter);
                           setCurrentStep('edit');
                         }}
-                        className="flex-1 bg-teal-600 text-white py-2 px-3 rounded text-sm hover:bg-teal-700 transition-colors duration-200"
+                        className="flex-1 bg-teal-600 text-white py-2 px-3 rounded text-sm hover:bg-teal-700 transition-colors duration-200 flex items-center justify-center"
                       >
                         View/Edit
                       </button>
@@ -1042,8 +1056,16 @@ const CoverLetterGenerator: React.FC = () => {
                           setTimeout(() => downloadLetter(), 100);
                         }}
                         className="p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors duration-200"
+                        title="Download PDF"
                       >
                         <Download className="h-4 w-4 text-gray-600" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteLetter(letter.id)}
+                        className="p-2 border border-red-300 text-red-600 rounded hover:bg-red-50 transition-colors duration-200"
+                        title="Delete cover letter"
+                      >
+                        <XCircle className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
