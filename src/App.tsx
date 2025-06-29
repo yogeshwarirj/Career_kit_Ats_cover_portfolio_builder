@@ -22,7 +22,7 @@ function App() {
               {/* Logo */}
               <Link to="/" className="flex items-center space-x-2 mr-12">
                 <img 
-                  src="/image copy copy copy copy copy copy.png" 
+                  src="/image copy copy copy copy copy copy copy.png" 
                   alt="CareerKit Logo" 
                   className="h-8 w-8 object-contain"
                 />
