@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, User, Briefcase, GraduationCap, Code, FileText, Trophy, Mail, Plus, Trash2, Eye, Download, Globe, Sparkles, CheckCircle, Star, Award, Users, Target, Layout, Palette, Save, Upload, Image as ImageIcon, Camera, Monitor, Smartphone } from 'lucide-react';
+import { ArrowLeft, ArrowRight, User, Briefcase, GraduationCap, Code, FileText, Trophy, Mail, Plus, Trash2, Eye, Download, Globe, Sparkles, CheckCircle, Star, Award, Users, Target, Layout, Palette, Save, Upload, Image as ImageIcon, Camera, Monitor, Smartphone } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import ImageUploader from '../components/ImageUploader';
 import { netlifyIntegration } from '../lib/netlifyIntegration';
