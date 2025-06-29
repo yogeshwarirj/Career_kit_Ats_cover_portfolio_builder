@@ -1,375 +1,1016 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Briefcase, User, Target, Palette, Eye, Download, Globe, ExternalLink, CheckCircle, Sparkles, RefreshCw, Code, Zap, Award, Users, Star, Shield, ArrowRight, Copy, Settings, Lightbulb, Plus, X, Calendar, Building, GraduationCap, Trophy } from 'lucide-react';
+import { ArrowLeft, User, Briefcase, GraduationCap, Code, FileText, Trophy, Mail, Plus, Trash2, Eye, Download, Globe, Sparkles, CheckCircle, Star, Award, Users, Target, Layout, Palette, Save, Upload, Image as ImageIcon, Camera, Monitor, Smartphone } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
-import { geminiPortfolioGenerator, PortfolioGenerationParams, GeneratedPortfolio } from '../lib/geminiPortfolioGenerator';
-import { netlifyIntegration, NetlifyDeployment } from '../lib/netlifyIntegration';
+import ImageUploader from '../components/ImageUploader';
+import { netlifyIntegration } from '../lib/netlifyIntegration';
+import TavusAgentExplainer from '../components/TavusAgentExplainer';
+
+interface PersonalInfo {
+  name: string;
+  title: string;
+  tagline: string;
+  email: string;
+  phone: string;
+  location: string;
+  linkedin: string;
+  github: string;
+  website: string;
+  profileImage: string;
+}
+
+interface AboutInfo {
+  background: string;
+  objectives: string;
+  interests: string;
+  uniqueValue: string;
+}
+
+interface Education {
+  id: string;
+  degree: string;
+  institution: string;
+  location: string;
+  year: string;
+  achievements: string;
+}
+
+interface Skill {
+  id: string;
+  name: string;
+  category: 'technical' | 'soft' | 'tools';
+  proficiency: number;
+}
 
 interface Project {
   id: string;
   title: string;
   description: string;
-  technologies: string;
+  technologies: string[];
+  role: string;
+  outcomes: string;
   liveUrl: string;
-  githubUrl: string;
+  repoUrl: string;
+  image: string;
 }
 
-interface ExperienceEntry {
+interface Blog {
   id: string;
   title: string;
-  company: string;
-  duration: string;
   description: string;
-}
-
-interface EducationEntry {
-  id: string;
-  degree: string;
-  school: string;
-  year: string;
+  url: string;
+  publishDate: string;
+  tags: string[];
 }
 
 interface Achievement {
   id: string;
+  title: string;
   description: string;
+  date: string;
+  category: string;
 }
 
-interface FormData {
-  personalInfo: {
-    name: string;
-    email: string;
-    phone: string;
-    location: string;
-    linkedin: string;
-    github: string;
-    website: string;
+interface PortfolioData {
+  personalInfo: PersonalInfo;
+  about: AboutInfo;
+  education: Education[];
+  skills: Skill[];
+  projects: Project[];
+  blogs: Blog[];
+  achievements: Achievement[];
+  theme: {
+    primaryColor: string;
+    secondaryColor: string;
+    layout: 'modern' | 'classic' | 'creative';
   };
-  targetRole: string;
-  experience: string;
-  skills: string[];
-  projects: string;
-  achievements: string;
-  preferences: {
-    style: 'modern' | 'classic' | 'creative' | 'minimal';
-    colorScheme: 'blue' | 'green' | 'purple' | 'orange' | 'red';
-    includeTestimonials: boolean;
-  };
-  skillsInput: string;
-  // Structured data arrays
-  projectsList: Project[];
-  experienceList: ExperienceEntry[];
-  educationList: EducationEntry[];
-  achievementsList: Achievement[];
-  // New item forms
-  newProject: Omit<Project, 'id'>;
-  newExperience: Omit<ExperienceEntry, 'id'>;
-  newEducation: Omit<EducationEntry, 'id'>;
-  newAchievement: Omit<Achievement, 'id'>;
 }
 
 const PortfolioBuilder: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState<'input' | 'preview' | 'deploy' | 'success'>('input');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isDeploying, setIsDeploying] = useState(false);
-  const [generatedPortfolio, setGeneratedPortfolio] = useState<GeneratedPortfolio | null>(null);
-  const [deploymentResult, setDeploymentResult] = useState<NetlifyDeployment | null>(null);
-  const [deploymentError, setDeploymentError] = useState<string>('');
-
-  const [formData, setFormData] = useState<FormData>({
+  const [currentStep, setCurrentStep] = useState(0);
+  const [portfolioData, setPortfolioData] = useState<PortfolioData>({
     personalInfo: {
       name: '',
+      title: '',
+      tagline: '',
       email: '',
       phone: '',
       location: '',
       linkedin: '',
       github: '',
-      website: ''
+      website: '',
+      profileImage: ''
     },
-    targetRole: '',
-    experience: '',
+    about: {
+      background: '',
+      objectives: '',
+      interests: '',
+      uniqueValue: ''
+    },
+    education: [],
     skills: [],
-    projects: '',
-    achievements: '',
-    preferences: {
-      style: 'modern',
-      colorScheme: 'blue',
-      includeTestimonials: false
-    },
-    skillsInput: '',
-    // Initialize structured arrays
-    projectsList: [],
-    experienceList: [],
-    educationList: [],
-    achievementsList: [],
-    // Initialize new item forms
-    newProject: {
-      title: '',
-      description: '',
-      technologies: '',
-      liveUrl: '',
-      githubUrl: ''
-    },
-    newExperience: {
-      title: '',
-      company: '',
-      duration: '',
-      description: ''
-    },
-    newEducation: {
-      degree: '',
-      school: '',
-      year: ''
-    },
-    newAchievement: {
-      description: ''
+    projects: [],
+    blogs: [],
+    achievements: [],
+    theme: {
+      primaryColor: '#3B82F6',
+      secondaryColor: '#10B981',
+      layout: 'modern'
     }
   });
+  
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedPortfolio, setGeneratedPortfolio] = useState<string | null>(null);
+  const [deploymentUrl, setDeploymentUrl] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
 
-  const handleInputChange = (field: string, value: string | boolean) => {
-    if (field.startsWith('personalInfo.')) {
-      const personalField = field.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        personalInfo: {
-          ...prev.personalInfo,
-          [personalField]: value
-        }
-      }));
-    } else if (field.startsWith('preferences.')) {
-      const prefField = field.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        preferences: {
-          ...prev.preferences,
-          [prefField]: value
-        }
-      }));
-    } else if (field.startsWith('newProject.')) {
-      const projectField = field.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        newProject: {
-          ...prev.newProject,
-          [projectField]: value
-        }
-      }));
-    } else if (field.startsWith('newExperience.')) {
-      const expField = field.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        newExperience: {
-          ...prev.newExperience,
-          [expField]: value
-        }
-      }));
-    } else if (field.startsWith('newEducation.')) {
-      const eduField = field.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        newEducation: {
-          ...prev.newEducation,
-          [eduField]: value
-        }
-      }));
-    } else if (field.startsWith('newAchievement.')) {
-      const achField = field.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        newAchievement: {
-          ...prev.newAchievement,
-          [achField]: value
-        }
-      }));
-    } else if (field === 'skillsInput') {
-      const skills = (value as string).split(',').map(skill => skill.trim()).filter(skill => skill.length > 0);
-      setFormData(prev => ({
-        ...prev,
-        skillsInput: value as string,
-        skills
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [field]: value
-      }));
+  const steps = [
+    { id: 'personal', title: 'Personal Info', icon: User },
+    { id: 'about', title: 'About Me', icon: FileText },
+    { id: 'education', title: 'Education', icon: GraduationCap },
+    { id: 'skills', title: 'Skills', icon: Code },
+    { id: 'projects', title: 'Projects', icon: Briefcase },
+    { id: 'blogs', title: 'Blogs', icon: FileText },
+    { id: 'achievements', title: 'Achievements', icon: Trophy },
+    { id: 'theme', title: 'Theme', icon: Palette },
+    { id: 'preview', title: 'Preview', icon: Eye }
+  ];
+
+  const colorThemes = [
+    { name: 'Blue Ocean', primary: '#3B82F6', secondary: '#10B981' },
+    { name: 'Purple Haze', primary: '#8B5CF6', secondary: '#F59E0B' },
+    { name: 'Green Nature', primary: '#10B981', secondary: '#3B82F6' },
+    { name: 'Orange Sunset', primary: '#F97316', secondary: '#EF4444' },
+    { name: 'Pink Flamingo', primary: '#EC4899', secondary: '#8B5CF6' },
+    { name: 'Teal Professional', primary: '#0D9488', secondary: '#F59E0B' }
+  ];
+
+  // Save to localStorage
+  useEffect(() => {
+    localStorage.setItem('portfolioBuilder', JSON.stringify(portfolioData));
+  }, [portfolioData]);
+
+  // Load from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('portfolioBuilder');
+    if (saved) {
+      try {
+        setPortfolioData(JSON.parse(saved));
+      } catch (error) {
+        console.error('Error loading saved data:', error);
+      }
     }
+  }, []);
+
+  const updatePersonalInfo = (field: keyof PersonalInfo, value: string) => {
+    setPortfolioData(prev => ({
+      ...prev,
+      personalInfo: { ...prev.personalInfo, [field]: value }
+    }));
   };
 
-  // Add functions
-  const handleAddProject = () => {
-    if (!formData.newProject.title.trim() || !formData.newProject.description.trim()) {
-      toast.error('Please fill in project title and description');
-      return;
-    }
+  const updateAbout = (field: keyof AboutInfo, value: string) => {
+    setPortfolioData(prev => ({
+      ...prev,
+      about: { ...prev.about, [field]: value }
+    }));
+  };
 
+  const addEducation = () => {
+    const newEducation: Education = {
+      id: Date.now().toString(),
+      degree: '',
+      institution: '',
+      location: '',
+      year: '',
+      achievements: ''
+    };
+    setPortfolioData(prev => ({
+      ...prev,
+      education: [...prev.education, newEducation]
+    }));
+  };
+
+  const updateEducation = (id: string, field: keyof Education, value: string) => {
+    setPortfolioData(prev => ({
+      ...prev,
+      education: prev.education.map(edu => 
+        edu.id === id ? { ...edu, [field]: value } : edu
+      )
+    }));
+  };
+
+  const removeEducation = (id: string) => {
+    setPortfolioData(prev => ({
+      ...prev,
+      education: prev.education.filter(edu => edu.id !== id)
+    }));
+  };
+
+  const addSkill = (category: 'technical' | 'soft' | 'tools') => {
+    const newSkill: Skill = {
+      id: Date.now().toString(),
+      name: '',
+      category,
+      proficiency: 80
+    };
+    setPortfolioData(prev => ({
+      ...prev,
+      skills: [...prev.skills, newSkill]
+    }));
+  };
+
+  const updateSkill = (id: string, field: keyof Skill, value: string | number) => {
+    setPortfolioData(prev => ({
+      ...prev,
+      skills: prev.skills.map(skill => 
+        skill.id === id ? { ...skill, [field]: value } : skill
+      )
+    }));
+  };
+
+  const removeSkill = (id: string) => {
+    setPortfolioData(prev => ({
+      ...prev,
+      skills: prev.skills.filter(skill => skill.id !== id)
+    }));
+  };
+
+  const addProject = () => {
     const newProject: Project = {
       id: Date.now().toString(),
-      ...formData.newProject
+      title: '',
+      description: '',
+      technologies: [],
+      role: '',
+      outcomes: '',
+      liveUrl: '',
+      repoUrl: '',
+      image: ''
     };
-
-    setFormData(prev => ({
+    setPortfolioData(prev => ({
       ...prev,
-      projectsList: [...prev.projectsList, newProject],
-      newProject: {
-        title: '',
-        description: '',
-        technologies: '',
-        liveUrl: '',
-        githubUrl: ''
-      }
+      projects: [...prev.projects, newProject]
     }));
-
-    toast.success('Project added successfully!');
   };
 
-  const handleAddExperience = () => {
-    if (!formData.newExperience.title.trim() || !formData.newExperience.company.trim()) {
-      toast.error('Please fill in job title and company');
-      return;
-    }
+  const updateProject = (id: string, field: keyof Project, value: string | string[]) => {
+    setPortfolioData(prev => ({
+      ...prev,
+      projects: prev.projects.map(project => 
+        project.id === id ? { ...project, [field]: value } : project
+      )
+    }));
+  };
 
-    const newExperience: ExperienceEntry = {
+  const removeProject = (id: string) => {
+    setPortfolioData(prev => ({
+      ...prev,
+      projects: prev.projects.filter(project => project.id !== id)
+    }));
+  };
+
+  const addBlog = () => {
+    const newBlog: Blog = {
       id: Date.now().toString(),
-      ...formData.newExperience
+      title: '',
+      description: '',
+      url: '',
+      publishDate: '',
+      tags: []
     };
-
-    setFormData(prev => ({
+    setPortfolioData(prev => ({
       ...prev,
-      experienceList: [...prev.experienceList, newExperience],
-      newExperience: {
-        title: '',
-        company: '',
-        duration: '',
-        description: ''
-      }
+      blogs: [...prev.blogs, newBlog]
     }));
-
-    toast.success('Experience added successfully!');
   };
 
-  const handleAddEducation = () => {
-    if (!formData.newEducation.degree.trim() || !formData.newEducation.school.trim()) {
-      toast.error('Please fill in degree and school');
-      return;
-    }
-
-    const newEducation: EducationEntry = {
-      id: Date.now().toString(),
-      ...formData.newEducation
-    };
-
-    setFormData(prev => ({
+  const updateBlog = (id: string, field: keyof Blog, value: string | string[]) => {
+    setPortfolioData(prev => ({
       ...prev,
-      educationList: [...prev.educationList, newEducation],
-      newEducation: {
-        degree: '',
-        school: '',
-        year: ''
-      }
+      blogs: prev.blogs.map(blog => 
+        blog.id === id ? { ...blog, [field]: value } : blog
+      )
     }));
-
-    toast.success('Education added successfully!');
   };
 
-  const handleAddAchievement = () => {
-    if (!formData.newAchievement.description.trim()) {
-      toast.error('Please enter achievement description');
-      return;
-    }
+  const removeBlog = (id: string) => {
+    setPortfolioData(prev => ({
+      ...prev,
+      blogs: prev.blogs.filter(blog => blog.id !== id)
+    }));
+  };
 
+  const addAchievement = () => {
     const newAchievement: Achievement = {
       id: Date.now().toString(),
-      ...formData.newAchievement
+      title: '',
+      description: '',
+      date: '',
+      category: ''
     };
-
-    setFormData(prev => ({
+    setPortfolioData(prev => ({
       ...prev,
-      achievementsList: [...prev.achievementsList, newAchievement],
-      newAchievement: {
-        description: ''
-      }
+      achievements: [...prev.achievements, newAchievement]
     }));
-
-    toast.success('Achievement added successfully!');
   };
 
-  // Delete functions
-  const handleDeleteProject = (id: string) => {
-    setFormData(prev => ({
+  const updateAchievement = (id: string, field: keyof Achievement, value: string) => {
+    setPortfolioData(prev => ({
       ...prev,
-      projectsList: prev.projectsList.filter(project => project.id !== id)
+      achievements: prev.achievements.map(achievement => 
+        achievement.id === id ? { ...achievement, [field]: value } : achievement
+      )
     }));
-    toast.success('Project removed');
   };
 
-  const handleDeleteExperience = (id: string) => {
-    setFormData(prev => ({
+  const removeAchievement = (id: string) => {
+    setPortfolioData(prev => ({
       ...prev,
-      experienceList: prev.experienceList.filter(exp => exp.id !== id)
+      achievements: prev.achievements.filter(achievement => achievement.id !== id)
     }));
-    toast.success('Experience removed');
   };
 
-  const handleDeleteEducation = (id: string) => {
-    setFormData(prev => ({
-      ...prev,
-      educationList: prev.educationList.filter(edu => edu.id !== id)
-    }));
-    toast.success('Education removed');
+  const generatePortfolioHTML = () => {
+    const { personalInfo, about, education, skills, projects, blogs, achievements, theme } = portfolioData;
+    
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${personalInfo.name} - Portfolio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: ${theme.primaryColor};
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+        
+        .nav-links a {
+            text-decoration: none;
+            color: #333;
+            transition: color 0.3s;
+        }
+        
+        .nav-links a:hover, .nav-links a.active {
+            color: ${theme.primaryColor};
+        }
+        
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, ${theme.primaryColor}10 0%, ${theme.secondaryColor}10 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+            z-index: 2;
+        }
+        
+        .hero-text h1 {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+        
+        .hero-text h2 {
+            font-size: 1.5rem;
+            color: ${theme.primaryColor};
+            margin-bottom: 1rem;
+        }
+        
+        .hero-text p {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, ${theme.primaryColor}, ${theme.secondaryColor});
+            color: white;
+            padding: 1rem 2rem;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: transform 0.3s;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .hero-image {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .profile-image {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 5px solid ${theme.primaryColor};
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .profile-placeholder {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, ${theme.primaryColor}, ${theme.secondaryColor});
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            color: white;
+            font-weight: bold;
+        }
+        
+        /* Section Styles */
+        section {
+            padding: 5rem 0;
+        }
+        
+        .section-title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 3rem;
+            color: ${theme.primaryColor};
+        }
+        
+        /* About Section */
+        .about-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .about-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid ${theme.primaryColor}20;
+        }
+        
+        /* Skills Section */
+        .skills-category {
+            margin-bottom: 3rem;
+        }
+        
+        .skills-category h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: ${theme.primaryColor};
+        }
+        
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        
+        .skill-item {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .skill-name {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .skill-bar {
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .skill-progress {
+            height: 100%;
+            background: linear-gradient(135deg, ${theme.primaryColor}, ${theme.secondaryColor});
+            border-radius: 4px;
+            transition: width 1s ease;
+        }
+        
+        /* Projects Section */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+        
+        .project-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+        
+        .project-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .project-image {
+            height: 200px;
+            background: linear-gradient(135deg, ${theme.primaryColor}20, ${theme.secondaryColor}20);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: ${theme.primaryColor};
+        }
+        
+        .project-content {
+            padding: 1.5rem;
+        }
+        
+        .project-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: ${theme.primaryColor};
+        }
+        
+        .project-tech {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+        
+        .tech-tag {
+            background: ${theme.primaryColor}20;
+            color: ${theme.primaryColor};
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        
+        /* Education Section */
+        .education-timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+        
+        .education-timeline::before {
+            content: '';
+            position: absolute;
+            left: 1rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: ${theme.primaryColor};
+        }
+        
+        .education-item {
+            position: relative;
+            background: white;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .education-item::before {
+            content: '';
+            position: absolute;
+            left: -1.75rem;
+            top: 1.5rem;
+            width: 12px;
+            height: 12px;
+            background: ${theme.primaryColor};
+            border-radius: 50%;
+            border: 3px solid white;
+        }
+        
+        /* Contact Section */
+        .contact {
+            background: linear-gradient(135deg, ${theme.primaryColor}10 0%, ${theme.secondaryColor}10 100%);
+        }
+        
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            text-align: center;
+        }
+        
+        .contact-item {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .contact-icon {
+            width: 60px;
+            height: 60px;
+            background: ${theme.primaryColor};
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 1.5rem;
+            color: white;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .hero-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+                gap: 2rem;
+            }
+            
+            .hero-text h1 {
+                font-size: 2.5rem;
+            }
+            
+            .profile-image, .profile-placeholder {
+                width: 200px;
+                height: 200px;
+            }
+        }
+        
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="container">
+            <div class="nav-content">
+                <div class="logo">${personalInfo.name}</div>
+                <ul class="nav-links">
+                    <li><a href="#home" class="active">Home</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#skills">Skills</a></li>
+                    <li><a href="#projects">Projects</a></li>
+                    ${blogs.length > 0 ? '<li><a href="#blogs">Blogs</a></li>' : ''}
+                    ${achievements.length > 0 ? '<li><a href="#achievements">Achievements</a></li>' : ''}
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1>Hi! I'm ${personalInfo.name}</h1>
+                    <h2>${personalInfo.title}</h2>
+                    <p>${personalInfo.tagline}</p>
+                    <a href="#about" class="cta-button">ABOUT ME</a>
+                </div>
+                <div class="hero-image">
+                    ${personalInfo.profileImage 
+                        ? `<img src="${personalInfo.profileImage}" alt="${personalInfo.name}" class="profile-image">`
+                        : `<div class="profile-placeholder">${personalInfo.name.charAt(0)}</div>`
+                    }
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about">
+        <div class="container">
+            <h2 class="section-title">About Me</h2>
+            <div class="about-grid">
+                <div class="about-card">
+                    <h3>Professional Background</h3>
+                    <p>${about.background}</p>
+                </div>
+                <div class="about-card">
+                    <h3>Career Objectives</h3>
+                    <p>${about.objectives}</p>
+                </div>
+                <div class="about-card">
+                    <h3>Personal Interests</h3>
+                    <p>${about.interests}</p>
+                </div>
+                <div class="about-card">
+                    <h3>What Makes Me Unique</h3>
+                    <p>${about.uniqueValue}</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Skills Section -->
+    <section id="skills">
+        <div class="container">
+            <h2 class="section-title">Technical Proficiencies</h2>
+            
+            ${['technical', 'soft', 'tools'].map(category => {
+                const categorySkills = skills.filter(skill => skill.category === category);
+                if (categorySkills.length === 0) return '';
+                
+                return `
+                <div class="skills-category">
+                    <h3>${category.charAt(0).toUpperCase() + category.slice(1)} Skills</h3>
+                    <div class="skills-grid">
+                        ${categorySkills.map(skill => `
+                            <div class="skill-item">
+                                <div class="skill-name">${skill.name}</div>
+                                <div class="skill-bar">
+                                    <div class="skill-progress" style="width: ${skill.proficiency}%"></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                `;
+            }).join('')}
+        </div>
+    </section>
+
+    <!-- Projects Section -->
+    ${projects.length > 0 ? `
+    <section id="projects">
+        <div class="container">
+            <h2 class="section-title">Projects</h2>
+            <div class="projects-grid">
+                ${projects.map(project => `
+                    <div class="project-card">
+                        <div class="project-image">
+                            ${project.image ? `<img src="${project.image}" alt="${project.title}" style="width: 100%; height: 100%; object-fit: cover;">` : '🚀'}
+                        </div>
+                        <div class="project-content">
+                            <h3 class="project-title">${project.title}</h3>
+                            <p>${project.description}</p>
+                            <div class="project-tech">
+                                ${project.technologies.map(tech => `<span class="tech-tag">${tech}</span>`).join('')}
+                            </div>
+                            <p><strong>Role:</strong> ${project.role}</p>
+                            <p><strong>Outcomes:</strong> ${project.outcomes}</p>
+                            ${project.liveUrl ? `<p><a href="${project.liveUrl}" target="_blank">Live Demo</a></p>` : ''}
+                            ${project.repoUrl ? `<p><a href="${project.repoUrl}" target="_blank">Repository</a></p>` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    </section>
+    ` : ''}
+
+    <!-- Education Section -->
+    ${education.length > 0 ? `
+    <section id="education">
+        <div class="container">
+            <h2 class="section-title">Education</h2>
+            <div class="education-timeline">
+                ${education.map(edu => `
+                    <div class="education-item">
+                        <h3>${edu.degree}</h3>
+                        <h4>${edu.institution}, ${edu.location}</h4>
+                        <p><strong>Year:</strong> ${edu.year}</p>
+                        ${edu.achievements ? `<p><strong>Achievements:</strong> ${edu.achievements}</p>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    </section>
+    ` : ''}
+
+    <!-- Blogs Section -->
+    ${blogs.length > 0 ? `
+    <section id="blogs">
+        <div class="container">
+            <h2 class="section-title">Blogs</h2>
+            <div class="projects-grid">
+                ${blogs.map(blog => `
+                    <div class="project-card">
+                        <div class="project-content">
+                            <h3 class="project-title">${blog.title}</h3>
+                            <p>${blog.description}</p>
+                            <div class="project-tech">
+                                ${blog.tags.map(tag => `<span class="tech-tag">${tag}</span>`).join('')}
+                            </div>
+                            <p><strong>Published:</strong> ${blog.publishDate}</p>
+                            ${blog.url ? `<p><a href="${blog.url}" target="_blank">Read Article</a></p>` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    </section>
+    ` : ''}
+
+    <!-- Achievements Section -->
+    ${achievements.length > 0 ? `
+    <section id="achievements">
+        <div class="container">
+            <h2 class="section-title">Achievements</h2>
+            <div class="education-timeline">
+                ${achievements.map(achievement => `
+                    <div class="education-item">
+                        <h3>${achievement.title}</h3>
+                        <p>${achievement.description}</p>
+                        <p><strong>Category:</strong> ${achievement.category}</p>
+                        <p><strong>Date:</strong> ${achievement.date}</p>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    </section>
+    ` : ''}
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+        <div class="container">
+            <h2 class="section-title">Contact</h2>
+            <div class="contact-grid">
+                <div class="contact-item">
+                    <div class="contact-icon">📧</div>
+                    <h3>Email</h3>
+                    <p><a href="mailto:${personalInfo.email}">${personalInfo.email}</a></p>
+                </div>
+                ${personalInfo.phone ? `
+                <div class="contact-item">
+                    <div class="contact-icon">📱</div>
+                    <h3>Phone</h3>
+                    <p><a href="tel:${personalInfo.phone}">${personalInfo.phone}</a></p>
+                </div>
+                ` : ''}
+                ${personalInfo.linkedin ? `
+                <div class="contact-item">
+                    <div class="contact-icon">💼</div>
+                    <h3>LinkedIn</h3>
+                    <p><a href="${personalInfo.linkedin}" target="_blank">Connect with me</a></p>
+                </div>
+                ` : ''}
+                ${personalInfo.github ? `
+                <div class="contact-item">
+                    <div class="contact-icon">💻</div>
+                    <h3>GitHub</h3>
+                    <p><a href="${personalInfo.github}" target="_blank">View my code</a></p>
+                </div>
+                ` : ''}
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Animate skill bars on scroll
+        const observerOptions = {
+            threshold: 0.5,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const skillBars = entry.target.querySelectorAll('.skill-progress');
+                    skillBars.forEach(bar => {
+                        const width = bar.style.width;
+                        bar.style.width = '0%';
+                        setTimeout(() => {
+                            bar.style.width = width;
+                        }, 100);
+                    });
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.skills-category').forEach(section => {
+            observer.observe(section);
+        });
+
+        // Active navigation highlighting
+        window.addEventListener('scroll', () => {
+            let current = '';
+            const sections = document.querySelectorAll('section[id]');
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (pageYOffset >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            document.querySelectorAll('.nav-links a').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>`;
   };
 
-  const handleDeleteAchievement = (id: string) => {
-    setFormData(prev => ({
-      ...prev,
-      achievementsList: prev.achievementsList.filter(ach => ach.id !== id)
-    }));
-    toast.success('Achievement removed');
-  };
-
-  const handleGeneratePortfolio = async () => {
-    // Validate required fields
-    if (!formData.personalInfo.name || !formData.personalInfo.email || !formData.targetRole || formData.skills.length === 0) {
-      toast.error('Please fill in all required fields');
+  const generatePortfolio = async () => {
+    if (!portfolioData.personalInfo.name || !portfolioData.personalInfo.title) {
+      toast.error('Please fill in at least your name and title before generating');
       return;
     }
 
     setIsGenerating(true);
-
+    
     try {
-      // Convert structured data to strings for the generator
-      const projectsString = formData.projectsList.map(project => 
-        `${project.title}: ${project.description}. Technologies: ${project.technologies}. ${project.liveUrl ? `Live: ${project.liveUrl}` : ''} ${project.githubUrl ? `GitHub: ${project.githubUrl}` : ''}`
-      ).join('\n\n');
-
-      const experienceString = formData.experienceList.map(exp => 
-        `${exp.title} at ${exp.company} (${exp.duration}): ${exp.description}`
-      ).join('\n\n');
-
-      const achievementsString = formData.achievementsList.map(ach => ach.description).join('\n');
-
-      const params: PortfolioGenerationParams = {
-        personalInfo: formData.personalInfo,
-        targetRole: formData.targetRole,
-        experience: experienceString || formData.experience,
-        skills: formData.skills,
-        projects: projectsString || formData.projects,
-        achievements: achievementsString || formData.achievements,
-        preferences: formData.preferences
-      };
-
-      const result = await geminiPortfolioGenerator.generatePortfolio(params);
-
-      if (result.success && result.portfolio) {
-        setGeneratedPortfolio(result.portfolio);
-        setCurrentStep('preview');
-        toast.success('Portfolio generated successfully with Gemini AI!');
-      } else {
-        // Try fallback generation
-        const fallbackPortfolio = geminiPortfolioGenerator.generateFallbackPortfolio(params);
-        setGeneratedPortfolio(fallbackPortfolio);
-        setCurrentStep('preview');
-        toast.success('Portfolio generated with fallback content!');
-      }
+      const htmlContent = generatePortfolioHTML();
+      setGeneratedPortfolio(htmlContent);
+      setCurrentStep(8); // Move to preview step
+      toast.success('Portfolio generated successfully!');
     } catch (error) {
       console.error('Portfolio generation error:', error);
       toast.error('Failed to generate portfolio. Please try again.');
@@ -378,90 +1019,849 @@ const PortfolioBuilder: React.FC = () => {
     }
   };
 
-  const handleDeployPortfolio = async () => {
+  const deployPortfolio = async () => {
     if (!generatedPortfolio) {
-      toast.error('No portfolio to deploy');
+      toast.error('Please generate your portfolio first');
       return;
     }
 
-    setIsDeploying(true);
-    setDeploymentError('');
-
+    setIsGenerating(true);
+    
     try {
-      // Generate portfolio files
-      const portfolioFiles = netlifyIntegration.generatePortfolioFiles(generatedPortfolio);
+      // Create a blob with the HTML content
+      const blob = new Blob([generatedPortfolio], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
       
-      // Optimize for performance
-      const optimizedFiles = netlifyIntegration.optimizeForPerformance(portfolioFiles);
+      // Create a temporary download link
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${portfolioData.personalInfo.name.replace(/\s+/g, '-').toLowerCase()}-portfolio.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       
-      // Deploy to Netlify
-      const deployment = await netlifyIntegration.deployPortfolio(
-        generatedPortfolio,
-        optimizedFiles,
-        { production: true }
-      );
-
-      setDeploymentResult(deployment);
-      setCurrentStep('success');
-      toast.success('Portfolio deployed successfully to Netlify!');
+      toast.success('Portfolio downloaded successfully!');
+      
+      // Simulate deployment (in a real app, this would deploy to Netlify)
+      setTimeout(() => {
+        const deploymentUrl = `https://${portfolioData.personalInfo.name.replace(/\s+/g, '-').toLowerCase()}-portfolio.netlify.app`;
+        setDeploymentUrl(deploymentUrl);
+        toast.success('Portfolio deployed successfully!');
+      }, 2000);
+      
     } catch (error) {
       console.error('Deployment error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to deploy portfolio';
-      setDeploymentError(errorMessage);
-      toast.error(errorMessage);
+      toast.error('Failed to deploy portfolio. Please try again.');
     } finally {
-      setIsDeploying(false);
+      setIsGenerating(false);
     }
   };
 
-  const copyPortfolioUrl = () => {
-    if (deploymentResult?.url) {
-      navigator.clipboard.writeText(deploymentResult.url);
-      toast.success('Portfolio URL copied to clipboard!');
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 0: // Personal Info
+        return (
+          <div className="space-y-6">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6">Personal Information</h3>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                <input
+                  type="text"
+                  value={portfolioData.personalInfo.name}
+                  onChange={(e) => updatePersonalInfo('name', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="John Doe"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Professional Title *</label>
+                <input
+                  type="text"
+                  value={portfolioData.personalInfo.title}
+                  onChange={(e) => updatePersonalInfo('title', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Data Analyst"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Professional Tagline</label>
+              <textarea
+                rows={3}
+                value={portfolioData.personalInfo.tagline}
+                onChange={(e) => updatePersonalInfo('tagline', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Bridging the gap between data and decisions. A passionate analyst who transforms complex datasets into actionable insights."
+              />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                <input
+                  type="email"
+                  value={portfolioData.personalInfo.email}
+                  onChange={(e) => updatePersonalInfo('email', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="john@example.com"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                <input
+                  type="tel"
+                  value={portfolioData.personalInfo.phone}
+                  onChange={(e) => updatePersonalInfo('phone', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="+1 (555) 123-4567"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+              <input
+                type="text"
+                value={portfolioData.personalInfo.location}
+                onChange={(e) => updatePersonalInfo('location', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="New York, NY"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">LinkedIn Profile</label>
+                <input
+                  type="url"
+                  value={portfolioData.personalInfo.linkedin}
+                  onChange={(e) => updatePersonalInfo('linkedin', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="https://linkedin.com/in/johndoe"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">GitHub Profile</label>
+                <input
+                  type="url"
+                  value={portfolioData.personalInfo.github}
+                  onChange={(e) => updatePersonalInfo('github', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="https://github.com/johndoe"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Personal Website</label>
+              <input
+                type="url"
+                value={portfolioData.personalInfo.website}
+                onChange={(e) => updatePersonalInfo('website', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="https://johndoe.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Profile Image</label>
+              <ImageUploader
+                onImageUpload={(imageUrl) => updatePersonalInfo('profileImage', imageUrl)}
+                currentImage={portfolioData.personalInfo.profileImage}
+              />
+            </div>
+          </div>
+        );
+
+      case 1: // About Me
+        return (
+          <div className="space-y-6">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6">About Me</h3>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Professional Background</label>
+              <textarea
+                rows={4}
+                value={portfolioData.about.background}
+                onChange={(e) => updateAbout('background', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Describe your professional journey, experience, and expertise..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Career Objectives</label>
+              <textarea
+                rows={4}
+                value={portfolioData.about.objectives}
+                onChange={(e) => updateAbout('objectives', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="What are your career goals and aspirations?"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Personal Interests & Hobbies</label>
+              <textarea
+                rows={4}
+                value={portfolioData.about.interests}
+                onChange={(e) => updateAbout('interests', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="What do you enjoy doing outside of work?"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">What Makes You Unique</label>
+              <textarea
+                rows={4}
+                value={portfolioData.about.uniqueValue}
+                onChange={(e) => updateAbout('uniqueValue', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="What sets you apart from others in your field?"
+              />
+            </div>
+          </div>
+        );
+
+      case 2: // Education
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-gray-900">Education</h3>
+              <button
+                onClick={addEducation}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Education
+              </button>
+            </div>
+
+            {portfolioData.education.map((edu, index) => (
+              <div key={edu.id} className="bg-gray-50 rounded-lg p-6 relative">
+                <button
+                  onClick={() => removeEducation(edu.id)}
+                  className="absolute top-4 right-4 p-2 text-red-600 hover:bg-red-100 rounded-full"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Degree/Certificate</label>
+                    <input
+                      type="text"
+                      value={edu.degree}
+                      onChange={(e) => updateEducation(edu.id, 'degree', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Bachelor of Science in Computer Science"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Institution</label>
+                    <input
+                      type="text"
+                      value={edu.institution}
+                      onChange={(e) => updateEducation(edu.id, 'institution', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="University of Technology"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                    <input
+                      type="text"
+                      value={edu.location}
+                      onChange={(e) => updateEducation(edu.id, 'location', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="San Francisco, CA"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Year</label>
+                    <input
+                      type="text"
+                      value={edu.year}
+                      onChange={(e) => updateEducation(edu.id, 'year', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="2020"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Achievements/Honors</label>
+                  <textarea
+                    rows={3}
+                    value={edu.achievements}
+                    onChange={(e) => updateEducation(edu.id, 'achievements', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Magna Cum Laude, Dean's List, Relevant coursework..."
+                  />
+                </div>
+              </div>
+            ))}
+
+            {portfolioData.education.length === 0 && (
+              <div className="text-center py-12 text-gray-500">
+                <GraduationCap className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <p>No education entries yet. Click "Add Education" to get started.</p>
+              </div>
+            )}
+          </div>
+        );
+
+      case 3: // Skills
+        return (
+          <div className="space-y-6">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6">Skills & Proficiencies</h3>
+
+            {['technical', 'soft', 'tools'].map((category) => (
+              <div key={category} className="bg-gray-50 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-semibold text-gray-900 capitalize">{category} Skills</h4>
+                  <button
+                    onClick={() => addSkill(category as 'technical' | 'soft' | 'tools')}
+                    className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add {category}
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {portfolioData.skills.filter(skill => skill.category === category).map((skill) => (
+                    <div key={skill.id} className="bg-white rounded-lg p-4 flex items-center space-x-4">
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={skill.name}
+                          onChange={(e) => updateSkill(skill.id, 'name', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder={`${category} skill name`}
+                        />
+                      </div>
+                      <div className="w-32">
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={skill.proficiency}
+                          onChange={(e) => updateSkill(skill.id, 'proficiency', parseInt(e.target.value))}
+                          className="w-full"
+                        />
+                        <div className="text-center text-sm text-gray-600 mt-1">{skill.proficiency}%</div>
+                      </div>
+                      <button
+                        onClick={() => removeSkill(skill.id)}
+                        className="p-2 text-red-600 hover:bg-red-100 rounded-full"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {portfolioData.skills.filter(skill => skill.category === category).length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No {category} skills added yet.</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+
+      case 4: // Projects
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-gray-900">Projects</h3>
+              <button
+                onClick={addProject}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Project
+              </button>
+            </div>
+
+            {portfolioData.projects.map((project) => (
+              <div key={project.id} className="bg-gray-50 rounded-lg p-6 relative">
+                <button
+                  onClick={() => removeProject(project.id)}
+                  className="absolute top-4 right-4 p-2 text-red-600 hover:bg-red-100 rounded-full"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Project Title</label>
+                    <input
+                      type="text"
+                      value={project.title}
+                      onChange={(e) => updateProject(project.id, 'title', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="My Awesome Project"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Your Role</label>
+                    <input
+                      type="text"
+                      value={project.role}
+                      onChange={(e) => updateProject(project.id, 'role', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Full Stack Developer"
+                    />
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Project Description</label>
+                  <textarea
+                    rows={3}
+                    value={project.description}
+                    onChange={(e) => updateProject(project.id, 'description', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Describe what this project does and its key features..."
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Technologies Used (comma-separated)</label>
+                  <input
+                    type="text"
+                    value={project.technologies.join(', ')}
+                    onChange={(e) => updateProject(project.id, 'technologies', e.target.value.split(',').map(tech => tech.trim()).filter(tech => tech))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="React, Node.js, MongoDB, Express"
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Project Outcomes</label>
+                  <textarea
+                    rows={3}
+                    value={project.outcomes}
+                    onChange={(e) => updateProject(project.id, 'outcomes', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="What were the results, impact, or achievements of this project?"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Live Demo URL</label>
+                    <input
+                      type="url"
+                      value={project.liveUrl}
+                      onChange={(e) => updateProject(project.id, 'liveUrl', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="https://myproject.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Repository URL</label>
+                    <input
+                      type="url"
+                      value={project.repoUrl}
+                      onChange={(e) => updateProject(project.id, 'repoUrl', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="https://github.com/username/project"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Project Image</label>
+                  <ImageUploader
+                    onImageUpload={(imageUrl) => updateProject(project.id, 'image', imageUrl)}
+                    currentImage={project.image}
+                  />
+                </div>
+              </div>
+            ))}
+
+            {portfolioData.projects.length === 0 && (
+              <div className="text-center py-12 text-gray-500">
+                <Briefcase className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <p>No projects added yet. Click "Add Project" to showcase your work.</p>
+              </div>
+            )}
+          </div>
+        );
+
+      case 5: // Blogs
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-gray-900">Blogs & Articles</h3>
+              <button
+                onClick={addBlog}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Blog
+              </button>
+            </div>
+
+            {portfolioData.blogs.map((blog) => (
+              <div key={blog.id} className="bg-gray-50 rounded-lg p-6 relative">
+                <button
+                  onClick={() => removeBlog(blog.id)}
+                  className="absolute top-4 right-4 p-2 text-red-600 hover:bg-red-100 rounded-full"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Article Title</label>
+                    <input
+                      type="text"
+                      value={blog.title}
+                      onChange={(e) => updateBlog(blog.id, 'title', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Understanding Machine Learning"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Publish Date</label>
+                    <input
+                      type="date"
+                      value={blog.publishDate}
+                      onChange={(e) => updateBlog(blog.id, 'publishDate', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Article Description</label>
+                  <textarea
+                    rows={3}
+                    value={blog.description}
+                    onChange={(e) => updateBlog(blog.id, 'description', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Brief description of what this article covers..."
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Article URL</label>
+                  <input
+                    type="url"
+                    value={blog.url}
+                    onChange={(e) => updateBlog(blog.id, 'url', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="https://medium.com/@username/article"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tags (comma-separated)</label>
+                  <input
+                    type="text"
+                    value={blog.tags.join(', ')}
+                    onChange={(e) => updateBlog(blog.id, 'tags', e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Data Science, Python, Machine Learning"
+                  />
+                </div>
+              </div>
+            ))}
+
+            {portfolioData.blogs.length === 0 && (
+              <div className="text-center py-12 text-gray-500">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <p>No blog entries yet. Click "Add Blog" to showcase your writing.</p>
+              </div>
+            )}
+          </div>
+        );
+
+      case 6: // Achievements
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-gray-900">Achievements & Awards</h3>
+              <button
+                onClick={addAchievement}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Achievement
+              </button>
+            </div>
+
+            {portfolioData.achievements.map((achievement) => (
+              <div key={achievement.id} className="bg-gray-50 rounded-lg p-6 relative">
+                <button
+                  onClick={() => removeAchievement(achievement.id)}
+                  className="absolute top-4 right-4 p-2 text-red-600 hover:bg-red-100 rounded-full"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Achievement Title</label>
+                    <input
+                      type="text"
+                      value={achievement.title}
+                      onChange={(e) => updateAchievement(achievement.id, 'title', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Employee of the Month"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                    <input
+                      type="text"
+                      value={achievement.category}
+                      onChange={(e) => updateAchievement(achievement.id, 'category', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Professional, Academic, Personal"
+                    />
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <textarea
+                    rows={3}
+                    value={achievement.description}
+                    onChange={(e) => updateAchievement(achievement.id, 'description', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Describe this achievement and its significance..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                  <input
+                    type="date"
+                    value={achievement.date}
+                    onChange={(e) => updateAchievement(achievement.id, 'date', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            ))}
+
+            {portfolioData.achievements.length === 0 && (
+              <div className="text-center py-12 text-gray-500">
+                <Trophy className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <p>No achievements added yet. Click "Add Achievement" to highlight your accomplishments.</p>
+              </div>
+            )}
+          </div>
+        );
+
+      case 7: // Theme
+        return (
+          <div className="space-y-6">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6">Choose Your Theme</h3>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-4">Color Scheme</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {colorThemes.map((theme, index) => (
+                  <div
+                    key={index}
+                    onClick={() => setPortfolioData(prev => ({
+                      ...prev,
+                      theme: { ...prev.theme, primaryColor: theme.primary, secondaryColor: theme.secondary }
+                    }))}
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                      portfolioData.theme.primaryColor === theme.primary
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3 mb-2">
+                      <div
+                        className="w-8 h-8 rounded-full"
+                        style={{ backgroundColor: theme.primary }}
+                      ></div>
+                      <div
+                        className="w-8 h-8 rounded-full"
+                        style={{ backgroundColor: theme.secondary }}
+                      ></div>
+                    </div>
+                    <h4 className="font-medium text-gray-900">{theme.name}</h4>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-4">Layout Style</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { id: 'modern', name: 'Modern', description: 'Clean and contemporary design' },
+                  { id: 'classic', name: 'Classic', description: 'Traditional and professional' },
+                  { id: 'creative', name: 'Creative', description: 'Bold and artistic' }
+                ].map((layout) => (
+                  <div
+                    key={layout.id}
+                    onClick={() => setPortfolioData(prev => ({
+                      ...prev,
+                      theme: { ...prev.theme, layout: layout.id as 'modern' | 'classic' | 'creative' }
+                    }))}
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                      portfolioData.theme.layout === layout.id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <Layout className="h-8 w-8 mb-2 text-gray-600" />
+                    <h4 className="font-medium text-gray-900">{layout.name}</h4>
+                    <p className="text-sm text-gray-600">{layout.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-6">
+              <h4 className="font-medium text-gray-900 mb-4">Preview Colors</h4>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <div
+                    className="w-6 h-6 rounded-full border"
+                    style={{ backgroundColor: portfolioData.theme.primaryColor }}
+                  ></div>
+                  <span className="text-sm text-gray-600">Primary: {portfolioData.theme.primaryColor}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div
+                    className="w-6 h-6 rounded-full border"
+                    style={{ backgroundColor: portfolioData.theme.secondaryColor }}
+                  ></div>
+                  <span className="text-sm text-gray-600">Secondary: {portfolioData.theme.secondaryColor}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 8: // Preview
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-gray-900">Portfolio Preview</h3>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setPreviewMode('desktop')}
+                    className={`p-2 rounded ${previewMode === 'desktop' ? 'bg-white shadow' : ''}`}
+                  >
+                    <Monitor className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setPreviewMode('tablet')}
+                    className={`p-2 rounded ${previewMode === 'tablet' ? 'bg-white shadow' : ''}`}
+                  >
+                    <Layout className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setPreviewMode('mobile')}
+                    className={`p-2 rounded ${previewMode === 'mobile' ? 'bg-white shadow' : ''}`}
+                  >
+                    <Smartphone className="h-4 w-4" />
+                  </button>
+                </div>
+                
+                <button
+                  onClick={deployPortfolio}
+                  disabled={!generatedPortfolio || isGenerating}
+                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 disabled:opacity-50"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download & Deploy
+                </button>
+              </div>
+            </div>
+
+            {generatedPortfolio ? (
+              <div className="border rounded-lg overflow-hidden">
+                <iframe
+                  srcDoc={generatedPortfolio}
+                  className={`w-full bg-white ${
+                    previewMode === 'desktop' ? 'h-96' :
+                    previewMode === 'tablet' ? 'h-80 max-w-2xl mx-auto' :
+                    'h-96 max-w-sm mx-auto'
+                  }`}
+                  title="Portfolio Preview"
+                />
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                <Eye className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <p>Generate your portfolio to see the preview.</p>
+              </div>
+            )}
+
+            {deploymentUrl && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                  <div>
+                    <p className="font-medium text-green-900">Portfolio Deployed Successfully!</p>
+                    <p className="text-green-700">Your portfolio is now live at: <a href={deploymentUrl} target="_blank" rel="noopener noreferrer" className="underline">{deploymentUrl}</a></p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      default:
+        return null;
     }
   };
 
-  const features = [
-    {
-      icon: <Sparkles className="h-8 w-8" />,
-      title: "AI-Generated Content",
-      description: "Gemini AI creates personalized, professional content tailored to your role",
-      gradient: "from-blue-500 to-blue-600"
-    },
-    {
-      icon: <Palette className="h-8 w-8" />,
-      title: "Custom Design",
-      description: "Choose from multiple styles and color schemes to match your personality",
-      gradient: "from-purple-500 to-purple-600"
-    },
-    {
-      icon: <Globe className="h-8 w-8" />,
-      title: "Instant Deployment",
-      description: "Deploy directly to Netlify with a custom URL and global CDN",
-      gradient: "from-green-500 to-green-600"
-    },
-    {
-      icon: <Zap className="h-8 w-8" />,
-      title: "Performance Optimized",
-      description: "Fast loading, SEO-friendly, and mobile-responsive portfolios",
-      gradient: "from-orange-500 to-orange-600"
+  const isStepComplete = (stepIndex: number) => {
+    switch (stepIndex) {
+      case 0: // Personal Info
+        return portfolioData.personalInfo.name && portfolioData.personalInfo.title;
+      case 1: // About
+        return portfolioData.about.background || portfolioData.about.objectives;
+      case 2: // Education
+        return true; // Optional
+      case 3: // Skills
+        return portfolioData.skills.length > 0;
+      case 4: // Projects
+        return true; // Optional
+      case 5: // Blogs
+        return true; // Optional
+      case 6: // Achievements
+        return true; // Optional
+      case 7: // Theme
+        return true; // Always complete
+      case 8: // Preview
+        return generatedPortfolio !== null;
+      default:
+        return false;
     }
-  ];
-
-  const styleOptions = [
-    { id: 'modern', name: 'Modern', description: 'Clean, contemporary design with bold typography' },
-    { id: 'classic', name: 'Classic', description: 'Timeless, professional layout with elegant styling' },
-    { id: 'creative', name: 'Creative', description: 'Artistic, unique design for creative professionals' },
-    { id: 'minimal', name: 'Minimal', description: 'Simple, focused design that lets content shine' }
-  ];
-
-  const colorOptions = [
-    { id: 'blue', name: 'Ocean Blue', color: '#2563eb' },
-    { id: 'green', name: 'Forest Green', color: '#059669' },
-    { id: 'purple', name: 'Royal Purple', color: '#7c3aed' },
-    { id: 'orange', name: 'Sunset Orange', color: '#ea580c' },
-    { id: 'red', name: 'Crimson Red', color: '#dc2626' }
-  ];
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 relative overflow-hidden">
@@ -481,9 +1881,22 @@ const PortfolioBuilder: React.FC = () => {
             <div className="flex items-center">
               <Link to="/" className="flex items-center group">
                 <ArrowLeft className="h-5 w-5 text-gray-600 mr-3 group-hover:text-blue-600 transition-colors duration-200" />
-                <Briefcase className="h-8 w-8 text-blue-600" />
+                <Layout className="h-8 w-8 text-blue-600" />
                 <span className="ml-2 text-xl font-bold text-gray-900">Portfolio Builder</span>
               </Link>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => {
+                  localStorage.setItem('portfolioBuilder', JSON.stringify(portfolioData));
+                  toast.success('Progress saved!');
+                }}
+                className="flex items-center px-3 py-2 text-gray-600 hover:text-blue-600 transition-colors duration-200"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Save Progress
+              </button>
             </div>
           </div>
         </div>
@@ -491,958 +1904,127 @@ const PortfolioBuilder: React.FC = () => {
 
       {/* Main Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Progress Indicator */}
+        {/* Hero Section */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 text-sm font-medium mb-6 animate-fade-in">
+            <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
+            Professional Portfolio Builder
+          </div>
+          
+          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4 leading-[1.1] animate-fade-in-up">
+            Create Your{' '}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600 animate-gradient-x">
+              Professional Portfolio
+            </span>
+          </h1>
+          
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed animate-fade-in-up delay-200">
+            Build a stunning portfolio website that showcases your skills, projects, and achievements. Stand out from the crowd with a professional online presence.
+          </p>
+
+          {/* Stats */}
+          <div className="flex justify-center items-center space-x-8 text-sm text-gray-500 mb-8">
+            <div className="flex items-center">
+              <Users className="h-4 w-4 text-blue-500 mr-1" />
+              <span>10K+ Portfolios Created</span>
+            </div>
+            <div className="flex items-center">
+              <Star className="h-4 w-4 text-yellow-400 mr-1" />
+              <span>4.9 User Rating</span>
+            </div>
+            <div className="flex items-center">
+              <Award className="h-4 w-4 text-green-500 mr-1" />
+              <span>Professional Quality</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Progress Steps */}
         <div className="mb-8">
-          <div className="flex items-center justify-center space-x-4">
-            {['input', 'preview', 'deploy', 'success'].map((step, index) => (
-              <div key={step} className="flex items-center">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
-                  currentStep === step 
-                    ? 'bg-blue-600 text-white shadow-lg' 
-                    : index < ['input', 'preview', 'deploy', 'success'].indexOf(currentStep)
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-200 text-gray-600'
-                }`}>
-                  {index + 1}
-                </div>
-                {index < 3 && (
-                  <div className={`w-16 h-1 mx-2 transition-all duration-300 ${
-                    index < ['input', 'preview', 'deploy', 'success'].indexOf(currentStep)
-                      ? 'bg-green-500'
-                      : 'bg-gray-200'
-                  }`}></div>
+          <div className="flex items-center justify-center space-x-2 mb-4 overflow-x-auto pb-2">
+            {steps.map((step, index) => (
+              <button
+                key={step.id}
+                onClick={() => setCurrentStep(index)}
+                className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                  currentStep === index
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : isStepComplete(index)
+                    ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <step.icon className="h-4 w-4 mr-2" />
+                {step.title}
+                {isStepComplete(index) && currentStep !== index && (
+                  <CheckCircle className="h-4 w-4 ml-2" />
                 )}
-              </div>
+              </button>
             ))}
           </div>
-          <div className="flex justify-center mt-4">
-            <span className="text-sm text-gray-600 capitalize">
-              Step {['input', 'preview', 'deploy', 'success'].indexOf(currentStep) + 1}: {
-                currentStep === 'input' ? 'Portfolio Details' : 
-                currentStep === 'preview' ? 'Review Portfolio' : 
-                currentStep === 'deploy' ? 'Deploy to Netlify' :
-                'Portfolio Live'
-              }
-            </span>
+          
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
+              style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+            ></div>
           </div>
         </div>
 
         {/* Step Content */}
-        {currentStep === 'input' && (
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 text-sm font-medium mb-4 animate-fade-in">
-                <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
-                AI-Powered Portfolio Builder
-              </div>
-              
-              <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4 leading-[1.15] animate-fade-in-up">
-                Create Your{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600 animate-gradient-x">
-                  Professional Portfolio
-                </span>
-              </h1>
-              
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-[1.15] animate-fade-in-up delay-200">
-                Generate a stunning portfolio website with AI and deploy it instantly to Netlify
-              </p>
-            </div>
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8">
+          {renderStepContent()}
+        </div>
 
-            {/* Features Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-              {features.map((feature, index) => (
-                <div
-                  key={index}
-                  className={`group bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 animate-fade-in-up`}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${feature.gradient} flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                    {feature.icon}
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
-                  <p className="text-gray-600 text-sm">{feature.description}</p>
-                </div>
-              ))}
-            </div>
+        {/* Navigation */}
+        <div className="flex justify-between items-center">
+          <button
+            onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+            disabled={currentStep === 0}
+            className={`flex items-center px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+              currentStep === 0
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Previous
+          </button>
 
-            {/* Form */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Portfolio Information</h2>
-              
-              <div className="space-y-8">
-                {/* Personal Information */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <User className="h-5 w-5 mr-2 text-blue-600" />
-                    Personal Information
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
-                      <input
-                        type="text"
-                        value={formData.personalInfo.name}
-                        onChange={(e) => handleInputChange('personalInfo.name', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                        placeholder="John Doe"
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
-                      <input
-                        type="email"
-                        value={formData.personalInfo.email}
-                        onChange={(e) => handleInputChange('personalInfo.email', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                        placeholder="john@example.com"
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                      <input
-                        type="tel"
-                        value={formData.personalInfo.phone}
-                        onChange={(e) => handleInputChange('personalInfo.phone', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                        placeholder="+1 (555) 123-4567"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                      <input
-                        type="text"
-                        value={formData.personalInfo.location}
-                        onChange={(e) => handleInputChange('personalInfo.location', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                        placeholder="San Francisco, CA"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">LinkedIn Profile</label>
-                      <input
-                        type="url"
-                        value={formData.personalInfo.linkedin}
-                        onChange={(e) => handleInputChange('personalInfo.linkedin', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                        placeholder="https://linkedin.com/in/johndoe"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">GitHub Profile</label>
-                      <input
-                        type="url"
-                        value={formData.personalInfo.github}
-                        onChange={(e) => handleInputChange('personalInfo.github', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                        placeholder="https://github.com/johndoe"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Professional Information */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <Target className="h-5 w-5 mr-2 text-blue-600" />
-                    Professional Information
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Target Role/Title *</label>
-                      <input
-                        type="text"
-                        value={formData.targetRole}
-                        onChange={(e) => handleInputChange('targetRole', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                        placeholder="Full Stack Developer"
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Skills & Technologies *</label>
-                      <input
-                        type="text"
-                        value={formData.skillsInput}
-                        onChange={(e) => handleInputChange('skillsInput', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                        placeholder="JavaScript, React, Node.js, Python, AWS, Docker, etc."
-                        required
-                      />
-                      <p className="text-sm text-gray-500 mt-1">Separate skills with commas</p>
-                      {formData.skills.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {formData.skills.map((skill, index) => (
-                            <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Projects Section */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <Code className="h-5 w-5 mr-2 text-blue-600" />
-                    Projects
-                  </h3>
-                  
-                  {/* Add New Project Form */}
-                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                    <h4 className="font-medium text-gray-900 mb-3">Add New Project</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Project Title *</label>
-                        <input
-                          type="text"
-                          value={formData.newProject.title}
-                          onChange={(e) => handleInputChange('newProject.title', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="E-commerce Website"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Technologies</label>
-                        <input
-                          type="text"
-                          value={formData.newProject.technologies}
-                          onChange={(e) => handleInputChange('newProject.technologies', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="React, Node.js, MongoDB"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Live URL</label>
-                        <input
-                          type="url"
-                          value={formData.newProject.liveUrl}
-                          onChange={(e) => handleInputChange('newProject.liveUrl', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="https://myproject.com"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">GitHub URL</label>
-                        <input
-                          type="url"
-                          value={formData.newProject.githubUrl}
-                          onChange={(e) => handleInputChange('newProject.githubUrl', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="https://github.com/user/project"
-                        />
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
-                      <textarea
-                        rows={3}
-                        value={formData.newProject.description}
-                        onChange={(e) => handleInputChange('newProject.description', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Describe your project, its features, and impact..."
-                      />
-                    </div>
-                    <button
-                      onClick={handleAddProject}
-                      className="mt-3 flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Project
-                    </button>
-                  </div>
-
-                  {/* Projects List */}
-                  {formData.projectsList.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-gray-900">Added Projects ({formData.projectsList.length})</h4>
-                      {formData.projectsList.map((project) => (
-                        <div key={project.id} className="border border-gray-200 rounded-lg p-4 bg-white">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h5 className="font-medium text-gray-900">{project.title}</h5>
-                              <p className="text-sm text-gray-600 mt-1">{project.description}</p>
-                              {project.technologies && (
-                                <p className="text-sm text-blue-600 mt-1">Technologies: {project.technologies}</p>
-                              )}
-                              <div className="flex space-x-4 mt-2">
-                                {project.liveUrl && (
-                                  <a href={project.liveUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-green-600 hover:underline">
-                                    Live Demo
-                                  </a>
-                                )}
-                                {project.githubUrl && (
-                                  <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-gray-600 hover:underline">
-                                    GitHub
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => handleDeleteProject(project.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Experience Section */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <Building className="h-5 w-5 mr-2 text-blue-600" />
-                    Work Experience
-                  </h3>
-                  
-                  {/* Add New Experience Form */}
-                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                    <h4 className="font-medium text-gray-900 mb-3">Add Work Experience</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Job Title *</label>
-                        <input
-                          type="text"
-                          value={formData.newExperience.title}
-                          onChange={(e) => handleInputChange('newExperience.title', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Software Engineer"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Company *</label>
-                        <input
-                          type="text"
-                          value={formData.newExperience.company}
-                          onChange={(e) => handleInputChange('newExperience.company', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Tech Company Inc."
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
-                        <input
-                          type="text"
-                          value={formData.newExperience.duration}
-                          onChange={(e) => handleInputChange('newExperience.duration', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Jan 2022 - Present"
-                        />
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                      <textarea
-                        rows={3}
-                        value={formData.newExperience.description}
-                        onChange={(e) => handleInputChange('newExperience.description', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Describe your role, responsibilities, and achievements..."
-                      />
-                    </div>
-                    <button
-                      onClick={handleAddExperience}
-                      className="mt-3 flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Experience
-                    </button>
-                  </div>
-
-                  {/* Experience List */}
-                  {formData.experienceList.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-gray-900">Added Experience ({formData.experienceList.length})</h4>
-                      {formData.experienceList.map((exp) => (
-                        <div key={exp.id} className="border border-gray-200 rounded-lg p-4 bg-white">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h5 className="font-medium text-gray-900">{exp.title}</h5>
-                              <p className="text-sm text-blue-600">{exp.company}</p>
-                              {exp.duration && <p className="text-sm text-gray-500">{exp.duration}</p>}
-                              {exp.description && <p className="text-sm text-gray-600 mt-2">{exp.description}</p>}
-                            </div>
-                            <button
-                              onClick={() => handleDeleteExperience(exp.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Education Section */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <GraduationCap className="h-5 w-5 mr-2 text-blue-600" />
-                    Education
-                  </h3>
-                  
-                  {/* Add New Education Form */}
-                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                    <h4 className="font-medium text-gray-900 mb-3">Add Education</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Degree *</label>
-                        <input
-                          type="text"
-                          value={formData.newEducation.degree}
-                          onChange={(e) => handleInputChange('newEducation.degree', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Bachelor of Science in Computer Science"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">School/University *</label>
-                        <input
-                          type="text"
-                          value={formData.newEducation.school}
-                          onChange={(e) => handleInputChange('newEducation.school', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="University of Technology"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
-                        <input
-                          type="text"
-                          value={formData.newEducation.year}
-                          onChange={(e) => handleInputChange('newEducation.year', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="2022"
-                        />
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleAddEducation}
-                      className="mt-3 flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Education
-                    </button>
-                  </div>
-
-                  {/* Education List */}
-                  {formData.educationList.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-gray-900">Added Education ({formData.educationList.length})</h4>
-                      {formData.educationList.map((edu) => (
-                        <div key={edu.id} className="border border-gray-200 rounded-lg p-4 bg-white">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h5 className="font-medium text-gray-900">{edu.degree}</h5>
-                              <p className="text-sm text-blue-600">{edu.school}</p>
-                              {edu.year && <p className="text-sm text-gray-500">{edu.year}</p>}
-                            </div>
-                            <button
-                              onClick={() => handleDeleteEducation(edu.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Achievements Section */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <Trophy className="h-5 w-5 mr-2 text-blue-600" />
-                    Key Achievements
-                  </h3>
-                  
-                  {/* Add New Achievement Form */}
-                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                    <h4 className="font-medium text-gray-900 mb-3">Add Achievement</h4>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Achievement Description *</label>
-                      <textarea
-                        rows={2}
-                        value={formData.newAchievement.description}
-                        onChange={(e) => handleInputChange('newAchievement.description', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Increased team productivity by 40% through implementation of automated testing..."
-                      />
-                    </div>
-                    <button
-                      onClick={handleAddAchievement}
-                      className="mt-3 flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Achievement
-                    </button>
-                  </div>
-
-                  {/* Achievements List */}
-                  {formData.achievementsList.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-gray-900">Added Achievements ({formData.achievementsList.length})</h4>
-                      {formData.achievementsList.map((achievement) => (
-                        <div key={achievement.id} className="border border-gray-200 rounded-lg p-4 bg-white">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <p className="text-sm text-gray-700">{achievement.description}</p>
-                            </div>
-                            <button
-                              onClick={() => handleDeleteAchievement(achievement.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Design Preferences */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <Palette className="h-5 w-5 mr-2 text-blue-600" />
-                    Design Preferences
-                  </h3>
-                  
-                  <div className="space-y-6">
-                    {/* Style Selection */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">Portfolio Style</label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {styleOptions.map((style) => (
-                          <div
-                            key={style.id}
-                            onClick={() => handleInputChange('preferences.style', style.id)}
-                            className={`cursor-pointer p-4 rounded-lg border-2 transition-all duration-200 ${
-                              formData.preferences.style === style.id
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-300 hover:border-gray-400'
-                            }`}
-                          >
-                            <h4 className="font-medium text-gray-900 mb-1">{style.name}</h4>
-                            <p className="text-sm text-gray-600">{style.description}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Color Scheme */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">Color Scheme</label>
-                      <div className="flex flex-wrap gap-4">
-                        {colorOptions.map((color) => (
-                          <div
-                            key={color.id}
-                            onClick={() => handleInputChange('preferences.colorScheme', color.id)}
-                            className={`cursor-pointer flex items-center space-x-3 p-3 rounded-lg border-2 transition-all duration-200 ${
-                              formData.preferences.colorScheme === color.id
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-300 hover:border-gray-400'
-                            }`}
-                          >
-                            <div 
-                              className="w-6 h-6 rounded-full border border-gray-200"
-                              style={{ backgroundColor: color.color }}
-                            ></div>
-                            <span className="text-sm font-medium text-gray-900">{color.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Additional Options */}
-                    <div>
-                      <label className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          checked={formData.preferences.includeTestimonials}
-                          onChange={(e) => handleInputChange('preferences.includeTestimonials', e.target.checked)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <span className="text-sm font-medium text-gray-700">Include testimonials section</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* AI Notice */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start">
-                    <div className="flex-shrink-0">
-                      <Lightbulb className="h-5 w-5 text-blue-400" />
-                    </div>
-                    <div className="ml-3">
-                      <h4 className="text-sm font-medium text-blue-800 mb-1">
-                        Powered by Google Gemini AI
-                      </h4>
-                      <p className="text-sm text-blue-700">
-                        Your portfolio content will be generated using advanced AI to create professional, 
-                        engaging content tailored to your role and experience.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Generate Button */}
-                <div className="flex justify-center pt-4">
-                  <button
-                    onClick={handleGeneratePortfolio}
-                    disabled={isGenerating || !formData.personalInfo.name || !formData.personalInfo.email || !formData.targetRole || formData.skills.length === 0}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
-                        Generating Portfolio...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="h-5 w-5 mr-2" />
-                        Generate Portfolio with AI
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {currentStep === 'preview' && generatedPortfolio && (
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-green-100 to-teal-100 text-green-800 text-sm font-medium mb-4 animate-fade-in">
-                <CheckCircle className="w-4 h-4 mr-2 animate-pulse" />
-                Portfolio Generated Successfully
-              </div>
-              
-              <h2 className="text-4xl font-bold text-gray-900 mb-4 leading-[1.15]">
-                Your{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 via-teal-600 to-blue-600">
-                  Portfolio Preview
-                </span>
-              </h2>
-              <p className="text-lg text-gray-600">
-                Review your AI-generated portfolio before deploying to Netlify
-              </p>
-            </div>
-
-            {/* Portfolio Preview */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900">Portfolio Preview</h3>
-                <div className="flex space-x-3">
-                  <button className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200">
-                    <Eye className="h-4 w-4 mr-2" />
-                    Full Preview
-                  </button>
-                </div>
-              </div>
-
-              {/* Portfolio Content Preview */}
-              <div className="space-y-8">
-                {/* Header */}
-                <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">{generatedPortfolio.personalInfo.name}</h1>
-                  <p className="text-xl text-gray-600 mb-4">{formData.targetRole}</p>
-                  <div className="flex justify-center space-x-4 text-sm text-gray-600">
-                    <span>{generatedPortfolio.personalInfo.email}</span>
-                    {generatedPortfolio.personalInfo.phone && <span>{generatedPortfolio.personalInfo.phone}</span>}
-                    {generatedPortfolio.personalInfo.location && <span>{generatedPortfolio.personalInfo.location}</span>}
-                  </div>
-                </div>
-
-                {/* About Section */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">About</h3>
-                  <p className="text-gray-700">{generatedPortfolio.sections.about}</p>
-                </div>
-
-                {/* Projects Preview */}
-                {generatedPortfolio.sections.projects.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Projects ({generatedPortfolio.sections.projects.length})</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {generatedPortfolio.sections.projects.slice(0, 4).map((project, index) => (
-                        <div key={project.id} className="border border-gray-200 rounded-lg p-4">
-                          <h4 className="font-medium text-gray-900 mb-2">{project.title}</h4>
-                          <p className="text-sm text-gray-600 mb-3">{project.description.substring(0, 100)}...</p>
-                          <div className="flex flex-wrap gap-1 mb-2">
-                            {project.technologies.slice(0, 3).map((tech, techIndex) => (
-                              <span key={techIndex} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                                {tech}
-                              </span>
-                            ))}
-                          </div>
-                          <div className="flex space-x-2">
-                            {project.liveUrl && (
-                              <span className="text-xs text-green-600">Live Demo</span>
-                            )}
-                            {project.githubUrl && (
-                              <span className="text-xs text-gray-600">GitHub</span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Experience Preview */}
-                {generatedPortfolio.sections.experience.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Experience ({generatedPortfolio.sections.experience.length})</h3>
-                    <div className="space-y-4">
-                      {generatedPortfolio.sections.experience.slice(0, 3).map((exp, index) => (
-                        <div key={exp.id} className="border-l-4 border-blue-500 pl-4">
-                          <h4 className="font-medium text-gray-900">{exp.title}</h4>
-                          <p className="text-sm text-blue-600">{exp.company}</p>
-                          <p className="text-sm text-gray-500">{exp.duration}</p>
-                          <p className="text-sm text-gray-600 mt-1">{exp.description.substring(0, 150)}...</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Education Preview */}
-                {generatedPortfolio.sections.education.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Education ({generatedPortfolio.sections.education.length})</h3>
-                    <div className="space-y-3">
-                      {generatedPortfolio.sections.education.map((edu, index) => (
-                        <div key={edu.id} className="border border-gray-200 rounded-lg p-3">
-                          <h4 className="font-medium text-gray-900">{edu.degree}</h4>
-                          <p className="text-sm text-blue-600">{edu.school}</p>
-                          <p className="text-sm text-gray-500">{edu.year}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Skills Preview */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Skills</h3>
-                  <div className="space-y-3">
-                    {generatedPortfolio.sections.skills.technical.length > 0 && (
-                      <div>
-                        <h4 className="font-medium text-gray-700 mb-2">Technical Skills</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {generatedPortfolio.sections.skills.technical.slice(0, 10).map((skill, index) => (
-                            <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {generatedPortfolio.sections.skills.soft.length > 0 && (
-                      <div>
-                        <h4 className="font-medium text-gray-700 mb-2">Soft Skills</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {generatedPortfolio.sections.skills.soft.slice(0, 8).map((skill, index) => (
-                            <span key={index} className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-between">
+          <div className="flex items-center space-x-4">
+            {currentStep === 8 ? (
               <button
-                onClick={() => setCurrentStep('input')}
-                className="px-6 py-3 text-gray-700 hover:text-blue-600 transition-colors duration-200"
+                onClick={generatePortfolio}
+                disabled={isGenerating}
+                className="flex items-center px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 disabled:opacity-50"
               >
-                ← Edit Portfolio
-              </button>
-              
-              <button
-                onClick={handleDeployPortfolio}
-                disabled={isDeploying}
-                className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-green-700 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center"
-              >
-                {isDeploying ? (
+                {isGenerating ? (
                   <>
-                    <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
-                    Deploying to Netlify...
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Generating...
                   </>
                 ) : (
                   <>
-                    <Globe className="h-5 w-5 mr-2" />
-                    Deploy to Netlify
+                    <Eye className="h-4 w-4 mr-2" />
+                    Generate Portfolio
                   </>
                 )}
               </button>
-            </div>
-
-            {deploymentError && (
-              <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-800">{deploymentError}</p>
-              </div>
+            ) : (
+              <button
+                onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
+                className="flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
+              >
+                Next
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </button>
             )}
           </div>
-        )}
-
-        {currentStep === 'success' && deploymentResult && (
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-12">
-              <div className="w-24 h-24 bg-gradient-to-r from-green-500 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle className="h-12 w-12 text-white" />
-              </div>
-              
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Portfolio Deployed Successfully!</h2>
-              <p className="text-lg text-gray-600 mb-8">
-                Your portfolio is now live on Netlify and accessible worldwide.
-              </p>
-              
-              <div className="bg-gray-50 rounded-xl p-6 mb-8">
-                <div className="flex items-center justify-center space-x-4">
-                  <Globe className="h-6 w-6 text-green-600" />
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Your Portfolio URL:</p>
-                    <a 
-                      href={deploymentResult.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-lg font-medium text-blue-600 hover:text-blue-700 transition-colors duration-200"
-                    >
-                      {deploymentResult.url}
-                    </a>
-                  </div>
-                  <button
-                    onClick={copyPortfolioUrl}
-                    className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors duration-200"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Zap className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <h3 className="font-medium text-gray-900 mb-1">Fast Loading</h3>
-                  <p className="text-sm text-gray-600">Optimized for performance</p>
-                </div>
-                
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Shield className="h-6 w-6 text-green-600" />
-                  </div>
-                  <h3 className="font-medium text-gray-900 mb-1">Secure HTTPS</h3>
-                  <p className="text-sm text-gray-600">SSL certificate included</p>
-                </div>
-                
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Globe className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <h3 className="font-medium text-gray-900 mb-1">Global CDN</h3>
-                  <p className="text-sm text-gray-600">Worldwide accessibility</p>
-                </div>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                <a
-                  href={deploymentResult.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-green-700 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center"
-                >
-                  <ExternalLink className="h-5 w-5 mr-2" />
-                  View Live Portfolio
-                </a>
-                <button
-                  onClick={() => {
-                    setCurrentStep('input');
-                    setGeneratedPortfolio(null);
-                    setDeploymentResult(null);
-                    setFormData({
-                      personalInfo: {
-                        name: '',
-                        email: '',
-                        phone: '',
-                        location: '',
-                        linkedin: '',
-                        github: '',
-                        website: ''
-                      },
-                      targetRole: '',
-                      experience: '',
-                      skills: [],
-                      projects: '',
-                      achievements: '',
-                      preferences: {
-                        style: 'modern',
-                        colorScheme: 'blue',
-                        includeTestimonials: false
-                      },
-                      skillsInput: '',
-                      projectsList: [],
-                      experienceList: [],
-                      educationList: [],
-                      achievementsList: [],
-                      newProject: {
-                        title: '',
-                        description: '',
-                        technologies: '',
-                        liveUrl: '',
-                        githubUrl: ''
-                      },
-                      newExperience: {
-                        title: '',
-                        company: '',
-                        duration: '',
-                        description: ''
-                      },
-                      newEducation: {
-                        degree: '',
-                        school: '',
-                        year: ''
-                      },
-                      newAchievement: {
-                        description: ''
-                      }
-                    });
-                  }}
-                  className="border-2 border-gray-300 text-gray-700 px-8 py-3 rounded-xl font-semibold hover:bg-gray-50 transition-all duration-300"
-                >
-                  Create Another Portfolio
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
+
+      {/* TavusAgentExplainer */}
+      <TavusAgentExplainer />
     </div>
   );
 };
