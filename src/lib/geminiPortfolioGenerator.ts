@@ -194,18 +194,8 @@ class GeminiPortfolioGenerator {
   private generateAboutSection(params: PortfolioGenerationParams): string {
     const { personalInfo, targetRole, skills, experience } = params;
     
-    // Don't generate an about section if we don't have enough information
-    if (!personalInfo.name || !targetRole || skills.length === 0) {
-      return '';
-    }
-    
     const topSkills = skills.slice(0, 3).join(', ');
     const experienceYears = this.extractExperienceYears(experience);
-    
-    // If no meaningful data, return empty
-    if (!topSkills) {
-      return '';
-    }
     
     let about = `I am ${personalInfo.name}, a dedicated ${targetRole}`;
     
@@ -344,11 +334,6 @@ class GeminiPortfolioGenerator {
 
   private generateEducationSection(params: PortfolioGenerationParams): Array<any> {
     // Since education is not provided in the form, generate a basic entry
-    // Only if we have meaningful information
-    if (!params.personalInfo.name || !params.targetRole) {
-      return [];
-    }
-    
     return [
       {
         id: 'edu1',
@@ -384,11 +369,6 @@ class GeminiPortfolioGenerator {
   }
 
   private generateTestimonials(params: PortfolioGenerationParams): Array<any> {
-    // Only generate testimonials if specifically requested and we have good data
-    if (!params.preferences.includeTestimonials || !params.personalInfo.name) {
-      return [];
-    }
-    
     return [
       {
         id: 'test1',

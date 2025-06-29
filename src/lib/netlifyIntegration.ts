@@ -65,7 +65,7 @@ class NetlifyIntegration {
                 <span class="brand-text">${personalInfo.name}</span>
             </div>
             <div class="nav-menu" id="nav-menu">
-                ${sections.about && sections.about.trim().length > 20 ? '<a href="#about" class="nav-link">About</a>' : ''}
+                <a href="#about" class="nav-link">About</a>
                 ${sections.projects.length > 0 ? '<a href="#projects" class="nav-link">Projects</a>' : ''}
                 ${sections.experience.length > 0 ? '<a href="#experience" class="nav-link">Experience</a>' : ''}
                 ${sections.education.length > 0 ? '<a href="#education" class="nav-link">Education</a>' : ''}
@@ -106,16 +106,12 @@ class NetlifyIntegration {
         </div>
     </section>
 
-    ${sections.about && sections.about.trim().length > 20 ? `
     <!-- About Section -->
     <section id="about" class="section">
         <div class="container">
             <h2 class="section-title">About Me</h2>
             <div class="about-content">
                 <p class="about-text">${sections.about}</p>
-            </div>
-        </div>
-    </section>` : ''}
             </div>
         </div>
     </section>
