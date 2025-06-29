@@ -25,7 +25,7 @@ export interface GeminiATSAnalysisResult {
     skills: string[];
     additionalKeywords: string[];
   };
-  atsLetter: string;
+  atsLetter?: string;
 }
 
 export interface ATSLetterParams {
@@ -207,11 +207,12 @@ Return only the complete cover letter text, properly formatted.
         applicantName: resumeData.personalInfo?.name || 'Applicant'
       };
       
-      const atsLetter = await this.generateATSLetter(letterParams);
+      // Optional: Generate ATS letter if needed
+      // const atsLetter = await this.generateATSLetter(letterParams);
       
       return {
-        ...analysisResult,
-        atsLetter
+        ...analysisResult
+        // atsLetter
       };
       
     } catch (error) {
@@ -390,7 +391,7 @@ Return only the complete cover letter text, properly formatted.
         skills: [...(resumeData.skills?.technical || []), ...foundKeywords.slice(0, 5)],
         additionalKeywords: missingKeywords.slice(0, 6)
       },
-      atsLetter: this.generateFallbackATSLetter(resumeData, jobDescription)
+      // atsLetter: this.generateFallbackATSLetter(resumeData, jobDescription)
     };
   }
 

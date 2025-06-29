@@ -6,7 +6,6 @@ import { ResumeUploader } from './ResumeUploader';
 import { ParsedResume } from '../lib/resumeParser';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 interface ATSOptimizerProps {
   onClose?: () => void;
@@ -26,7 +25,6 @@ const ATSOptimizer: React.FC<ATSOptimizerProps> = ({ onClose, initialResumeData,
   const [inputMethod, setInputMethod] = useState<'text' | 'url'>('text');
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
-  const [editingOptimized, setEditingOptimized] = useState(false);
 
   useEffect(() => {
     if (initialResumeData) {
@@ -169,11 +167,11 @@ Preferred Qualifications:
     setIsOptimizing(true);
 
     try {
-      // Since analyzeResumeWithGemini already returns optimized content and ATS letter,
+      // Since analyzeResumeWithGemini already returns optimized content,
       // we just need to set the optimized result
       setOptimizedResult(analysisResult);
       setCurrentStep('optimize');
-      toast.success('ATS-optimized cover letter is ready!');
+      toast.success('ATS-optimized resume is ready!');
     } catch (error) {
       toast.error('Failed to prepare optimized content. Please try again.');
     } finally {
@@ -182,94 +180,125 @@ Preferred Qualifications:
   };
 
   const handleDownloadOptimized = () => {
-    if (!optimizedResult?.atsLetter) {
-      toast.error('No ATS letter available to download');
+    if (!optimizedResult?.optimizedContent) {
+      toast.error('No optimized resume available to download');
       return;
     }
 
     // Extract first name from the resume data
     const fullName = resumeData?.personalInfo?.name || '';
-    const firstName = fullName.split(' ')[0] || 'cover';
+    const firstName = fullName.split(' ')[0] || 'resume';
     // Clean the first name to be filename-safe
     const cleanFirstName = firstName.toLowerCase().replace(/[^a-z0-9]/g, '');
     
-    const element = document.getElementById('optimized-resume-content');
-    if (!element) {
-      toast.error('Cover letter content not found. Please try again.');
-      return;
-    }
-
     toast.loading('Generating PDF...', { id: 'pdf-generation' });
 
-    html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff'
-    }).then(canvas => {
-      try {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
+    try {
+      const pdf = new jsPDF();
+      const pageHeight = pdf.internal.pageSize.height;
+      const pageWidth = pdf.internal.pageSize.width;
+      const margin = 20;
+      const lineHeight = 7;
+      let yPosition = margin;
+
+      // Helper function to add text with word wrapping
+      const addText = (text: string, fontSize: number = 12, fontStyle: 'normal' | 'bold' = 'normal') => {
+        pdf.setFontSize(fontSize);
+        pdf.setFont('helvetica', fontStyle);
+        const lines = pdf.splitTextToSize(text, pageWidth - 2 * margin);
         
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
-        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-        const imgX = (pdfWidth - imgWidth * ratio) / 2;
-        const imgY = 0;
-        
-        // Calculate if content needs multiple pages
-        const scaledHeight = imgHeight * ratio;
-        
-        if (scaledHeight <= pdfHeight) {
-          // Single page
-          pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, scaledHeight);
-        } else {
-          // Multiple pages
-          let position = 0;
-          const pageHeight = pdfHeight;
-          
-          while (position < scaledHeight) {
-            const remainingHeight = scaledHeight - position;
-            const currentPageHeight = Math.min(pageHeight, remainingHeight);
-            
-            // Create a temporary canvas for this page section
-            const pageCanvas = document.createElement('canvas');
-            const pageCtx = pageCanvas.getContext('2d');
-            const sourceY = (position / ratio);
-            const sourceHeight = (currentPageHeight / ratio);
-            
-            pageCanvas.width = imgWidth;
-            pageCanvas.height = sourceHeight;
-            
-            if (pageCtx) {
-              pageCtx.drawImage(canvas, 0, sourceY, imgWidth, sourceHeight, 0, 0, imgWidth, sourceHeight);
-              const pageImgData = pageCanvas.toDataURL('image/png');
-              
-              if (position > 0) {
-                pdf.addPage();
-              }
-              
-              pdf.addImage(pageImgData, 'PNG', imgX, 0, imgWidth * ratio, currentPageHeight);
-            }
-            
-            position += pageHeight;
-          }
+        // Check if we need a new page
+        if (yPosition + (lines.length * lineHeight) > pageHeight - margin) {
+          pdf.addPage();
+          yPosition = margin;
         }
         
-        const fileName = `${cleanFirstName}_ats_cover_letter.pdf`;
-        pdf.save(fileName);
+        pdf.text(lines, margin, yPosition);
+        yPosition += lines.length * lineHeight + 3;
+      };
+
+      // Header with name and contact info
+      if (resumeData?.personalInfo) {
+        addText(resumeData.personalInfo.name || 'Name', 20, 'bold');
+        yPosition -= 3; // Reduce space after name
         
-        toast.success('ATS-optimized cover letter downloaded as PDF!', { id: 'pdf-generation' });
-      } catch (error) {
-        console.error('PDF generation error:', error);
-        toast.error('Failed to generate PDF. Please try again.', { id: 'pdf-generation' });
+        const contactInfo = [
+          resumeData.personalInfo.email,
+          resumeData.personalInfo.phone,
+          resumeData.personalInfo.location
+        ].filter(Boolean).join(' | ');
+        
+        if (contactInfo) {
+          addText(contactInfo, 10);
+        }
+        
+        yPosition += 5; // Add space after header
       }
-    }).catch(error => {
-      console.error('Canvas generation error:', error);
+
+      // Professional Summary
+      if (optimizedResult.optimizedContent.summary) {
+        addText('PROFESSIONAL SUMMARY', 14, 'bold');
+        addText(optimizedResult.optimizedContent.summary, 11);
+        yPosition += 3;
+      }
+
+      // Experience
+      if (optimizedResult.optimizedContent.experience.length > 0) {
+        addText('EXPERIENCE', 14, 'bold');
+        
+        optimizedResult.optimizedContent.experience.forEach((exp) => {
+          addText(`${exp.title} | ${exp.company}`, 12, 'bold');
+          addText(exp.description, 11);
+          yPosition += 2;
+        });
+        
+        yPosition += 3;
+      }
+
+      // Skills
+      if (optimizedResult.optimizedContent.skills.length > 0) {
+        addText('SKILLS', 14, 'bold');
+        const skillsText = optimizedResult.optimizedContent.skills.join(', ');
+        addText(skillsText, 11);
+        yPosition += 3;
+      }
+
+      // Education (from original resume)
+      if (resumeData?.education && resumeData.education.length > 0) {
+        addText('EDUCATION', 14, 'bold');
+        
+        resumeData.education.forEach((edu) => {
+          const eduText = `${edu.degree} | ${edu.school} | ${edu.graduationYear}`;
+          addText(eduText, 11);
+        });
+        
+        yPosition += 3;
+      }
+
+      // Additional Keywords (if any)
+      if (optimizedResult.optimizedContent.additionalKeywords && optimizedResult.optimizedContent.additionalKeywords.length > 0) {
+        addText('ADDITIONAL KEYWORDS', 14, 'bold');
+        const keywordsText = optimizedResult.optimizedContent.additionalKeywords.join(', ');
+        addText(keywordsText, 10);
+      }
+
+      // Footer
+      const totalPages = pdf.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`ATS-Optimized Resume | Page ${i} of ${totalPages}`, pageWidth - margin - 60, pageHeight - 10);
+      }
+
+      const fileName = `${cleanFirstName}_ats_optimized_resume.pdf`;
+      pdf.save(fileName);
+      
+      toast.success('ATS-optimized resume downloaded as PDF!', { id: 'pdf-generation' });
+    } catch (error) {
+      console.error('PDF generation error:', error);
       toast.error('Failed to generate PDF. Please try again.', { id: 'pdf-generation' });
-    });
+    }
   };
 
   const getScoreColor = (score: number) => {
@@ -346,7 +375,7 @@ Preferred Qualifications:
         <div className="bg-white rounded-xl shadow-lg border border-green-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <Sparkles className="h-5 w-5 text-green-600 mr-2" />
-            ATS-Optimized Content
+            ATS-Optimized Resume
           </h3>
           <div className="space-y-4 text-sm">
             <div>
@@ -391,7 +420,7 @@ Preferred Qualifications:
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-900">ATS Resume Builder</h2>
-              <p className="text-gray-600">Generate ATS-optimized resumes and cover letters with Gemini AI</p>
+              <p className="text-gray-600">Generate ATS-optimized resumes with Gemini AI</p>
             </div>
           </div>
           <button
@@ -435,7 +464,7 @@ Preferred Qualifications:
               currentStep === 'upload' ? 'Upload Resume' : 
               currentStep === 'analyze' ? 'Add Job Description' : 
               currentStep === 'results' ? 'View Analysis' :
-              'Generate ATS Cover Letter'
+              'Generate Optimized Resume'
             }
           </span>
         </div>
@@ -458,7 +487,7 @@ Preferred Qualifications:
             </h1>
             
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-[1.15] animate-fade-in-up delay-200">
-              Upload your existing resume and we'll generate a tailored, ATS-optimized version with cover letter using Google Gemini AI
+              Upload your existing resume and we'll generate a tailored, ATS-optimized version using Google Gemini AI
             </p>
           </div>
 
@@ -491,8 +520,8 @@ Preferred Qualifications:
                 <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Download className="h-6 w-6 text-white" />
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">ATS Cover Letter</h3>
-                <p className="text-sm text-gray-600">Generate professional cover letters optimized for ATS systems</p>
+                <h3 className="font-semibold text-gray-900 mb-2">Optimized Resume</h3>
+                <p className="text-sm text-gray-600">Generate ATS-friendly resume optimized for specific jobs</p>
               </div>
             </div>
           </div>
@@ -514,7 +543,7 @@ Preferred Qualifications:
               </span>
             </h2>
             <p className="text-lg text-gray-600">
-              Provide the job description to generate a tailored, ATS-optimized resume and cover letter
+              Provide the job description to generate a tailored, ATS-optimized resume
             </p>
           </div>
 
@@ -577,7 +606,7 @@ Preferred Qualifications:
                   placeholder="Paste the complete job description here including requirements, responsibilities, and qualifications..."
                 />
                 <p className="text-sm text-gray-500 mt-2">
-                  Paste the job description to generate an ATS-optimized resume and cover letter using Gemini AI
+                  Paste the job description to generate an ATS-optimized resume using Gemini AI
                 </p>
               </div>
             ) : (
@@ -643,7 +672,7 @@ Preferred Qualifications:
               </span>
             </h2>
             <p className="text-lg text-gray-600">
-              Review your current ATS score and generate an optimized cover letter
+              Review your current ATS score and generate an optimized resume
             </p>
           </div>
 
@@ -712,12 +741,12 @@ Preferred Qualifications:
               {isOptimizing ? (
                 <>
                   <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
-                  Preparing ATS Cover Letter...
+                  Preparing Optimized Resume...
                 </>
               ) : (
                 <>
                   <Sparkles className="mr-2 h-5 w-5" />
-                  Generate ATS Cover Letter
+                  Generate Optimized Resume
                 </>
               )}
             </button>
@@ -813,17 +842,17 @@ Preferred Qualifications:
           <div className="text-center mb-8">
             <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-green-100 to-teal-100 text-green-800 text-sm font-medium mb-4 animate-fade-in">
               <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
-              ATS Cover Letter Ready
+              Optimized Resume Ready
             </div>
             
             <h2 className="text-4xl font-bold text-gray-900 mb-4 leading-[1.15]">
               Your{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 via-teal-600 to-blue-600">
-                ATS-Optimized Cover Letter
+                ATS-Optimized Resume
               </span>
             </h2>
             <p className="text-lg text-gray-600">
-              Review and download your AI-generated, ATS-optimized cover letter
+              Review and download your AI-generated, ATS-optimized resume
             </p>
           </div>
 
@@ -831,12 +860,12 @@ Preferred Qualifications:
           <div className="mb-8 p-6 bg-gradient-to-r from-green-50 to-teal-50 rounded-xl border border-green-200">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-green-900 mb-2">ATS-Optimized Cover Letter Generated</h3>
-                <p className="text-green-800">Your cover letter is tailored to the job requirements with optimal keyword density</p>
+                <h3 className="text-lg font-semibold text-green-900 mb-2">ATS-Optimized Resume Generated</h3>
+                <p className="text-green-800">Your resume is now tailored to the job requirements with optimal keyword density</p>
               </div>
               <div className="text-right">
                 <div className="text-3xl font-bold text-green-600">
-                  AI-Generated
+                  AI-Enhanced
                 </div>
                 <div className="text-sm text-green-700">Gemini AI Powered</div>
               </div>
@@ -863,21 +892,14 @@ Preferred Qualifications:
             </div>
           )}
 
-          {/* ATS Cover Letter Preview */}
+          {/* Optimized Resume Preview */}
           <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-gray-900 flex items-center">
                 <FileText className="h-6 w-6 text-green-600 mr-2" />
-                ATS-Optimized Cover Letter Preview
+                ATS-Optimized Resume Preview
               </h3>
               <div className="flex space-x-3">
-                <button
-                  onClick={() => setEditingOptimized(!editingOptimized)}
-                  className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
-                >
-                  {editingOptimized ? <Eye className="h-4 w-4 mr-2" /> : <Edit3 className="h-4 w-4 mr-2" />}
-                  {editingOptimized ? 'Preview' : 'Edit'}
-                </button>
                 <button
                   onClick={handleDownloadOptimized}
                   className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
@@ -888,24 +910,87 @@ Preferred Qualifications:
               </div>
             </div>
 
-            {optimizedResult.atsLetter && (
+            {optimizedResult.optimizedContent && (
               <div className="prose max-w-none">
                 <div id="optimized-resume-content" className="bg-gray-50 p-6 rounded-lg">
-                  {editingOptimized ? (
-                    <textarea
-                      value={optimizedResult.atsLetter}
-                      onChange={(e) => {
-                        setOptimizedResult({
-                          ...optimizedResult,
-                          atsLetter: e.target.value
-                        });
-                      }}
-                      className="w-full h-96 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 font-serif"
-                      placeholder="Edit your ATS cover letter here..."
-                    />
-                  ) : (
-                    <div className="whitespace-pre-wrap font-serif text-gray-900 leading-relaxed">
-                      {optimizedResult.atsLetter}
+                  <div className="text-center mb-6">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                      {resumeData?.personalInfo.name}
+                    </h1>
+                    <div className="text-gray-600">
+                      {resumeData?.personalInfo.email} | {resumeData?.personalInfo.phone} | {resumeData?.personalInfo.location}
+                    </div>
+                  </div>
+
+                  {optimizedResult.optimizedContent.summary && (
+                    <div className="mb-6">
+                      <h2 className="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-300 pb-1">
+                        PROFESSIONAL SUMMARY
+                      </h2>
+                      <p className="text-gray-700">{optimizedResult.optimizedContent.summary}</p>
+                    </div>
+                  )}
+
+                  {optimizedResult.optimizedContent.experience.length > 0 && (
+                    <div className="mb-6">
+                      <h2 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-1">
+                        EXPERIENCE
+                      </h2>
+                      {optimizedResult.optimizedContent.experience.map((exp, index) => (
+                        <div key={index} className="mb-4">
+                          <div className="flex justify-between items-start mb-1">
+                            <h3 className="font-semibold text-gray-900">{exp.title}</h3>
+                          </div>
+                          <p className="text-gray-700 font-medium mb-2">{exp.company}</p>
+                          <p className="text-gray-600 text-sm">{exp.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {optimizedResult.optimizedContent.skills.length > 0 && (
+                    <div className="mb-6">
+                      <h2 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-1">
+                        SKILLS
+                      </h2>
+                      <div className="mb-2">
+                        <span className="text-gray-700">{optimizedResult.optimizedContent.skills.join(', ')}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {resumeData?.education && resumeData.education.length > 0 && (
+                    <div className="mb-6">
+                      <h2 className="text-lg font-semibold text-gray-900 mb-3 border-b border-gray-300 pb-1">
+                        EDUCATION
+                      </h2>
+                      {resumeData.education.map((edu, index) => (
+                        <div key={index} className="mb-2">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-semibold text-gray-900">{edu.degree}</h3>
+                              <p className="text-gray-700">{edu.school}</p>
+                            </div>
+                            <span className="text-sm text-gray-600">{edu.graduationYear}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {optimizedResult.optimizedContent.additionalKeywords && optimizedResult.optimizedContent.additionalKeywords.length > 0 && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <h3 className="font-medium text-green-900 mb-2 flex items-center">
+                        <Plus className="h-4 w-4 mr-1" />
+                        Additional Keywords Added
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {optimizedResult.optimizedContent.additionalKeywords.map((keyword, index) => (
+                          <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded-full">
+                            {keyword}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -934,7 +1019,7 @@ Preferred Qualifications:
                 className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-green-700 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 flex items-center"
               >
                 <Download className="mr-2 h-5 w-5" />
-                Download Cover Letter
+                Download Optimized Resume
               </button>
             </div>
           </div>
