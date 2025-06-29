@@ -1305,6 +1305,13 @@ document.querySelectorAll('.btn, .project-link, .social-link').forEach(button =>
 </urlset>`;
   }
 
+  private generateRobotsTxt(): string {
+    return `User-agent: *
+Allow: /
+
+Sitemap: https://careerkit-portfolios.netlify.app/sitemap.xml`;
+  }
+
   private generateHTML(portfolioData: any): string {
     // Keep original method for backward compatibility
     return this.generatePortfolioHTML(portfolioData);
