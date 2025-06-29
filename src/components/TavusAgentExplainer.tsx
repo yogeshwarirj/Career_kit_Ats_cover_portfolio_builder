@@ -24,9 +24,11 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
   const [hasStarted, setHasStarted] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const playbackRef = useRef<boolean>(false);
   const componentId = 'tavus-ai-explainer';
+  const audioTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const features: FeatureExplanation[] = [
     {
@@ -76,10 +78,11 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
   // Main playback effect - plays through all features sequentially
   useEffect(() => {
     const playSequentially = async () => {
-      if (!isPlaying || isMuted || !hasStarted || isPaused) {
+      if (!isPlaying || isMuted || !hasStarted || isPaused || isProcessing) {
         return;
       }
 
+      setIsProcessing(true);
       playbackRef.current = true;
 
       // Show toast when starting
@@ -99,6 +102,14 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
         if (!playbackRef.current || !isPlaying || isPaused) break;
 
         setCurrentFeature(i);
+        
+        // Clear any existing timeouts
+        if (audioTimeoutRef.current) {
+          clearTimeout(audioTimeoutRef.current);
+          audioTimeoutRef.current = null;
+        }
+        
+        // CRITICAL: Aggressive audio stopping with longer delay
         const feature = features[i];
 
         // Check if Eleven Labs is configured
@@ -111,10 +122,14 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
         try {
           setIsSpeaking(true);
           
-          // CRITICAL: Ensure only this component plays
-          // Stop any other audio that might be playing
+          // CRITICAL: SUPER AGGRESSIVE audio stopping
           elevenLabsService.stopAllAudio();
-          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Wait longer for complete cleanup
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // Double-check that we should still be playing
+          if (!playbackRef.current || !isPlaying || isPaused) break;
           
           // Show speaking status
           toast.loading(`Speaking: ${feature.title}`, {
@@ -123,6 +138,10 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
           });
 
           // Use component-specific playback to prevent conflicts
+          // Final check before playing
+          if (!playbackRef.current || !isPlaying || isPaused) {
+            break;
+          }
           await elevenLabsService.playTextWithId(feature.description, componentId, {
             voiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - professional, clear female voice
             voiceSettings: {
@@ -144,7 +163,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
           if (error instanceof Error && error.message.includes('ELEVENLABS_NOT_CONFIGURED')) {
             toast.error('Voice features require Eleven Labs API key. Please configure in settings.');
             // Continue with text-only display
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            await new Promise(resolve => setTimeout(resolve, 4000));
           }
         }
 
@@ -167,16 +186,22 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
           }
         });
       }
+
+      setIsProcessing(false);
     };
 
-    if (isPlaying && hasStarted && !isPaused) {
+    if (isPlaying && !isPaused && !isProcessing) {
       playSequentially();
     }
-
+    
+    // Cleanup timeout on unmount or dependency change
     return () => {
-      playbackRef.current = false;
+      if (audioTimeoutRef.current) {
+        clearTimeout(audioTimeoutRef.current);
+        audioTimeoutRef.current = null;
+      }
     };
-  }, [isPlaying, hasStarted, isPaused, currentFeature]);
+  }, [isPlaying, isPaused, currentFeature, isProcessing]);
 
   const toggleVisibility = () => {
     setIsVisible(!isVisible);
@@ -194,6 +219,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
       // Pause
       setIsPaused(true);
       setIsPlaying(false);
+      setIsProcessing(false);
       elevenLabsService.stopAllAudio();
       setIsSpeaking(false);
       playbackRef.current = false;
@@ -202,6 +228,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
       // Play/Resume
       setIsPaused(false);
       setIsPlaying(true);
+      setIsProcessing(false);
       
       // Check if Eleven Labs is configured when starting
       const configStatus = elevenLabsService.getConfigurationStatus();
@@ -228,6 +255,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
     
     // Stop any current audio when muting
     if (newMutedState && isSpeaking) {
+      setIsProcessing(false);
       elevenLabsService.stopAllAudio();
       setIsSpeaking(false);
     }
@@ -240,6 +268,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
     if (isPlaying) {
       setIsPlaying(false);
       elevenLabsService.stopAllAudio();
+      setIsProcessing(false);
       setIsSpeaking(false);
       playbackRef.current = false;
     }
@@ -250,6 +279,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
   const goToFeature = (index: number) => {
     // Stop current playback
     playbackRef.current = false;
+    setIsProcessing(false);
     elevenLabsService.stopAllAudio();
     setIsSpeaking(false);
     setIsPlaying(false);
@@ -518,6 +548,19 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
                 <div>
                   <div className="font-medium">🎤 AI Coach Speaking</div>
                   <div className="mt-1">Wait for completion before advancing...</div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Processing Status */}
+          {isProcessing && !isSpeaking && (
+            <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-center text-xs text-yellow-800">
+                <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2 animate-pulse"></div>
+                <div>
+                  <div className="font-medium">⚙️ Processing Audio</div>
+                  <div className="mt-1">Preparing next feature...</div>
                 </div>
               </div>
             </div>
