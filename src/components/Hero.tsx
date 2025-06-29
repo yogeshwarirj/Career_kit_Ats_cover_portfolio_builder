@@ -245,26 +245,30 @@ const Hero: React.FC = () => {
                       <div className="absolute inset-0 bg-gradient-to-br from-teal-400 to-orange-400 rounded-full"></div>
                       
                       {/* Avatar Face */}
-                      <div className="absolute inset-2 bg-gradient-to-br from-teal-300 to-orange-300 rounded-full flex items-center justify-center">
-                        <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg">
-                          {/* Professional AI Woman Face */}
-                          <div className="relative">
-                            {/* Eyes */}
-                            <div className="flex space-x-3 mb-2">
-                              <div className={`w-3 h-3 bg-teal-600 rounded-full transition-all duration-300 ${
-                                isSpeaking ? 'animate-pulse scale-110' : isPlaying ? 'animate-pulse' : ''
-                              }`}></div>
-                              <div className={`w-3 h-3 bg-teal-600 rounded-full transition-all duration-300 ${
-                                isSpeaking ? 'animate-pulse scale-110' : isPlaying ? 'animate-pulse' : ''
-                              }`}></div>
-                            </div>
-                            {/* Mouth - animated when speaking */}
-                            <div className={`w-4 h-2 bg-orange-500 rounded-full mx-auto transition-all duration-200 ${
-                              isSpeaking ? 'animate-bounce scale-125' : isPlaying ? 'animate-pulse' : ''
-                            }`}></div>
-                          </div>
-                        </div>
-                      </div>
+                     <div className="absolute inset-2 rounded-full overflow-hidden shadow-2xl border-4 border-white/90">
+                       <img 
+                         src="/image copy.png" 
+                         alt="AI Professional Career Coach - Professional Woman in Suit"
+                         className="w-full h-full object-cover object-center transition-all duration-300"
+                         style={{
+                           filter: isSpeaking 
+                             ? 'brightness(1.1) saturate(1.2)' 
+                             : isPlaying 
+                             ? 'brightness(1.05) saturate(1.1)' 
+                             : 'brightness(1) saturate(1)'
+                         }}
+                       />
+                       
+                       {/* Overlay for speaking effect */}
+                       {isSpeaking && (
+                         <div className="absolute inset-0 bg-gradient-to-br from-teal-400/20 to-orange-400/20 animate-pulse"></div>
+                       )}
+                       
+                       {/* Subtle overlay for active state */}
+                       {isPlaying && !isSpeaking && (
+                         <div className="absolute inset-0 bg-gradient-to-br from-teal-400/10 to-orange-400/10 animate-pulse"></div>
+                       )}
+                     </div>
                       
                       {/* Speaking Animation Ring */}
                       {isSpeaking && (
