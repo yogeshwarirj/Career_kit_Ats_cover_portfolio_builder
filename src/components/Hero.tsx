@@ -325,8 +325,9 @@ const Hero: React.FC = () => {
                   {/* Voice Configuration Notice */}
                   {isPlaying && !elevenLabsService.isConfigured() && (
                     <div className="mt-2 text-center">
-                      <div className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
-                        <span>Text only - Add API key for voice</span>
+                      <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs bg-blue-50 text-blue-800 border border-blue-200">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
+                        <span>Voice setup needed - See setup guide</span>
                       </div>
                     </div>
                   )}
