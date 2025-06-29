@@ -13,10 +13,6 @@ const Hero: React.FC = () => {
       duration: 4000
     },
     {
-      text: "Build professional resumes with our 12+ templates.",
-      duration: 4000
-    },
-    {
       text: "Generate AI-powered cover letters using Gemini AI.",
       duration: 4000
     },
