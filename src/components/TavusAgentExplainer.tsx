@@ -26,6 +26,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
   const [isPaused, setIsPaused] = useState(false);
 
   const playbackRef = useRef<boolean>(false);
+  const componentId = 'tavus-ai-explainer';
 
   const features: FeatureExplanation[] = [
     {
@@ -116,8 +117,8 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
             duration: 1000
           });
 
-          // Wait for speech to complete before advancing
-          await playText(feature.description, {
+          // Use component-specific playback to prevent conflicts
+          await elevenLabsService.playTextWithId(feature.description, componentId, {
             voiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - professional, clear female voice
             voiceSettings: {
               stability: 0.75,
@@ -188,7 +189,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
       // Pause
       setIsPaused(true);
       setIsPlaying(false);
-      stopAudio();
+      elevenLabsService.stopComponentAudio(componentId);
       setIsSpeaking(false);
       playbackRef.current = false;
       toast.success('⏸️ AI presentation paused');
@@ -222,7 +223,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
     
     // Stop any current audio when muting
     if (newMutedState && isSpeaking) {
-      stopAudio();
+      elevenLabsService.stopComponentAudio(componentId);
       setIsSpeaking(false);
     }
 
@@ -233,7 +234,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
     // Stop any playing audio
     if (isPlaying) {
       setIsPlaying(false);
-      stopAudio();
+      elevenLabsService.stopComponentAudio(componentId);
       setIsSpeaking(false);
       playbackRef.current = false;
     }
@@ -244,7 +245,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
   const goToFeature = (index: number) => {
     // Stop current playback
     playbackRef.current = false;
-    stopAudio();
+    elevenLabsService.stopComponentAudio(componentId);
     setIsSpeaking(false);
     setIsPlaying(false);
     setIsPaused(false);

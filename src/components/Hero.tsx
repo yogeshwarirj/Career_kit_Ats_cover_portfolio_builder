@@ -12,6 +12,7 @@ const Hero: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
 
   const playbackRef = useRef<boolean>(false);
+  const componentId = 'hero-ai-character';
 
   const messages = [
     {
@@ -72,8 +73,8 @@ const Hero: React.FC = () => {
         try {
           setIsSpeaking(true);
 
-          // Wait for speech to complete before advancing
-          await playText(message.text, {
+          // Use component-specific playback to prevent conflicts
+          await elevenLabsService.playTextWithId(message.text, componentId, {
             voiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - professional, clear female voice
             voiceSettings: {
               stability: 0.75, // Higher stability for clear, consistent delivery
@@ -129,7 +130,7 @@ const Hero: React.FC = () => {
       // Stop playing
       setIsPlaying(false);
       setIsPaused(true);
-      stopAudio();
+      elevenLabsService.stopComponentAudio(componentId);
       setIsSpeaking(false);
       playbackRef.current = false;
       toast.success('⏸️ AI Assistant paused');
@@ -160,7 +161,7 @@ const Hero: React.FC = () => {
     setIsMuted(newMutedState);
     
     if (newMutedState && isSpeaking) {
-      stopAudio();
+      elevenLabsService.stopComponentAudio(componentId);
       setIsSpeaking(false);
     }
     
@@ -171,7 +172,7 @@ const Hero: React.FC = () => {
     // Stop any playing audio
     if (isPlaying) {
       setIsPlaying(false);
-      stopAudio();
+      elevenLabsService.stopComponentAudio(componentId);
       setIsSpeaking(false);
       playbackRef.current = false;
     }

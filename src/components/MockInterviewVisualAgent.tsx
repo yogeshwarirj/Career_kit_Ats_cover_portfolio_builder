@@ -30,6 +30,8 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
 }) => {
   const [interviewPhase, setInterviewPhase] = useState<InterviewPhase>('intro');
   
+  const componentId = 'mock-interview-agent';
+  
   const [session, setSession] = useState<InterviewSession>({
     currentQuestionIndex: 0,
     answers: {},
@@ -89,7 +91,7 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
 
   const endInterview = () => {
     setInterviewPhase('completed');
-    stopAudio();
+    elevenLabsService.stopComponentAudio(componentId);
     setSession(prev => ({
       ...prev,
       isRecording: false,
@@ -111,7 +113,7 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
     });
     setCurrentAnswer('');
     setShowFeedback(false);
-    stopAudio();
+    elevenLabsService.stopAllAudio();
     toast.success('🔄 Interview reset. Ready to start again!');
   };
 
@@ -127,7 +129,15 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
         }));
       }, 100);
 
-      await playInterviewQuestion(text);
+      await elevenLabsService.playTextWithId(text, componentId, {
+        voiceId: 'EXAVITQu4vr4xnSDxMaL',
+        voiceSettings: {
+          stability: 0.75,
+          similarity_boost: 0.6,
+          style: 0.1,
+          use_speaker_boost: true
+        }
+      });
       
       setAudioState(prev => ({ ...prev, isPlaying: false, progress: 100 }));
       
@@ -155,7 +165,7 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
   };
 
   const stopQuestionAudio = () => {
-    stopAudio();
+    elevenLabsService.stopComponentAudio(componentId);
     setAudioState(prev => ({ ...prev, isPlaying: false, progress: 0 }));
     
     if (progressInterval.current) {
@@ -581,7 +591,11 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
 
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => playQuestionAudio(currentQuestion.question)}
+              onClick={() => {
+                // Stop any other audio first
+                elevenLabsService.stopAllAudio();
+                playQuestionAudio(currentQuestion.question);
+              }}
               disabled={audioState.isPlaying || audioState.isMuted}
               className="flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-medium hover:from-blue-600 hover:to-purple-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -708,7 +722,11 @@ const MockInterviewVisualAgent: React.FC<MockInterviewVisualAgentProps> = ({
             
             {/* Play Feedback Button */}
             <button
-              onClick={() => playQuestionAudio(session.feedback[currentQuestion.id].overallFeedback)}
+              onClick={() => {
+                // Stop any other audio first
+                elevenLabsService.stopAllAudio();
+                playQuestionAudio(session.feedback[currentQuestion.id].overallFeedback);
+              }}
               disabled={audioState.isPlaying}
               className="mt-4 flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50"
             >

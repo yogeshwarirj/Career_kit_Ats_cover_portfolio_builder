@@ -32,6 +32,9 @@ class ElevenLabsService {
   private config: ElevenLabsConfig;
   private audioCache: Map<string, string> = new Map();
   private currentAudio: HTMLAudioElement | null = null;
+  private isGloballyPlaying: boolean = false;
+  private audioQueue: Array<{ text: string; options?: Partial<TextToSpeechOptions>; resolve: () => void; reject: (error: Error) => void }> = [];
+  private currentPlaybackId: string | null = null;
 
   constructor() {
     this.config = {
@@ -77,6 +80,23 @@ class ElevenLabsService {
       configured: true,
       message: 'Eleven Labs is properly configured and ready to use.'
     };
+  }
+
+  /**
+   * Check if any audio is currently playing globally
+   */
+  isGloballyPlaying(): boolean {
+    return this.isGloballyPlaying;
+  }
+
+  /**
+   * Stop all audio playback globally
+   */
+  stopAllAudio(): void {
+    this.stopCurrentAudio();
+    this.audioQueue = [];
+    this.isGloballyPlaying = false;
+    this.currentPlaybackId = null;
   }
 
   /**
@@ -160,11 +180,19 @@ class ElevenLabsService {
   /**
    * Play text as speech
    */
-  async playText(text: string, options?: Partial<TextToSpeechOptions>): Promise<void> {
+  async playText(text: string, options?: Partial<TextToSpeechOptions>, playbackId?: string): Promise<void> {
+    // If there's already audio playing globally, stop it first
+    if (this.isGloballyPlaying) {
+      this.stopAllAudio();
+      // Small delay to ensure cleanup
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    // Set global playing state and playback ID
+    this.isGloballyPlaying = true;
+    this.currentPlaybackId = playbackId || null;
+
     try {
-      // Stop any currently playing audio
-      this.stopCurrentAudio();
-      
       const audioUrl = await this.textToSpeech({ text, ...options });
       
       return new Promise((resolve, reject) => {
@@ -172,18 +200,139 @@ class ElevenLabsService {
         
         this.currentAudio.onended = () => {
           this.currentAudio = null;
+          this.isGloballyPlaying = false;
+          this.currentPlaybackId = null;
           resolve();
         };
         
         this.currentAudio.onerror = () => {
           this.currentAudio = null;
+          this.isGloballyPlaying = false;
+          this.currentPlaybackId = null;
           reject(new Error('Failed to play audio'));
         };
         
-        // Ensure audio can play
-        const playPromise = this.currentAudio.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(reject);
+        this.currentAudio.play().catch((error) => {
+          this.currentAudio = null;
+          this.isGloballyPlaying = false;
+          this.currentPlaybackId = null;
+          reject(error);
+        });
+      });
+    } catch (error) {
+      this.isGloballyPlaying = false;
+      this.currentPlaybackId = null;
+      console.error('Play text error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Play text with component identification to prevent conflicts
+   */
+  async playTextWithId(text: string, componentId: string, options?: Partial<TextToSpeechOptions>): Promise<void> {
+    return this.playText(text, options, componentId);
+  }
+
+  /**
+   * Check if a specific component is currently playing
+   */
+  isComponentPlaying(componentId: string): boolean {
+    return this.isGloballyPlaying && this.currentPlaybackId === componentId;
+  }
+
+  /**
+   * Stop audio if it belongs to a specific component
+   */
+  stopComponentAudio(componentId: string): void {
+    if (this.currentPlaybackId === componentId) {
+      this.stopAllAudio();
+    }
+  }
+
+  /**
+   * Queue audio for sequential playback (useful for multiple messages)
+   */
+  async queueText(text: string, options?: Partial<TextToSpeechOptions>): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.audioQueue.push({ text, options, resolve, reject });
+      
+      // If nothing is playing, start the queue
+      if (!this.isGloballyPlaying) {
+        this.processAudioQueue();
+      }
+    });
+  }
+
+  /**
+   * Process the audio queue sequentially
+   */
+  private async processAudioQueue(): Promise<void> {
+    while (this.audioQueue.length > 0) {
+      const item = this.audioQueue.shift();
+      if (!item) break;
+
+      try {
+        await this.playText(item.text, item.options);
+        item.resolve();
+      } catch (error) {
+        item.reject(error instanceof Error ? error : new Error('Audio playback failed'));
+        // Continue with next item even if one fails
+      }
+
+      // Small delay between queue items
+      if (this.audioQueue.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+  }
+
+  /**
+   * Clear the audio queue
+   */
+  clearQueue(): void {
+    // Reject all pending promises
+    this.audioQueue.forEach(item => {
+      item.reject(new Error('Audio queue cleared'));
+    });
+    this.audioQueue = [];
+  }
+
+  /**
+   * Enhanced stop current audio with better cleanup
+   */
+  stopCurrentAudio(): void {
+    if (this.currentAudio) {
+      try {
+        this.currentAudio.pause();
+        this.currentAudio.currentTime = 0;
+        this.currentAudio.onended = null;
+        this.currentAudio.onerror = null;
+      } catch (error) {
+        console.warn('Error stopping audio:', error);
+      } finally {
+        this.currentAudio = null;
+        this.isGloballyPlaying = false;
+        this.currentPlaybackId = null;
+      }
+    }
+  }
+
+  /**
+   * Get current playback status
+   */
+  getPlaybackStatus(): {
+    isPlaying: boolean;
+    componentId: string | null;
+    queueLength: number;
+  } {
+    return {
+      isPlaying: this.isGloballyPlaying,
+      componentId: this.currentPlaybackId,
+      queueLength: this.audioQueue.length
+    };
+  }
+
         }
       });
     } catch (error) {
