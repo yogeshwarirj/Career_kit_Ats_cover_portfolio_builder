@@ -380,8 +380,10 @@ export class NetlifyIntegration {
             <div class="nav-logo">${personalInfo.name}</div>
             <ul class="nav-menu">
                 <li><a href="#about" class="nav-link">About</a></li>
+                <li><a href="#skills" class="nav-link">Skills</a></li>
                 <li><a href="#projects" class="nav-link">Projects</a></li>
                 <li><a href="#experience" class="nav-link">Experience</a></li>
+                <li><a href="#education" class="nav-link">Education</a></li>
                 <li><a href="#contact" class="nav-link">Contact</a></li>
             </ul>
             <div class="hamburger">
@@ -391,13 +393,7 @@ export class NetlifyIntegration {
             </div>
         </div>
     </nav>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <header>
-        <h1>${portfolioData.personalInfo.name}</h1>
-        <p>${portfolioData.personalInfo.email}</p>
-    </header>
+
     <!-- Hero Section -->
     <section class="hero">
         <div class="hero-content">
@@ -418,24 +414,47 @@ export class NetlifyIntegration {
                 <div class="about-text">
                     <p>${sections.about}</p>
                 </div>
-                <div class="about-skills">
-                    <h3>Technical Skills</h3>
+            </div>
+        </div>
+    </section>
+
+    <!-- Skills Section -->
+    <section id="skills" class="section bg-light">
+        <div class="container">
+            <h2 class="section-title">Skills & Expertise</h2>
+            <div class="skills-container">
+                ${sections.skills.technical.length > 0 ? `
+                <div class="skills-category">
+                    <h3 class="skills-category-title">Technical Skills</h3>
                     <div class="skills-grid">
-                        ${sections.skills.technical.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
+                        ${sections.skills.technical.map(skill => `<span class="skill-tag technical">${skill}</span>`).join('')}
                     </div>
-                    ${sections.skills.soft.length > 0 ? `
-                    <h3>Soft Skills</h3>
+                </div>
+                ` : ''}
+                
+                ${sections.skills.soft.length > 0 ? `
+                <div class="skills-category">
+                    <h3 class="skills-category-title">Soft Skills</h3>
                     <div class="skills-grid">
                         ${sections.skills.soft.map(skill => `<span class="skill-tag soft">${skill}</span>`).join('')}
                     </div>
-                    ` : ''}
                 </div>
+                ` : ''}
+                
+                ${sections.skills.tools && sections.skills.tools.length > 0 ? `
+                <div class="skills-category">
+                    <h3 class="skills-category-title">Tools & Technologies</h3>
+                    <div class="skills-grid">
+                        ${sections.skills.tools.map(tool => `<span class="skill-tag tools">${tool}</span>`).join('')}
+                    </div>
+                </div>
+                ` : ''}
             </div>
         </div>
     </section>
 
     <!-- Projects Section -->
-    <section id="projects" class="section bg-light">
+    <section id="projects" class="section">
         <div class="container">
             <h2 class="section-title">Projects</h2>
             <div class="projects-grid">
@@ -463,7 +482,7 @@ export class NetlifyIntegration {
 
     <!-- Experience Section -->
     ${sections.experience.length > 0 ? `
-    <section id="experience" class="section">
+    <section id="experience" class="section bg-light">
         <div class="container">
             <h2 class="section-title">Experience</h2>
             <div class="timeline">
@@ -479,6 +498,27 @@ export class NetlifyIntegration {
                             ${exp.achievements.map(achievement => `<li>${achievement}</li>`).join('')}
                         </ul>
                         ` : ''}
+                    </div>
+                </div>
+                `).join('')}
+            </div>
+        </div>
+    </section>
+    ` : ''}
+
+    <!-- Education Section -->
+    ${sections.education && sections.education.length > 0 ? `
+    <section id="education" class="section">
+        <div class="container">
+            <h2 class="section-title">Education</h2>
+            <div class="education-grid">
+                ${sections.education.map(edu => `
+                <div class="education-card">
+                    <div class="education-content">
+                        <h3 class="education-degree">${edu.degree}</h3>
+                        <h4 class="education-school">${edu.school}</h4>
+                        <p class="education-year">${edu.year}</p>
+                        ${edu.description ? `<p class="education-description">${edu.description}</p>` : ''}
                     </div>
                 </div>
                 `).join('')}
@@ -729,10 +769,9 @@ body {
 
 /* About Section */
 .about-content {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 3rem;
-    align-items: start;
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
 }
 
 .about-text {
@@ -740,29 +779,56 @@ body {
     line-height: 1.8;
 }
 
-.about-skills h3 {
-    margin-bottom: 1rem;
+/* Skills Section */
+.skills-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.skills-category {
+    margin-bottom: 3rem;
+}
+
+.skills-category-title {
+    font-size: 1.5rem;
+    font-weight: 600;
     color: ${colors.primary};
+    margin-bottom: 1.5rem;
+    text-align: center;
 }
 
 .skills-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 2rem;
+    gap: 0.75rem;
+    justify-content: center;
 }
 
 .skill-tag {
-    background: ${colors.primary};
-    color: white;
     padding: 0.5rem 1rem;
     border-radius: 20px;
     font-size: 0.9rem;
     font-weight: 500;
+    transition: transform 0.2s ease;
+}
+
+.skill-tag:hover {
+    transform: translateY(-2px);
+}
+
+.skill-tag.technical {
+    background: ${colors.primary};
+    color: white;
 }
 
 .skill-tag.soft {
     background: ${colors.accent};
+    color: white;
+}
+
+.skill-tag.tools {
+    background: ${colors.secondary};
+    color: white;
 }
 
 /* Projects Section */
@@ -907,6 +973,54 @@ body {
     margin-bottom: 0.5rem;
 }
 
+/* Education Section */
+.education-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.education-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.education-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.education-degree {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: ${colors.primary};
+    margin-bottom: 0.5rem;
+}
+
+.education-school {
+    font-size: 1.1rem;
+    color: ${colors.accent};
+    margin-bottom: 0.5rem;
+}
+
+.education-year {
+    font-size: 0.9rem;
+    opacity: 0.7;
+    margin-bottom: 1rem;
+}
+
+.education-description {
+    font-size: 0.9rem;
+    color: ${colors.text};
+    opacity: 0.8;
+}
+
 /* Testimonials */
 .testimonials-grid {
     display: grid;
@@ -964,9 +1078,7 @@ body {
 }
 
 .social-links {
-    display
-  }
-}: flex;
+    display: flex;
     justify-content: center;
     gap: 1rem;
     margin-top: 2rem;
@@ -1024,9 +1136,8 @@ body {
         align-items: center;
     }
     
-    .about-content {
-        grid-template-columns: 1fr;
-        gap: 2rem;
+    .skills-grid {
+        justify-content: center;
     }
     
     .projects-grid {
@@ -1063,6 +1174,15 @@ body {
     
     .section-title {
         font-size: 2rem;
+    }
+    
+    .skills-grid {
+        gap: 0.5rem;
+    }
+    
+    .skill-tag {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
     }
 }
 
@@ -1151,7 +1271,7 @@ const observer = new IntersectionObserver((entries) => {
 }, observerOptions);
 
 // Observe elements for animation
-document.querySelectorAll('.project-card, .timeline-item, .testimonial-card').forEach(el => {
+document.querySelectorAll('.project-card, .timeline-item, .testimonial-card, .education-card, .skill-tag').forEach(el => {
     observer.observe(el);
 });
 
@@ -1221,6 +1341,30 @@ document.querySelectorAll('.btn, .project-link, .social-link').forEach(button =>
         });
     });
 });
+
+// Skill tag hover effects
+document.querySelectorAll('.skill-tag').forEach(tag => {
+    tag.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-2px) scale(1.05)';
+    });
+    
+    tag.addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0) scale(1)';
+    });
+});
+
+// Project card interactions
+document.querySelectorAll('.project-card').forEach(card => {
+    card.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-8px)';
+        this.style.boxShadow = '0 12px 30px rgba(0, 0, 0, 0.2)';
+    });
+    
+    card.addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(-5px)';
+        this.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.15)';
+    });
+});
     `;
   }
 
@@ -1285,6 +1429,12 @@ document.querySelectorAll('.btn, .project-link, .social-link').forEach(button =>
         <priority>0.8</priority>
     </url>
     <url>
+        <loc>${baseUrl}/#skills</loc>
+        <lastmod>${currentDate}</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.9</priority>
+    </url>
+    <url>
         <loc>${baseUrl}/#projects</loc>
         <lastmod>${currentDate}</lastmod>
         <changefreq>weekly</changefreq>
@@ -1295,6 +1445,12 @@ document.querySelectorAll('.btn, .project-link, .social-link').forEach(button =>
         <lastmod>${currentDate}</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>${baseUrl}/#education</loc>
+        <lastmod>${currentDate}</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.6</priority>
     </url>
     <url>
         <loc>${baseUrl}/#contact</loc>
