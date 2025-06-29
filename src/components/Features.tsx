@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Target, Briefcase, Search, Mail, ArrowRight, Sparkles } from 'lucide-react';
+import { FileText, Target, Briefcase, Search, Mail, ArrowRight, Sparkles, Brain } from 'lucide-react';
 
 const Features: React.FC = () => {
   const features = [
@@ -26,6 +26,14 @@ const Features: React.FC = () => {
       gradient: "from-orange-300 via-orange-400 to-orange-500",
       shadowColor: "shadow-orange-400/25",
       glowColor: "group-hover:shadow-orange-400/40"
+    },
+    {
+      icon: <Brain className="h-8 w-8" />,
+      title: "Mock Interview Generator",
+      description: "Generate AI-powered interview questions tailored to specific job descriptions and technologies.",
+      gradient: "from-indigo-400 via-indigo-500 to-indigo-600",
+      shadowColor: "shadow-indigo-500/25",
+      glowColor: "group-hover:shadow-indigo-500/40"
     }
   ];
 
@@ -125,6 +133,17 @@ const Features: React.FC = () => {
                 ) : feature.title === "Portfolio Builder" ? (
                   <a 
                     href="/portfolio-builder"
+                    className={`group/btn relative overflow-hidden inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r ${feature.gradient} text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105`}
+                  >
+                    <span className="relative z-10">Get Started</span>
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover/btn:translate-x-1 transition-transform duration-300 relative z-10" />
+                    
+                    {/* Button Shine Effect */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700"></div>
+                  </a>
+                ) : feature.title === "Mock Interview Generator" ? (
+                  <a 
+                    href="/mock-interview"
                     className={`group/btn relative overflow-hidden inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r ${feature.gradient} text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105`}
                   >
                     <span className="relative z-10">Get Started</span>

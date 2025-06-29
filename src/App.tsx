@@ -7,6 +7,7 @@ import ResumeBuilder from './pages/ResumeBuilder';
 import CoverLetterGenerator from './pages/CoverLetterGenerator';
 import ATSOptimization from './pages/ATSOptimization';
 import PortfolioBuilder from './pages/PortfolioBuilder';
+import MockInterviewGenerator from './pages/MockInterviewGenerator';
 import { FileText, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -103,6 +104,7 @@ function App() {
           <Route path="/cover-letter" element={<CoverLetterGenerator />} />
           <Route path="/ats-optimizer" element={<ATSOptimization />} />
           <Route path="/portfolio-builder" element={<PortfolioBuilder />} />
+          <Route path="/mock-interview" element={<MockInterviewGenerator />} />
         </Routes>
       </div>
     </Router>

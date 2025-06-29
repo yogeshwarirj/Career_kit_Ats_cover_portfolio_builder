@@ -32,7 +32,8 @@
     "lodash.debounce": "^4.0.8",
     "react-dropzone": "^14.2.3",
     "react-hot-toast": "^2.4.1",
-    "algosdk": "^2.7.0"
+    "algosdk": "^2.7.0",
+    "@google/generative-ai": "^0.21.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
