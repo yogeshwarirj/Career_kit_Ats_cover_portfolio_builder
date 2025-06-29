@@ -1,127 +1,156 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowRight, Play, Pause, Volume2, VolumeX, Sparkles, Star, Award, Users, CheckCircle, X } from 'lucide-react';
-import { elevenLabsService, playText, stopAudio, isAudioPlaying } from '../lib/elevenLabsService';
+import { elevenLabsService, playText, stopAudio } from '../lib/elevenLabsService';
 import toast from 'react-hot-toast';
 
 const Hero: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentMessage, setCurrentMessage] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showAICharacter, setShowAICharacter] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const playbackRef = useRef<boolean>(false);
 
   const messages = [
     {
-      text: "Welcome to CareerKit! I'm your AI career assistant, here to help you succeed in your professional journey.",
-      duration: 6000
+      text: "Welcome to CareerKit! I'm your AI career assistant, here to help you succeed in your professional journey."
     },
     {
-      text: "Generate personalized, professional cover letters using Google Gemini AI that perfectly match any job description.",
-      duration: 7000
+      text: "Generate personalized, professional cover letters using Google Gemini AI that perfectly match any job description."
     },
     {
-      text: "Optimize your resume for ATS systems with detailed scoring and AI-powered recommendations to get more interviews.",
-      duration: 7000
+      text: "Optimize your resume for ATS systems with detailed scoring and AI-powered recommendations to get more interviews."
     },
     {
-      text: "Practice interviews with our AI coach featuring professional voice feedback and real-time performance analysis.",
-      duration: 7000
+      text: "Practice interviews with our AI coach featuring professional voice feedback and real-time performance analysis."
     },
     {
-      text: "Create stunning portfolio websites with AI-generated content and deploy them instantly to showcase your work.",
-      duration: 7000
+      text: "Create stunning portfolio websites with AI-generated content and deploy them instantly to showcase your work."
     },
     {
-      text: "Let's accelerate your career success together with our comprehensive AI-powered toolkit!",
-      duration: 6000
+      text: "Let's accelerate your career success together with our comprehensive AI-powered toolkit!"
     }
   ];
 
+  // Main speech playback effect
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (isPlaying && !isMuted) {
-      const currentMessageData = messages[currentMessage];
-      
-      // Start speaking the current message
-      speakMessage(currentMessageData.text);
-      
-      interval = setInterval(() => {
-        setIsAnimating(true);
-        setTimeout(() => {
-          setCurrentMessage((prev) => (prev + 1) % messages.length);
-          setIsAnimating(false);
-        }, 300);
-      }, currentMessageData.duration);
-    }
-    
-    return () => {
-      clearInterval(interval);
-      if (isSpeaking) {
-        stopAudio();
-        setIsSpeaking(false);
+    const speakSequentially = async () => {
+      if (!isPlaying || isMuted || isPaused) {
+        return;
+      }
+
+      playbackRef.current = true;
+
+      // Show toast when starting
+      if (currentMessage === 0) {
+        toast.success('🎤 AI Assistant is now speaking!', {
+          duration: 3000,
+          style: {
+            background: '#10B981',
+            color: 'white',
+            fontWeight: '500'
+          }
+        });
+      }
+
+      // Play through all messages
+      for (let i = currentMessage; i < messages.length && playbackRef.current && isPlaying; i++) {
+        if (!playbackRef.current || !isPlaying || isPaused) break;
+
+        setCurrentMessage(i);
+        const message = messages[i];
+
+        // Check if Eleven Labs is configured
+        if (!elevenLabsService.isConfigured()) {
+          // Just wait a bit for text reading time if no voice
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          continue;
+        }
+
+        try {
+          setIsSpeaking(true);
+
+          // Wait for speech to complete before advancing
+          await playText(message.text, {
+            voiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - professional, clear female voice
+            voiceSettings: {
+              stability: 0.75, // Higher stability for clear, consistent delivery
+              similarity_boost: 0.6, // Natural sound
+              style: 0.0, // Neutral, professional tone
+              use_speaker_boost: true // Enhanced clarity
+            }
+          });
+
+          setIsSpeaking(false);
+
+        } catch (error) {
+          console.error('Voice synthesis error:', error);
+          setIsSpeaking(false);
+          
+          // Show user-friendly error message
+          if (error instanceof Error) {
+            if (error.message.includes('ELEVENLABS_NOT_CONFIGURED')) {
+              toast.error('Voice features require Eleven Labs API key. The AI character will display text only.');
+            } else {
+              toast.error('Voice playback failed. Continuing with text display.');
+            }
+          }
+          
+          // Continue with text-only display for a reasonable time
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+
+        // Small pause between messages
+        if (i < messages.length - 1 && playbackRef.current && isPlaying) {
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+      }
+
+      // End of presentation - loop back to start
+      if (playbackRef.current && isPlaying) {
+        setCurrentMessage(0);
+        // Continue looping - the effect will restart automatically
       }
     };
-  }, [isPlaying, isMuted, currentMessage]);
 
-  const speakMessage = async (text: string) => {
-    if (isMuted || !elevenLabsService.isConfigured()) {
-      return;
+    if (isPlaying && !isPaused) {
+      speakSequentially();
     }
 
-    try {
-      setIsSpeaking(true);
-      
-      // Use professional female voice settings optimized for clear speech
-      await playText(text, {
-        voiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - professional, clear female voice
-        voiceSettings: {
-          stability: 0.75, // Higher stability for clear, consistent delivery
-          similarity_boost: 0.6, // Natural sound
-          style: 0.0, // Neutral, professional tone
-          use_speaker_boost: true // Enhanced clarity
-        }
-      });
-      
-      setIsSpeaking(false);
-    } catch (error) {
-      console.error('Voice synthesis error:', error);
-      setIsSpeaking(false);
-      
-      // Show user-friendly error message
-      if (error instanceof Error) {
-        if (error.message.includes('ELEVENLABS_NOT_CONFIGURED')) {
-          toast.error('Voice features require Eleven Labs API key. The AI character will display text only.');
-        } else {
-          toast.error('Voice playback failed. Continuing with text display.');
-        }
-      }
-    }
-  };
+    return () => {
+      playbackRef.current = false;
+    };
+  }, [isPlaying, isPaused, currentMessage]);
 
   const togglePlay = () => {
     if (isPlaying) {
       // Stop playing
       setIsPlaying(false);
+      setIsPaused(true);
       stopAudio();
       setIsSpeaking(false);
+      playbackRef.current = false;
+      toast.success('⏸️ AI Assistant paused');
     } else {
-      // Start playing
+      // Start/Resume playing
       setIsPlaying(true);
-      setCurrentMessage(0);
+      setIsPaused(false);
       
       // Check if Eleven Labs is configured
       const configStatus = elevenLabsService.getConfigurationStatus();
       if (!configStatus.configured) {
-        toast.error('🎤 Voice features need setup! Get your free API key from ElevenLabs.io and add it to your .env file.', {
+        toast.error('🔧 Voice features need setup! Get your free API key from ElevenLabs.io and add it to your .env file.', {
           duration: 5000,
           style: {
-            background: '#3B82F6',
+            background: '#F59E0B',
             color: 'white',
             fontWeight: '500'
           }
         });
+      } else {
+        toast.success('▶️ AI Assistant started');
       }
     }
   };
@@ -135,7 +164,7 @@ const Hero: React.FC = () => {
       setIsSpeaking(false);
     }
     
-    toast.success(newMutedState ? 'Voice muted' : 'Voice enabled');
+    toast.success(newMutedState ? '🔇 Voice muted' : '🔊 Voice enabled');
   };
 
   const closeAICharacter = () => {
@@ -144,6 +173,7 @@ const Hero: React.FC = () => {
       setIsPlaying(false);
       stopAudio();
       setIsSpeaking(false);
+      playbackRef.current = false;
     }
     setShowAICharacter(false);
     toast.success('AI Assistant closed');
@@ -286,9 +316,7 @@ const Hero: React.FC = () => {
 
                     {/* Speech Bubble */}
                     <div className="relative bg-white rounded-2xl p-4 shadow-lg border border-gray-200 max-w-xs">
-                      <div className={`text-sm text-gray-800 text-center transition-all duration-300 ${
-                        isAnimating ? 'opacity-0 transform scale-95' : 'opacity-100 transform scale-100'
-                      }`}>
+                      <div className="text-sm text-gray-800 text-center transition-all duration-300">
                         {messages[currentMessage].text}
                       </div>
                       
@@ -343,16 +371,16 @@ const Hero: React.FC = () => {
                     <div className="mt-4 text-center">
                       <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
                         isSpeaking
-                          ? 'bg-blue-100 text-blue-800'
+                          ? 'bg-green-100 text-green-800'
                           : isPlaying 
-                          ? 'bg-green-100 text-green-800' 
+                          ? 'bg-blue-100 text-blue-800' 
                           : 'bg-gray-100 text-gray-600'
                       }`}>
                         <div className={`w-2 h-2 rounded-full mr-2 transition-all duration-300 ${
                           isSpeaking
-                            ? 'bg-blue-500 animate-pulse'
+                            ? 'bg-green-500 animate-pulse'
                             : isPlaying 
-                            ? 'bg-green-500 animate-pulse' 
+                            ? 'bg-blue-500 animate-pulse' 
                             : 'bg-gray-400'
                         }`}></div>
                         {isSpeaking 
@@ -361,6 +389,11 @@ const Hero: React.FC = () => {
                           ? 'AI Assistant Active' 
                           : 'Click Play to Start'
                         }
+                      </div>
+                      
+                      {/* Message counter */}
+                      <div className="mt-1 text-xs text-gray-500">
+                        Message {currentMessage + 1} of {messages.length}
                       </div>
                     </div>
 

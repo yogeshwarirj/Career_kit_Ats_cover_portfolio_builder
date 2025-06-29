@@ -13,7 +13,6 @@ interface FeatureExplanation {
   description: string;
   icon: React.ReactNode;
   benefits: string[];
-  duration: number;
 }
 
 const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '' }) => {
@@ -22,11 +21,11 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentFeature, setCurrentFeature] = useState(0);
-  const [progress, setProgress] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
-  const progressInterval = useRef<NodeJS.Timeout | null>(null);
+  const playbackRef = useRef<boolean>(false);
 
   const features: FeatureExplanation[] = [
     {
@@ -34,65 +33,91 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
       title: 'Welcome to CareerKit',
       description: 'Your comprehensive career toolkit powered by AI. I\'m your virtual career coach, here to guide you through our professional-grade tools designed to accelerate your career success.',
       icon: <Sparkles className="h-6 w-6" />,
-      benefits: ['AI-powered career tools', 'Professional-grade results', 'Comprehensive career support'],
-      duration: 8000
+      benefits: ['AI-powered career tools', 'Professional-grade results', 'Comprehensive career support']
     },
     {
       id: 'cover-letter',
       title: 'AI Cover Letter Generator',
       description: 'Generate personalized, compelling cover letters using Google Gemini AI. Simply upload your resume and job description, and get a tailored cover letter that highlights your perfect fit.',
       icon: <Mail className="h-6 w-6" />,
-      benefits: ['Gemini AI-powered', 'Personalized content', 'Job-specific tailoring', 'Professional templates'],
-      duration: 10000
+      benefits: ['Gemini AI-powered', 'Personalized content', 'Job-specific tailoring', 'Professional templates']
     },
     {
       id: 'ats-optimizer',
       title: 'ATS Score Optimizer',
       description: 'Analyze and optimize your resume for Applicant Tracking Systems. Get detailed scoring, keyword analysis, and AI-generated optimized versions that pass ATS screening.',
       icon: <Target className="h-6 w-6" />,
-      benefits: ['Comprehensive ATS analysis', 'Keyword optimization', 'AI-optimized versions', 'Detailed scoring'],
-      duration: 12000
+      benefits: ['Comprehensive ATS analysis', 'Keyword optimization', 'AI-optimized versions', 'Detailed scoring']
     },
     {
       id: 'portfolio-builder',
       title: 'Portfolio Builder',
       description: 'Create stunning portfolio websites with AI-generated content and deploy them instantly to Netlify. Showcase your work with professional designs that impress employers.',
       icon: <Briefcase className="h-6 w-6" />,
-      benefits: ['AI-generated content', 'Instant Netlify deployment', 'Professional designs', 'Custom domains'],
-      duration: 10000
+      benefits: ['AI-generated content', 'Instant Netlify deployment', 'Professional designs', 'Custom domains']
     },
     {
       id: 'mock-interview',
       title: 'Mock Interview Generator',
       description: 'Practice with AI-generated interview questions tailored to your job description. Get real-time feedback from our professional voice coach and improve your interview performance.',
       icon: <Brain className="h-6 w-6" />,
-      benefits: ['AI-generated questions', 'Professional voice coach', 'Real-time feedback', 'Performance analytics'],
-      duration: 12000
+      benefits: ['AI-generated questions', 'Professional voice coach', 'Real-time feedback', 'Performance analytics']
     },
     {
       id: 'conclusion',
       title: 'Your Career Success Awaits',
       description: 'With CareerKit\'s AI-powered tools, you have everything needed to land your dream job. Join thousands of professionals who have accelerated their careers with our platform.',
       icon: <Award className="h-6 w-6" />,
-      benefits: ['Complete career toolkit', 'AI-powered optimization', 'Professional results', 'Career acceleration'],
-      duration: 8000
+      benefits: ['Complete career toolkit', 'AI-powered optimization', 'Professional results', 'Career acceleration']
     }
   ];
 
-  // Audio playback effect
+  // Main playback effect - plays through all features sequentially
   useEffect(() => {
-    const playCurrentFeatureAudio = async () => {
-      if (isPlaying && !isMuted && hasStarted) {
-        const currentFeatureData = features[currentFeature];
-        
+    const playSequentially = async () => {
+      if (!isPlaying || isMuted || !hasStarted || isPaused) {
+        return;
+      }
+
+      playbackRef.current = true;
+
+      // Show toast when starting
+      if (currentFeature === 0) {
+        toast.success('🎤 AI Career Coach is now speaking!', {
+          duration: 3000,
+          style: {
+            background: '#10B981',
+            color: 'white',
+            fontWeight: '500'
+          }
+        });
+      }
+
+      // Play through all features
+      for (let i = currentFeature; i < features.length && playbackRef.current && isPlaying; i++) {
+        if (!playbackRef.current || !isPlaying || isPaused) break;
+
+        setCurrentFeature(i);
+        const feature = features[i];
+
         // Check if Eleven Labs is configured
         if (!elevenLabsService.isConfigured()) {
-          return;
+          // Just wait a bit for text reading time if no voice
+          await new Promise(resolve => setTimeout(resolve, 4000));
+          continue;
         }
 
         try {
           setIsSpeaking(true);
-          await playText(currentFeatureData.description, {
+          
+          // Show speaking status
+          toast.loading(`Speaking: ${feature.title}`, {
+            id: 'speaking-status',
+            duration: 1000
+          });
+
+          // Wait for speech to complete before advancing
+          await playText(feature.description, {
             voiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - professional, clear female voice
             voiceSettings: {
               stability: 0.75,
@@ -101,52 +126,51 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
               use_speaker_boost: true
             }
           });
+
           setIsSpeaking(false);
+          toast.dismiss('speaking-status');
+
         } catch (error) {
           console.error('Voice synthesis error:', error);
           setIsSpeaking(false);
+          toast.dismiss('speaking-status');
           
           if (error instanceof Error && error.message.includes('ELEVENLABS_NOT_CONFIGURED')) {
             toast.error('Voice features require Eleven Labs API key. Please configure in settings.');
+            // Continue with text-only display
+            await new Promise(resolve => setTimeout(resolve, 3000));
           }
         }
+
+        // Small pause between features
+        if (i < features.length - 1 && playbackRef.current && isPlaying) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      // End of presentation
+      if (playbackRef.current && isPlaying) {
+        setIsPlaying(false);
+        setCurrentFeature(0);
+        toast.success('🎉 AI Career Coach presentation complete!', {
+          duration: 4000,
+          style: {
+            background: '#3B82F6',
+            color: 'white',
+            fontWeight: '500'
+          }
+        });
       }
     };
 
-    if (isPlaying && !isMuted && hasStarted) {
-      playCurrentFeatureAudio();
+    if (isPlaying && hasStarted && !isPaused) {
+      playSequentially();
     }
-  }, [currentFeature, isPlaying, isMuted, hasStarted]);
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (isPlaying && !isMuted && hasStarted) {
-      interval = setInterval(() => {
-        setProgress(prev => {
-          const newProgress = prev + 100;
-          const currentDuration = features[currentFeature].duration;
-          
-          if (newProgress >= currentDuration) {
-            // Move to next feature
-            if (currentFeature < features.length - 1) {
-              setCurrentFeature(prev => prev + 1);
-              return 0;
-            } else {
-              // End of presentation
-              setIsPlaying(false);
-              setCurrentFeature(0);
-              return 0;
-            }
-          }
-          
-          return newProgress;
-        });
-      }, 100);
-    }
-    
-    return () => clearInterval(interval);
-  }, [isPlaying, isMuted, currentFeature, features, hasStarted]);
+    return () => {
+      playbackRef.current = false;
+    };
+  }, [isPlaying, hasStarted, isPaused, currentFeature]);
 
   const toggleVisibility = () => {
     setIsVisible(!isVisible);
@@ -161,17 +185,25 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
 
   const togglePlayPause = () => {
     if (isPlaying) {
-      // Stop any current audio
+      // Pause
+      setIsPaused(true);
+      setIsPlaying(false);
       stopAudio();
       setIsSpeaking(false);
+      playbackRef.current = false;
+      toast.success('⏸️ AI presentation paused');
     } else {
+      // Play/Resume
+      setIsPaused(false);
+      setIsPlaying(true);
+      
       // Check if Eleven Labs is configured when starting
       const configStatus = elevenLabsService.getConfigurationStatus();
       if (!configStatus.configured) {
-        toast.error('Voice features require Eleven Labs API key. Please add your API key to the .env file.', {
+        toast.error('🔧 Voice setup needed! Get your free API key from ElevenLabs.io', {
           duration: 5000,
           style: {
-            background: '#3B82F6',
+            background: '#F59E0B',
             color: 'white',
             fontWeight: '500'
           }
@@ -179,7 +211,6 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
       }
     }
     
-    setIsPlaying(!isPlaying);
     if (!hasStarted) {
       setHasStarted(true);
     }
@@ -194,42 +225,33 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
       stopAudio();
       setIsSpeaking(false);
     }
+
+    toast.success(newMutedState ? '🔇 Voice muted' : '🔊 Voice enabled');
   };
 
   const goToFeature = (index: number) => {
-    // Stop any current audio
+    // Stop current playback
+    playbackRef.current = false;
     stopAudio();
     setIsSpeaking(false);
+    setIsPlaying(false);
+    setIsPaused(false);
     
     setCurrentFeature(index);
-    setProgress(0);
+    toast.success(`Jumped to: ${features[index].title}`);
   };
 
   const handlePrevious = () => {
     if (currentFeature > 0) {
-      // Stop any current audio
-      stopAudio();
-      setIsSpeaking(false);
-      
-      setCurrentFeature(prev => prev - 1);
-      setProgress(0);
+      goToFeature(currentFeature - 1);
     }
   };
 
   const handleNext = () => {
     if (currentFeature < features.length - 1) {
-      // Stop any current audio
-      stopAudio();
-      setIsSpeaking(false);
-      
-      setCurrentFeature(prev => prev + 1);
-      setProgress(0);
+      goToFeature(currentFeature + 1);
     }
   };
-
-  const currentProgressPercent = features[currentFeature] 
-    ? (progress / features[currentFeature].duration) * 100 
-    : 0;
 
   if (!isVisible) {
     return (
@@ -268,7 +290,9 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
               </div>
               <div>
                 <h3 className="font-semibold">AI Career Coach</h3>
-                <p className="text-xs opacity-90">Powered by Tavus AI</p>
+                <p className="text-xs opacity-90">
+                  {isSpeaking ? 'Speaking...' : isPlaying ? 'Active' : 'Ready'}
+                </p>
               </div>
             </div>
             
@@ -301,19 +325,29 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
         <div className="relative bg-gradient-to-br from-blue-50 to-purple-50 p-6 flex-1 flex items-center justify-center">
           {/* Simulated Video Avatar */}
           <div className="relative">
-            <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center shadow-2xl">
+            <div className={`w-32 h-32 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center shadow-2xl transition-transform duration-300 ${
+              isSpeaking ? 'scale-110' : ''
+            }`}>
               <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center">
                 {features[currentFeature].icon}
               </div>
               
               {/* Speaking animation */}
               {isSpeaking && (
-                <div className="absolute inset-0 border-4 border-white/30 rounded-full animate-ping"></div>
+                <>
+                  <div className="absolute inset-0 border-4 border-white/50 rounded-full animate-ping"></div>
+                  <div className="absolute inset-0 border-2 border-green-400 rounded-full animate-pulse"></div>
+                </>
+              )}
+              
+              {/* Playing but not speaking animation */}
+              {isPlaying && !isSpeaking && (
+                <div className="absolute inset-0 border-2 border-blue-400 rounded-full animate-pulse opacity-60"></div>
               )}
             </div>
             
             {/* Status indicator */}
-            <div className={`absolute -bottom-2 -right-2 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center ${
+            <div className={`absolute -bottom-2 -right-2 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center transition-colors duration-300 ${
               isSpeaking ? 'bg-green-500' : isPlaying ? 'bg-blue-500' : 'bg-gray-400'
             }`}>
               {isSpeaking ? (
@@ -339,21 +373,21 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
 
         {/* Content Area */}
         <div className="p-6 bg-white">
-          {/* Progress Bar */}
+          {/* Feature Indicator */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700">
-                {currentFeature + 1} of {features.length}
+                Feature {currentFeature + 1} of {features.length}
               </span>
-              <span className="text-xs text-gray-500">
-                {Math.round(currentProgressPercent)}%
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-100"
-                style={{ width: `${currentProgressPercent}%` }}
-              ></div>
+              <div className={`text-xs px-2 py-1 rounded-full ${
+                isSpeaking 
+                  ? 'bg-green-100 text-green-800' 
+                  : isPlaying 
+                  ? 'bg-blue-100 text-blue-800' 
+                  : 'bg-gray-100 text-gray-600'
+              }`}>
+                {isSpeaking ? '🗣️ Speaking' : isPlaying ? '▶️ Active' : '⏹️ Stopped'}
+              </div>
             </div>
           </div>
 
@@ -440,20 +474,30 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
 
           {/* Voice Configuration Notice */}
           {isPlaying && !elevenLabsService.isConfigured() && (
-            <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <div className="flex items-center text-xs text-amber-800">
                 <div className="w-2 h-2 bg-amber-500 rounded-full mr-2 animate-pulse"></div>
-                <span>Add Eleven Labs API key for voice features</span>
+                <div>
+                  <div className="font-medium">🔧 Voice Setup Needed</div>
+                  <div className="mt-1">Add your free Eleven Labs API key for voice features</div>
+                </div>
               </div>
             </div>
           )}
 
-          {/* Speaking Indicator */}
+          {/* Speaking Status */}
           {isSpeaking && (
-            <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-lg">
+            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
               <div className="flex items-center text-xs text-green-800">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                <span>AI Assistant Speaking...</span>
+                <div className="flex space-x-1 mr-2">
+                  <div className="w-1 h-1 bg-green-500 rounded-full animate-bounce"></div>
+                  <div className="w-1 h-1 bg-green-500 rounded-full animate-bounce delay-100"></div>
+                  <div className="w-1 h-1 bg-green-500 rounded-full animate-bounce delay-200"></div>
+                </div>
+                <div>
+                  <div className="font-medium">🎤 AI Coach Speaking</div>
+                  <div className="mt-1">Wait for completion before advancing...</div>
+                </div>
               </div>
             </div>
           )}

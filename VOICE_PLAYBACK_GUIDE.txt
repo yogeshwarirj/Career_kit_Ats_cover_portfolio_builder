@@ -1,0 +1,91 @@
+# 🎤 Voice Playback Behavior Guide
+
+## New Improved Behavior
+
+### AI Speech Completion
+✅ **The AI now waits to finish speaking before advancing to the next message/feature**
+✅ **No more cutting off mid-sentence - the AI completes every word**
+✅ **Proper timing based on actual speech duration, not fixed timers**
+
+## How It Works
+
+### Hero AI Character
+- **Sequential Playback**: Messages play one after another
+- **Speech Completion**: Each message is fully spoken before moving to the next
+- **Loop Behavior**: After the last message, it starts over from the beginning
+- **Pause/Resume**: You can pause at any time and resume from where you left off
+
+### Tavus AI Career Coach (Explainer)
+- **Feature-by-Feature**: Explains each CareerKit feature completely
+- **Speech Completion**: Waits for full explanation before allowing navigation
+- **Manual Navigation**: Use arrow buttons to jump between features
+- **Auto-Advance**: When playing, automatically moves to next feature after speech completes
+
+## User Experience Improvements
+
+### Clear Status Indicators
+- 🟢 **"AI Assistant Speaking"** - Currently speaking, please wait
+- 🔵 **"AI Assistant Active"** - Playing but between messages
+- ⚪ **"Click Play to Start"** - Ready to begin
+- 🟡 **"Add API key for voice"** - Voice setup needed
+
+### Toast Notifications
+- 🎤 **"AI Career Coach is now speaking!"** - When starting presentation
+- ⏸️ **"AI presentation paused"** - When paused
+- 🎉 **"AI Career Coach presentation complete!"** - When finished
+- 🔧 **"Voice setup needed!"** - When API key missing
+
+### Smart Fallbacks
+- **No Voice Setup**: Still shows text with appropriate timing
+- **Network Issues**: Gracefully handles connection problems
+- **API Limits**: Clear messages about quota usage
+
+## Voice Configuration
+
+### Setup Steps (2 minutes)
+1. Get free API key from ElevenLabs.io
+2. Add to .env file: `VITE_ELEVENLABS_API_KEY=your_key`
+3. Restart dev server
+4. Enjoy professional voice synthesis!
+
+### Professional Voice Settings
+- **Voice**: Bella (professional female voice)
+- **Stability**: 75% (clear, consistent delivery)
+- **Similarity**: 60% (natural sound)
+- **Style**: Neutral/professional tone
+- **Speaker Boost**: Enabled (enhanced clarity)
+
+## User Controls
+
+### Playback Controls
+- ▶️ **Play**: Start/resume the AI presentation
+- ⏸️ **Pause**: Stop at current position, can resume later
+- 🔇 **Mute**: Disable voice while keeping visual playback
+- ❌ **Close**: Dismiss the AI character entirely
+
+### Navigation (Tavus Explainer)
+- ⬅️ **Previous**: Jump to previous feature
+- ➡️ **Next**: Jump to next feature
+- 🔘 **Dots**: Click any dot to jump to specific feature
+- 📋 **Grid** (expanded): Click feature cards for instant navigation
+
+## Technical Benefits
+
+### Improved Reliability
+- No more race conditions between timers and audio
+- Proper cleanup of audio resources
+- Better error handling and recovery
+
+### Better Performance
+- Efficient audio management
+- Reduced memory usage
+- Cleaner component lifecycle
+
+### Enhanced UX
+- Predictable behavior
+- Clear feedback
+- Professional presentation quality
+
+---
+
+**Result**: The AI now provides a professional, polished experience that respects the user's time and delivers complete information without interruption.
