@@ -333,14 +333,6 @@ class ElevenLabsService {
     };
   }
 
-        }
-      });
-    } catch (error) {
-      console.error('Play text error:', error);
-      throw error;
-    }
-  }
-
   /**
    * Stop currently playing audio
    */
@@ -439,7 +431,7 @@ class ElevenLabsService {
 // Export additional professional voice functions
 export const playInterviewQuestion = (text: string): Promise<void> => {
   return elevenLabsService.playInterviewQuestion(text);
-}
+};
 
 // Export singleton instance
 export const elevenLabsService = ElevenLabsService.getInstance();

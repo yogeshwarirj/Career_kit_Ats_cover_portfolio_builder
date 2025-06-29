@@ -261,18 +261,64 @@ const Hero: React.FC = () => {
                       
                       {/* Avatar Face */}
                      <div className="absolute inset-2 rounded-full overflow-hidden shadow-2xl border-4 border-white/90">
-                       <img 
-                         src="/image.png" 
-                         alt="AI Professional Career Coach - Professional Woman in Suit"
-                         className="w-full h-full object-cover object-center transition-all duration-300"
-                         style={{
-                           filter: isSpeaking 
-                             ? 'brightness(1.1) saturate(1.2)' 
-                             : isPlaying 
-                             ? 'brightness(1.05) saturate(1.1)' 
-                             : 'brightness(1) saturate(1)'
-                         }}
-                       />
+                       {/* CK Calligraphy Logo */}
+                       <div className="w-full h-full bg-gradient-to-br from-white to-gray-50 flex items-center justify-center relative">
+                         <div 
+                           className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-teal-600 via-blue-600 to-purple-600 transition-all duration-300 select-none"
+                           style={{
+                             fontFamily: 'serif',
+                             fontStyle: 'italic',
+                             fontWeight: '700',
+                             letterSpacing: '-0.1em',
+                             textShadow: isSpeaking 
+                               ? '2px 2px 8px rgba(20, 184, 166, 0.3), -1px -1px 4px rgba(59, 130, 246, 0.2)' 
+                               : isPlaying 
+                               ? '1px 1px 4px rgba(20, 184, 166, 0.2)' 
+                               : '0px 0px 2px rgba(107, 114, 128, 0.1)',
+                             transform: isSpeaking 
+                               ? 'scale(1.05) rotate(-2deg)' 
+                               : isPlaying 
+                               ? 'scale(1.02) rotate(-1deg)' 
+                               : 'scale(1) rotate(0deg)',
+                             filter: isSpeaking 
+                               ? 'brightness(1.2) saturate(1.3)' 
+                               : isPlaying 
+                               ? 'brightness(1.1) saturate(1.1)' 
+                               : 'brightness(1) saturate(1)'
+                           }}
+                         >
+                           CK
+                         </div>
+                         
+                         {/* Decorative flourishes */}
+                         <div 
+                           className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+                           style={{
+                             opacity: isSpeaking ? 0.4 : isPlaying ? 0.2 : 0.1
+                           }}
+                         >
+                           {/* Top flourish */}
+                           <div 
+                             className="absolute top-3 right-6 w-4 h-4 border-t-2 border-r-2 border-teal-400 rounded-tr-full"
+                             style={{ transform: 'rotate(15deg)' }}
+                           ></div>
+                           
+                           {/* Bottom flourish */}
+                           <div 
+                             className="absolute bottom-3 left-6 w-4 h-4 border-b-2 border-l-2 border-purple-400 rounded-bl-full"
+                             style={{ transform: 'rotate(15deg)' }}
+                           ></div>
+                           
+                           {/* Center decorative dots */}
+                           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                             <div className="flex space-x-1">
+                               <div className="w-1 h-1 bg-gradient-to-r from-teal-400 to-blue-400 rounded-full animate-pulse"></div>
+                               <div className="w-1 h-1 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full animate-pulse delay-200"></div>
+                               <div className="w-1 h-1 bg-gradient-to-r from-purple-400 to-teal-400 rounded-full animate-pulse delay-400"></div>
+                             </div>
+                           </div>
+                         </div>
+                       </div>
                        
                        {/* Overlay for speaking effect */}
                        {isSpeaking && (
