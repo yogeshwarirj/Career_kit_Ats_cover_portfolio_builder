@@ -3,12 +3,11 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Hero from './components/Hero';
 import Features from './components/Features';
 import CallToAction from './components/CallToAction';
-import ResumeBuilder from './pages/ResumeBuilder';
 import CoverLetterGenerator from './pages/CoverLetterGenerator';
 import ATSOptimization from './pages/ATSOptimization';
 import PortfolioBuilder from './pages/PortfolioBuilder';
 import MockInterviewGenerator from './pages/MockInterviewGenerator';
-import TavusAgentExplainer from './components/TavusAgentExplainer';
+import AIChatAssistant from './components/AIChatAssistant';
 import { FileText, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -35,12 +34,6 @@ function App() {
                         className="text-gray-700 hover:text-teal-600 transition-colors duration-200"
                       >
                         Home
-                      </Link>
-                      <Link 
-                        to="/resume-builder" 
-                        className="text-gray-700 hover:text-teal-600 transition-colors duration-200"
-                      >
-                        Resume Builder
                       </Link>
                       <Link 
                         to="/cover-letter" 
@@ -106,16 +99,16 @@ function App() {
                 <CallToAction />
               </main>
               
-              {/* Tavus AI Agent Explainer */}
-              <TavusAgentExplainer />
             </>
           } />
-          <Route path="/resume-builder" element={<ResumeBuilder />} />
           <Route path="/cover-letter" element={<CoverLetterGenerator />} />
           <Route path="/ats-optimizer" element={<ATSOptimization />} />
           <Route path="/portfolio-builder" element={<PortfolioBuilder />} />
           <Route path="/mock-interview" element={<MockInterviewGenerator />} />
         </Routes>
+        
+        {/* AI Chat Assistant - Available on all pages */}
+        <AIChatAssistant />
       </div>
     </Router>
   );
