@@ -224,16 +224,36 @@ class GeminiPortfolioGenerator {
       const lines = section.trim().split('\n');
       const title = lines[0]?.replace(/^[-•]\s*/, '').trim() || `Project ${index + 1}`;
       
-      // Extract description (everything after first line)
-      const description = lines.slice(1).join(' ').trim() || 'Professional project showcasing technical skills and expertise.';
+      // Look for explicit technologies line
+      let technologies: string[] = [];
+      let description = '';
       
-      // Match skills mentioned in the project description
-      const relevantTech = skills.filter(skill => 
-        section.toLowerCase().includes(skill.toLowerCase())
-      ).slice(0, 4);
+      const techLine = lines.find(line => 
+        /^(technologies?|tech\s*stack|tech\s*used|technologies\s*used):\s*/i.test(line.trim())
+      );
       
-      // If no specific tech mentioned, use general skills
-      const technologies = relevantTech.length > 0 ? relevantTech : skills.slice(0, 3);
+      if (techLine) {
+        // Extract technologies from the line
+        const techPart = techLine.replace(/^(technologies?|tech\s*stack|tech\s*used|technologies\s*used):\s*/i, '').trim();
+        technologies = techPart.split(',').map(tech => tech.trim()).filter(tech => tech.length > 0);
+        
+        // Build description from remaining lines (excluding the tech line)
+        description = lines.slice(1).filter(line => line !== techLine).join(' ').trim();
+        if (!description) {
+          description = 'Professional project showcasing technical skills and expertise.';
+        }
+      } else {
+        // Fallback to existing logic
+        description = lines.slice(1).join(' ').trim() || 'Professional project showcasing technical skills and expertise.';
+        
+        // Match skills mentioned in the project description
+        const relevantTech = skills.filter(skill => 
+          section.toLowerCase().includes(skill.toLowerCase())
+        ).slice(0, 4);
+        
+        // If no specific tech mentioned, use general skills
+        technologies = relevantTech.length > 0 ? relevantTech : skills.slice(0, 3);
+      }
       
       projects.push({
         id: `project${index + 1}`,
