@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileText, Target, Zap, Shield, TrendingUp, CheckCircle, AlertTriangle, XCircle, Download, Copy, Eye, EyeOff, RefreshCw, Star, Award, Users, Lightbulb, ArrowRight, BarChart3, PieChart, Activity, Sparkles, Edit3, Save, Plus } from 'lucide-react';
+import { Upload, FileText, Target, Zap, Shield, TrendingUp, CheckCircle, AlertTriangle, XCircle, Download, Copy, Eye, EyeOff, RefreshCw, Star, Award, Users, Lightbulb, ArrowRight, BarChart3, PieChart, Activity, Sparkles, Edit3, Save, Plus, Mail } from 'lucide-react';
 import { ResumeData } from '../lib/localStorage';
 import { ATSAnalyzer, ATSAnalysisResult } from '../lib/atsAnalyzer';
+import { geminiATSAnalyzer, GeminiATSAnalysisResult } from '../lib/geminiATSAnalyzer';
 import { ResumeUploader } from './ResumeUploader';
 import { ParsedResume } from '../lib/resumeParser';
 import toast from 'react-hot-toast';
@@ -16,6 +17,8 @@ interface ATSOptimizerProps {
 
 interface OptimizedResumeResult extends ATSAnalysisResult {
   optimizedResume?: ResumeData;
+  geminiAnalysis?: GeminiATSAnalysisResult;
+  atsLetter?: string;
 }
 
 const ATSOptimizer: React.FC<ATSOptimizerProps> = ({ onClose, initialResumeData, className = '' }) => {
@@ -30,7 +33,9 @@ const ATSOptimizer: React.FC<ATSOptimizerProps> = ({ onClose, initialResumeData,
   const [inputMethod, setInputMethod] = useState<'text' | 'url'>('text');
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
+  const [showATSLetter, setShowATSLetter] = useState(false);
   const [editingOptimized, setEditingOptimized] = useState(false);
+  const [useGeminiAI, setUseGeminiAI] = useState(true);
 
   const atsAnalyzer = ATSAnalyzer.getInstance();
 
@@ -126,8 +131,51 @@ Preferred Qualifications:
     setIsAnalyzing(true);
 
     try {
-      const result = await atsAnalyzer.analyzeResume(resumeData, finalJobDescription);
+      let result: ATSAnalysisResult;
+      let geminiAnalysis: GeminiATSAnalysisResult | undefined;
+      
+      if (useGeminiAI) {
+        try {
+          geminiAnalysis = await geminiATSAnalyzer.analyzeResumeWithGemini(resumeData, finalJobDescription);
+          // Convert Gemini analysis to standard format
+          result = {
+            overallScore: geminiAnalysis.overallScore,
+            keywordScore: geminiAnalysis.keywordScore,
+            formatScore: geminiAnalysis.formatScore,
+            contentScore: geminiAnalysis.contentScore,
+            keywords: geminiAnalysis.keywords,
+            formatting: {
+              issues: geminiAnalysis.weaknesses,
+              recommendations: geminiAnalysis.recommendations.slice(0, 3)
+            },
+            content: {
+              strengths: geminiAnalysis.strengths,
+              improvements: geminiAnalysis.weaknesses
+            },
+            recommendations: geminiAnalysis.recommendations,
+            detailedAnalysis: {
+              sections: [],
+              readabilityScore: geminiAnalysis.readabilityScore,
+              lengthAnalysis: {
+                wordCount: this.extractResumeText(resumeData).split(' ').length,
+                optimal: true,
+                recommendation: 'Resume length is appropriate'
+              }
+            }
+          };
+        } catch (geminiError) {
+          console.warn('Gemini AI analysis failed, falling back to standard analysis:', geminiError);
+          toast.error('AI analysis unavailable, using standard analysis');
+          result = await atsAnalyzer.analyzeResume(resumeData, finalJobDescription);
+        }
+      } else {
+        result = await atsAnalyzer.analyzeResume(resumeData, finalJobDescription);
+      }
+      
       setAnalysisResult(result);
+      if (geminiAnalysis) {
+        setOptimizedResult({ ...result, geminiAnalysis, atsLetter: geminiAnalysis.atsLetter });
+      }
       setCurrentStep('results');
       toast.success('ATS analysis completed!');
     } catch (error) {
@@ -146,7 +194,50 @@ Preferred Qualifications:
     setIsOptimizing(true);
 
     try {
-      const result = await atsAnalyzer.generateOptimizedResume(resumeData, jobDescription);
+      let result: OptimizedResumeResult;
+      
+      if (useGeminiAI) {
+        try {
+          const geminiAnalysis = await geminiATSAnalyzer.analyzeResumeWithGemini(resumeData, jobDescription);
+          const optimizedResume = this.createOptimizedResumeFromGemini(resumeData, geminiAnalysis);
+          
+          result = {
+            overallScore: geminiAnalysis.overallScore,
+            keywordScore: geminiAnalysis.keywordScore,
+            formatScore: geminiAnalysis.formatScore,
+            contentScore: geminiAnalysis.contentScore,
+            keywords: geminiAnalysis.keywords,
+            formatting: {
+              issues: geminiAnalysis.weaknesses,
+              recommendations: geminiAnalysis.recommendations.slice(0, 3)
+            },
+            content: {
+              strengths: geminiAnalysis.strengths,
+              improvements: geminiAnalysis.weaknesses
+            },
+            recommendations: geminiAnalysis.recommendations,
+            detailedAnalysis: {
+              sections: [],
+              readabilityScore: geminiAnalysis.readabilityScore,
+              lengthAnalysis: {
+                wordCount: this.extractResumeText(resumeData).split(' ').length,
+                optimal: true,
+                recommendation: 'Resume length is appropriate'
+              }
+            },
+            optimizedResume,
+            geminiAnalysis,
+            atsLetter: geminiAnalysis.atsLetter
+          };
+        } catch (geminiError) {
+          console.warn('Gemini AI optimization failed, falling back to standard optimization:', geminiError);
+          toast.error('AI optimization unavailable, using standard optimization');
+          result = await atsAnalyzer.generateOptimizedResume(resumeData, jobDescription);
+        }
+      } else {
+        result = await atsAnalyzer.generateOptimizedResume(resumeData, jobDescription);
+      }
+      
       setOptimizedResult(result);
       setCurrentStep('optimize');
       toast.success('Optimized resume generated successfully!');
@@ -155,6 +246,42 @@ Preferred Qualifications:
     } finally {
       setIsOptimizing(false);
     }
+  };
+
+  const createOptimizedResumeFromGemini = (originalResume: ResumeData, geminiAnalysis: GeminiATSAnalysisResult): ResumeData => {
+    return {
+      ...originalResume,
+      summary: geminiAnalysis.optimizedContent.summary,
+      experience: originalResume.experience.map((exp, index) => {
+        const optimizedExp = geminiAnalysis.optimizedContent.experience[index];
+        return optimizedExp ? {
+          ...exp,
+          description: optimizedExp.description
+        } : exp;
+      }),
+      skills: {
+        technical: [...new Set([...(originalResume.skills?.technical || []), ...geminiAnalysis.optimizedContent.skills])],
+        soft: originalResume.skills?.soft || []
+      },
+      additionalKeywords: geminiAnalysis.optimizedContent.additionalKeywords
+    };
+  };
+
+  const extractResumeText = (resumeData: ResumeData): string => {
+    const sections = [
+      resumeData.personalInfo?.name || '',
+      resumeData.summary || '',
+      resumeData.experience?.map(exp => 
+        `${exp.title} ${exp.company} ${exp.description}`
+      ).join(' ') || '',
+      resumeData.education?.map(edu => 
+        `${edu.degree} ${edu.school}`
+      ).join(' ') || '',
+      resumeData.skills?.technical?.join(' ') || '',
+      resumeData.skills?.soft?.join(' ') || ''
+    ];
+    
+    return sections.filter(section => section.trim()).join(' ');
   };
 
   const handleDownloadOptimized = () => {
@@ -713,7 +840,7 @@ Preferred Qualifications:
             <button
               onClick={handleOptimizeResume}
               disabled={isOptimizing}
-              className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-green-700 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
+              className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-green-700 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center relative"
             >
               {isOptimizing ? (
                 <>
@@ -723,12 +850,29 @@ Preferred Qualifications:
               ) : (
                 <>
                   <Sparkles className="mr-2 h-5 w-5" />
-                  Generate ATS-Optimized Resume
+                  {useGeminiAI ? 'Generate AI-Optimized Resume' : 'Generate ATS-Optimized Resume'}
                 </>
+              )}
+              {useGeminiAI && (
+                <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                  <Sparkles className="h-3 w-3 text-white" />
+                </div>
               )}
             </button>
             
-           
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="useGeminiAI"
+                checked={useGeminiAI}
+                onChange={(e) => setUseGeminiAI(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="useGeminiAI" className="text-sm text-gray-700 flex items-center">
+                <Sparkles className="h-4 w-4 text-blue-500 mr-1" />
+                Use Gemini AI
+              </label>
+            </div>
           </div>
 
           {/* Detailed Analysis Toggle */}
@@ -747,6 +891,60 @@ Preferred Qualifications:
           {/* Detailed Analysis */}
           {showDetailedAnalysis && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+              {/* Gemini AI Analysis Results */}
+              {optimizedResult?.geminiAnalysis && (
+                <div className="lg:col-span-2 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl shadow-lg border border-blue-200 p-6 mb-6">
+                  <h4 className="font-semibold text-blue-900 mb-4 flex items-center">
+                    <Sparkles className="h-5 w-5 text-blue-600 mr-2" />
+                    Gemini AI Enhanced Analysis
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h5 className="font-medium text-green-900 mb-2 flex items-center">
+                        <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
+                        Strengths
+                      </h5>
+                      <ul className="space-y-1">
+                        {optimizedResult.geminiAnalysis.strengths.map((strength, index) => (
+                          <li key={index} className="text-sm text-green-800 flex items-start">
+                            <span className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 mr-2 flex-shrink-0"></span>
+                            {strength}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <h5 className="font-medium text-orange-900 mb-2 flex items-center">
+                        <AlertTriangle className="h-4 w-4 text-orange-600 mr-1" />
+                        Areas for Improvement
+                      </h5>
+                      <ul className="space-y-1">
+                        {optimizedResult.geminiAnalysis.weaknesses.map((weakness, index) => (
+                          <li key={index} className="text-sm text-orange-800 flex items-start">
+                            <span className="w-1.5 h-1.5 bg-orange-600 rounded-full mt-2 mr-2 flex-shrink-0"></span>
+                            {weakness}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <h5 className="font-medium text-blue-900 mb-2">AI Recommendations</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {optimizedResult.geminiAnalysis.recommendations.map((rec, index) => (
+                        <div key={index} className="flex items-start text-sm text-blue-800">
+                          <Lightbulb className="h-4 w-4 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
+                          {rec}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {/* Keywords Analysis */}
               <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
                 <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
@@ -794,7 +992,8 @@ Preferred Qualifications:
                   </div>
                 </div>
               </div>
-    {/* Recommendations */}
+
+              {/* Recommendations */}
               <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
                 <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
                   <Lightbulb className="h-5 w-5 text-yellow-600 mr-2" />
@@ -849,6 +1048,75 @@ Preferred Qualifications:
               </div>
             </div>
           </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-8">
+            {optimizedResult.atsLetter && (
+              <button
+                onClick={() => setShowATSLetter(!showATSLetter)}
+                className="flex items-center px-6 py-3 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 transition-all duration-300 transform hover:scale-105"
+              >
+                <Mail className="mr-2 h-5 w-5" />
+                {showATSLetter ? 'Hide' : 'View'} ATS Cover Letter
+              </button>
+            )}
+            
+            <button
+              onClick={handleDownloadOptimized}
+              className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-green-700 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center"
+            >
+              <Download className="mr-2 h-5 w-5" />
+              Download Optimized Resume
+            </button>
+          </div>
+
+          {/* ATS Cover Letter Section */}
+          {showATSLetter && optimizedResult.atsLetter && (
+            <div className="mb-8 bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900 flex items-center">
+                  <Mail className="h-6 w-6 text-purple-600 mr-2" />
+                  ATS-Optimized Cover Letter
+                </h3>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => navigator.clipboard.writeText(optimizedResult.atsLetter || '')}
+                    className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy
+                  </button>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 rounded-lg p-6">
+                <div className="whitespace-pre-wrap font-serif text-gray-900 leading-relaxed">
+                  {optimizedResult.atsLetter}
+                </div>
+              </div>
+              
+              <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                <h4 className="font-medium text-purple-900 mb-2 flex items-center">
+                  <Sparkles className="h-4 w-4 mr-1" />
+                  AI-Generated Features
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-purple-800">
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    <span>ATS-optimized keywords</span>
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    <span>Job-specific content</span>
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    <span>Professional formatting</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Comparison Toggle */}
           <div className="mb-6">

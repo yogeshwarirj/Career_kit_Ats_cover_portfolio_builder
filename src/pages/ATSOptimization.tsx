@@ -172,7 +172,7 @@ const ATSOptimization: React.FC = () => {
           </h1>
           
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed animate-fade-in-up delay-200">
-            Optimize your resume for Applicant Tracking Systems with our AI-powered analysis. 
+            Optimize your resume for Applicant Tracking Systems with our Google Gemini AI-powered analysis. 
             Get detailed scoring, keyword recommendations, and formatting suggestions to increase your chances of landing interviews.
           </p>
 
@@ -286,16 +286,16 @@ const ATSOptimization: React.FC = () => {
 
         {/* CTA Section */}
         <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600 rounded-2xl p-12 text-center text-white">
-          <h2 className="text-4xl font-bold mb-4">Ready to Optimize Your Resume?</h2>
+          <h2 className="text-4xl font-bold mb-4">Ready to AI-Optimize Your Resume?</h2>
           <p className="text-xl mb-8 opacity-90">
-            Get detailed ATS analysis and actionable recommendations in minutes
+            Get detailed ATS analysis, optimized resume, and cover letter powered by Google Gemini AI
           </p>
           <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4">
             <button
               onClick={() => setShowOptimizer(true)}
               className="bg-white text-blue-600 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center"
             >
-              Start Free Analysis
+              Start AI Analysis
               <Shield className="ml-2 h-5 w-5" />
             </button>
           </div>
