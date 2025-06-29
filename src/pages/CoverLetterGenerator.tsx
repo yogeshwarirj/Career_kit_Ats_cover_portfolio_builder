@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, FileText, User, Building, Briefcase, Sparkles, Download, Copy, Eye, EyeOff, Save, Clock, Crown, Shield, Zap, CheckCircle, Star, Award, Users, Target, Edit3, Palette, Layout, BookOpen, Mail, Phone, MapPin, Globe, Linkedin } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
+import { geminiATSAnalyzer, ATSLetterParams } from '../lib/geminiATSAnalyzer';
+import { ResumeData } from '../lib/localStorage';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -123,19 +125,57 @@ const CoverLetterGenerator: React.FC = () => {
     return subscription.isSubscribed || subscription.freeLettersUsed < subscription.maxFreeLetters;
   };
 
+  // Convert form data to ResumeData format for Gemini API
+  const convertFormDataToResumeData = (): ResumeData => {
+    return {
+      id: Date.now().toString(),
+      title: `Cover Letter Resume Data - ${new Date().toLocaleDateString()}`,
+      personalInfo: formData.personalInfo,
+      summary: '', // Not provided in cover letter form
+      experience: [], // Not provided in cover letter form
+      education: [], // Not provided in cover letter form
+      skills: {
+        technical: formData.skills,
+        soft: []
+      },
+      certifications: [], // Not provided in cover letter form
+      template: 'modern-professional',
+      lastModified: new Date().toISOString(),
+      version: 1
+    };
+  };
+
   const generateCoverLetter = async () => {
     if (!canGenerateNewLetter()) {
       toast.error('You have reached your free letter limit. Please subscribe to continue.');
       return;
     }
 
+    // Check if Gemini is configured
+    const configStatus = geminiATSAnalyzer.getConfigurationStatus();
+    if (!configStatus.configured) {
+      toast.error('Gemini AI is not configured. Please add your API key to generate AI-powered cover letters.');
+      return;
+    }
+
     setIsGenerating(true);
     
     try {
-      // Simulate AI generation with a more sophisticated template
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Convert form data to ResumeData format
+      const resumeData = convertFormDataToResumeData();
       
-      const generatedContent = generateLetterContent(formData, selectedTemplate);
+      // Create ATSLetterParams for Gemini API
+      const letterParams: ATSLetterParams = {
+        resumeData,
+        jobDescription: formData.jobDescription,
+        companyName: formData.companyName,
+        jobTitle: formData.jobTitle,
+        applicantName: formData.personalInfo.name
+      };
+
+      // Generate cover letter using Gemini AI
+      console.log('Generating cover letter with Gemini AI...');
+      const generatedContent = await geminiATSAnalyzer.generateATSLetter(letterParams);
       
       const newLetter: CoverLetterData = {
         id: Date.now().toString(),
@@ -161,75 +201,37 @@ const CoverLetterGenerator: React.FC = () => {
       saveToLocalStorage(updatedLetters, updatedSubscription);
       
       setCurrentStep('edit');
-      toast.success('Cover letter generated successfully!');
+      toast.success('AI-powered cover letter generated successfully!');
     } catch (error) {
-      toast.error('Failed to generate cover letter. Please try again.');
+      console.error('Cover letter generation error:', error);
+      
+      // Handle specific error types
+      if (error instanceof Error) {
+        switch (error.message) {
+          case 'GEMINI_NOT_CONFIGURED':
+            toast.error('Gemini AI is not configured. Please add your API key.');
+            break;
+          case 'LETTER_GENERATION_FAILED':
+            toast.error('Failed to generate cover letter. Please try again.');
+            break;
+          case 'INVALID_API_KEY':
+            toast.error('Invalid Gemini API key. Please check your configuration.');
+            break;
+          case 'QUOTA_EXCEEDED':
+            toast.error('API quota exceeded. Please try again later.');
+            break;
+          case 'NETWORK_ERROR':
+            toast.error('Network error. Please check your internet connection.');
+            break;
+          default:
+            toast.error('Failed to generate cover letter. Please try again.');
+        }
+      } else {
+        toast.error('Failed to generate cover letter. Please try again.');
+      }
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  const generateLetterContent = (data: typeof formData, template: string): string => {
-    const { personalInfo, jobTitle, companyName, skills, jobDescription } = data;
-    
-    const templates = {
-      professional: `Dear Hiring Manager,
-
-I am writing to express my strong interest in the ${jobTitle} position at ${companyName}. With my background in ${skills.slice(0, 3).join(', ')}, I am confident that I would be a valuable addition to your team.
-
-In my previous roles, I have developed expertise in ${skills.join(', ')}, which directly aligns with the requirements outlined in your job posting. I am particularly drawn to ${companyName} because of your commitment to innovation and excellence in the industry.
-
-${jobDescription ? `Having reviewed the job description, I am excited about the opportunity to contribute to ${companyName}'s continued success. My experience with ${skills.slice(0, 2).join(' and ')} would allow me to make an immediate impact in this role.` : ''}
-
-I would welcome the opportunity to discuss how my skills and enthusiasm can contribute to your team's success. Thank you for considering my application.
-
-Sincerely,
-${personalInfo.name}`,
-
-      creative: `Hello ${companyName} Team!
-
-I'm thrilled to apply for the ${jobTitle} position at ${companyName}. As someone passionate about ${skills.slice(0, 2).join(' and ')}, I believe I could bring fresh perspectives and innovative solutions to your team.
-
-What excites me most about this opportunity is the chance to work with a company that values creativity and forward-thinking approaches. My experience in ${skills.join(', ')} has taught me that the best solutions often come from thinking outside the box.
-
-${jobDescription ? `Your job posting resonated with me because it emphasizes the importance of ${skills.slice(0, 2).join(' and ')}, areas where I've consistently delivered exceptional results.` : ''}
-
-I'd love to discuss how my unique blend of skills and creative approach could contribute to ${companyName}'s continued innovation and success.
-
-Best regards,
-${personalInfo.name}`,
-
-      modern: `Dear ${companyName} Hiring Team,
-
-I am excited to submit my application for the ${jobTitle} role at ${companyName}. Your company's reputation for innovation and commitment to excellence makes this an ideal opportunity for someone with my background in ${skills.slice(0, 3).join(', ')}.
-
-Key highlights of my qualifications include:
-• Expertise in ${skills.slice(0, 2).join(' and ')}
-• Proven track record in ${skills.slice(2, 4).join(' and ')}
-• Strong foundation in ${skills.slice(4, 6).join(' and ')}
-
-${jobDescription ? `The requirements outlined in your job posting align perfectly with my experience, particularly in ${skills.slice(0, 2).join(' and ')}.` : ''}
-
-I am eager to bring my skills and passion to ${companyName} and contribute to your team's continued success. I look forward to the opportunity to discuss how I can add value to your organization.
-
-Best regards,
-${personalInfo.name}`,
-
-      traditional: `Dear Sir/Madam,
-
-I am writing to apply for the position of ${jobTitle} at ${companyName}. I believe my qualifications and experience make me an ideal candidate for this role.
-
-Throughout my career, I have developed strong skills in ${skills.join(', ')}, which I believe would be valuable assets to your organization. I am particularly interested in this position because it would allow me to utilize my expertise while contributing to ${companyName}'s continued growth and success.
-
-${jobDescription ? `After carefully reviewing the job requirements, I am confident that my background in ${skills.slice(0, 3).join(', ')} aligns well with your needs.` : ''}
-
-I would appreciate the opportunity to discuss my qualifications in more detail. Thank you for your time and consideration.
-
-Yours sincerely,
-${personalInfo.name}`
-    };
-
-    return templates[template as keyof typeof templates] || templates.professional;
   };
 
   const handleLetterEdit = (newContent: string) => {
@@ -471,7 +473,7 @@ ${personalInfo.name}`
             <div className="text-center mb-8">
               <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-teal-100 to-blue-100 text-teal-800 text-sm font-medium mb-4 animate-fade-in">
                 <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
-                AI-Powered Cover Letter Generator
+                Gemini AI-Powered Cover Letter Generator
               </div>
               
               <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4 leading-[1.15] animate-fade-in-up">
@@ -482,7 +484,7 @@ ${personalInfo.name}`
               </h1>
               
               <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-[1.15] animate-fade-in-up delay-200">
-                Generate personalized, professional cover letters tailored to any job description in minutes
+                Generate personalized, professional cover letters using Google Gemini AI tailored to any job description
               </p>
             </div>
 
@@ -612,16 +614,34 @@ ${personalInfo.name}`
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Job Description</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Job Description *</label>
                       <textarea
                         rows={8}
                         value={formData.jobDescription}
                         onChange={(e) => handleInputChange('jobDescription', e.target.value)}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
-                        placeholder="Paste the job description here to get a more tailored cover letter..."
+                        placeholder="Paste the job description here for AI-powered personalization..."
+                        required
                       />
-                      <p className="text-sm text-gray-500 mt-1">Optional: Paste the job posting for better personalization</p>
+                      <p className="text-sm text-gray-500 mt-1">Required: Paste the job posting for AI-powered personalization</p>
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Gemini AI Notice */}
+              <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <Sparkles className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div className="ml-3">
+                    <h4 className="text-sm font-medium text-blue-800 mb-1">
+                      Powered by Google Gemini AI
+                    </h4>
+                    <p className="text-sm text-blue-700">
+                      Your cover letter will be generated using advanced AI to ensure it's perfectly tailored to the job description and showcases your skills effectively.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -629,7 +649,7 @@ ${personalInfo.name}`
               <div className="mt-8 flex justify-end">
                 <button
                   onClick={() => setCurrentStep('template')}
-                  disabled={!formData.personalInfo.name || !formData.personalInfo.email || !formData.jobTitle || !formData.companyName || formData.skills.length === 0}
+                  disabled={!formData.personalInfo.name || !formData.personalInfo.email || !formData.jobTitle || !formData.companyName || formData.skills.length === 0 || !formData.jobDescription}
                   className="bg-gradient-to-r from-teal-600 to-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-teal-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   Continue to Templates
@@ -705,7 +725,7 @@ ${personalInfo.name}`
                 onClick={() => setCurrentStep('generate')}
                 className="bg-gradient-to-r from-teal-600 to-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-teal-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105"
               >
-                Generate Cover Letter
+                Generate with AI
               </button>
             </div>
           </div>
@@ -730,11 +750,11 @@ ${personalInfo.name}`
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
                       <div className="flex items-center">
                         <CheckCircle className="h-5 w-5 mr-2" />
-                        <span>Unlimited cover letters</span>
+                        <span>Unlimited AI cover letters</span>
                       </div>
                       <div className="flex items-center">
                         <CheckCircle className="h-5 w-5 mr-2" />
-                        <span>Advanced AI suggestions</span>
+                        <span>Advanced Gemini AI suggestions</span>
                       </div>
                       <div className="flex items-center">
                         <CheckCircle className="h-5 w-5 mr-2" />
@@ -775,16 +795,16 @@ ${personalInfo.name}`
                         <Sparkles className="h-12 w-12 text-white animate-spin" />
                       </div>
                       
-                      <h2 className="text-3xl font-bold text-gray-900 mb-4">Generating Your Cover Letter</h2>
+                      <h2 className="text-3xl font-bold text-gray-900 mb-4">Generating Your AI Cover Letter</h2>
                       <p className="text-lg text-gray-600 mb-8">
-                        Our AI is crafting a personalized cover letter based on your information...
+                        Google Gemini AI is crafting a personalized cover letter based on your information and the job description...
                       </p>
                       
                       <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
                         <div className="bg-gradient-to-r from-teal-600 to-blue-600 h-2 rounded-full animate-pulse" style={{ width: '70%' }}></div>
                       </div>
                       
-                      <p className="text-sm text-gray-500">This usually takes 10-15 seconds</p>
+                      <p className="text-sm text-gray-500">This usually takes 10-20 seconds</p>
                     </div>
                   ) : (
                     <div>
@@ -792,9 +812,9 @@ ${personalInfo.name}`
                         <Zap className="h-12 w-12 text-white" />
                       </div>
                       
-                      <h2 className="text-3xl font-bold text-gray-900 mb-4">Ready to Generate</h2>
+                      <h2 className="text-3xl font-bold text-gray-900 mb-4">Ready to Generate with AI</h2>
                       <p className="text-lg text-gray-600 mb-8">
-                        We'll create a personalized cover letter for the <strong>{formData.jobTitle}</strong> position at <strong>{formData.companyName}</strong>
+                        We'll create a personalized cover letter for the <strong>{formData.jobTitle}</strong> position at <strong>{formData.companyName}</strong> using Google Gemini AI
                       </p>
                       
                       <div className="bg-gray-50 rounded-xl p-6 mb-8 text-left">
@@ -805,6 +825,7 @@ ${personalInfo.name}`
                           <p><strong>Position:</strong> {formData.jobTitle}</p>
                           <p><strong>Company:</strong> {formData.companyName}</p>
                           <p><strong>Key Skills:</strong> {formData.skills.slice(0, 3).join(', ')}</p>
+                          <p><strong>AI Engine:</strong> Google Gemini AI</p>
                         </div>
                       </div>
                       
@@ -813,7 +834,7 @@ ${personalInfo.name}`
                           onClick={generateCoverLetter}
                           className="bg-gradient-to-r from-teal-600 to-blue-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-teal-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105"
                         >
-                          Generate Cover Letter
+                          Generate AI Cover Letter
                         </button>
                         <button 
                           onClick={() => setCurrentStep('template')}
@@ -835,17 +856,17 @@ ${personalInfo.name}`
             <div className="text-center mb-8">
               <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-green-100 to-teal-100 text-green-800 text-sm font-medium mb-4 animate-fade-in">
                 <Edit3 className="w-4 h-4 mr-2 animate-pulse" />
-                Edit & Download
+                AI Cover Letter Ready
               </div>
               
               <h2 className="text-4xl font-bold text-gray-900 mb-4 leading-[1.15]">
-                Your Cover Letter is{' '}
+                Your AI-Generated{' '}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 via-teal-600 to-blue-600">
-                  Ready!
+                  Cover Letter
                 </span>
               </h2>
               <p className="text-lg text-gray-600">
-                Review, edit, and download your personalized cover letter
+                Review, edit, and download your personalized cover letter powered by Gemini AI
               </p>
             </div>
 
@@ -894,6 +915,7 @@ ${personalInfo.name}`
                       <p><strong>Position:</strong> {currentLetter.jobTitle}</p>
                       <p><strong>Company:</strong> {currentLetter.companyName}</p>
                       <p><strong>Template:</strong> {templates.find(t => t.id === currentLetter.template)?.name}</p>
+                      <p><strong>AI Engine:</strong> Gemini AI</p>
                       <p><strong>Created:</strong> {new Date(currentLetter.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
@@ -911,15 +933,15 @@ ${personalInfo.name}`
                     </div>
                   ) : (
                     <div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-4">Edit Your Cover Letter</h3>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-4">Edit Your AI Cover Letter</h3>
                       <textarea
                         value={currentLetter.generatedLetter}
                         onChange={(e) => handleLetterEdit(e.target.value)}
                         className="w-full h-96 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200 font-serif"
-                        placeholder="Edit your cover letter here..."
+                        placeholder="Edit your AI-generated cover letter here..."
                       />
                       <p className="text-sm text-gray-500 mt-2">
-                        Characters: {currentLetter.generatedLetter.length}
+                        Characters: {currentLetter.generatedLetter.length} | Generated by Gemini AI
                       </p>
                     </div>
                   )}
