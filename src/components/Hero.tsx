@@ -214,22 +214,6 @@ const Hero: React.FC = () => {
               Build, Optimize, and Achieve with our comprehensive AI-powered career toolkit
             </p>
 
-            {/* Stats */}
-            <div className="flex flex-wrap justify-center lg:justify-start gap-6 mb-8 animate-fade-in-up delay-300">
-              <div className="flex items-center space-x-2">
-                <Users className="h-5 w-5 text-teal-600" />
-                <span className="text-sm font-medium text-gray-700">10,000+ Users</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                <span className="text-sm font-medium text-gray-700">4.8 Rating</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Award className="h-5 w-5 text-orange-500" />
-                <span className="text-sm font-medium text-gray-700">Industry Leading</span>
-              </div>
-            </div>
-
             {/* CTA Button */}
             <div className="flex flex-col sm:flex-row justify-center lg:justify-start items-center space-y-4 sm:space-y-0 sm:space-x-4 animate-fade-in-up delay-400">
               <a 
