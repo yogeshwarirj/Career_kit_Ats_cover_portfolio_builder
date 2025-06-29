@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, X, Maximize2, Minimize2, MessageCircle, Sparkles, FileText, Mail, Target, Briefcase, Brain, Shield, Award, Users, Star, CheckCircle, Zap } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Play, Pause, Volume2, VolumeX, X, Maximize2, Minimize2, MessageCircle, Sparkles, FileText, Mail, Target, Briefcase, Brain, Shield, Award, Users, Star, CheckCircle, Zap, ArrowLeft, ArrowRight } from 'lucide-react';
+import { elevenLabsService, playText, stopAudio } from '../lib/elevenLabsService';
+import toast from 'react-hot-toast';
 
 interface TavusAgentExplainerProps {
   className?: string;
@@ -22,6 +24,9 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
   const [currentFeature, setCurrentFeature] = useState(0);
   const [progress, setProgress] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const progressInterval = useRef<NodeJS.Timeout | null>(null);
 
   const features: FeatureExplanation[] = [
     {
@@ -74,10 +79,49 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
     }
   ];
 
+  // Audio playback effect
+  useEffect(() => {
+    const playCurrentFeatureAudio = async () => {
+      if (isPlaying && !isMuted && hasStarted) {
+        const currentFeatureData = features[currentFeature];
+        
+        // Check if Eleven Labs is configured
+        if (!elevenLabsService.isConfigured()) {
+          return;
+        }
+
+        try {
+          setIsSpeaking(true);
+          await playText(currentFeatureData.description, {
+            voiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - professional, clear female voice
+            voiceSettings: {
+              stability: 0.75,
+              similarity_boost: 0.6,
+              style: 0.1,
+              use_speaker_boost: true
+            }
+          });
+          setIsSpeaking(false);
+        } catch (error) {
+          console.error('Voice synthesis error:', error);
+          setIsSpeaking(false);
+          
+          if (error instanceof Error && error.message.includes('ELEVENLABS_NOT_CONFIGURED')) {
+            toast.error('Voice features require Eleven Labs API key. Please configure in settings.');
+          }
+        }
+      }
+    };
+
+    if (isPlaying && !isMuted && hasStarted) {
+      playCurrentFeatureAudio();
+    }
+  }, [currentFeature, isPlaying, isMuted, hasStarted]);
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
-    if (isPlaying && !isMuted) {
+    if (isPlaying && !isMuted && hasStarted) {
       interval = setInterval(() => {
         setProgress(prev => {
           const newProgress = prev + 100;
@@ -102,7 +146,7 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
     }
     
     return () => clearInterval(interval);
-  }, [isPlaying, isMuted, currentFeature, features]);
+  }, [isPlaying, isMuted, currentFeature, features, hasStarted]);
 
   const toggleVisibility = () => {
     setIsVisible(!isVisible);
@@ -116,6 +160,25 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
   };
 
   const togglePlayPause = () => {
+    if (isPlaying) {
+      // Stop any current audio
+      stopAudio();
+      setIsSpeaking(false);
+    } else {
+      // Check if Eleven Labs is configured when starting
+      const configStatus = elevenLabsService.getConfigurationStatus();
+      if (!configStatus.configured) {
+        toast.error('Voice features require Eleven Labs API key. Please add your API key to the .env file.', {
+          duration: 5000,
+          style: {
+            background: '#3B82F6',
+            color: 'white',
+            fontWeight: '500'
+          }
+        });
+      }
+    }
+    
     setIsPlaying(!isPlaying);
     if (!hasStarted) {
       setHasStarted(true);
@@ -123,12 +186,45 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
   };
 
   const toggleMute = () => {
-    setIsMuted(!isMuted);
+    const newMutedState = !isMuted;
+    setIsMuted(newMutedState);
+    
+    // Stop any current audio when muting
+    if (newMutedState && isSpeaking) {
+      stopAudio();
+      setIsSpeaking(false);
+    }
   };
 
   const goToFeature = (index: number) => {
+    // Stop any current audio
+    stopAudio();
+    setIsSpeaking(false);
+    
     setCurrentFeature(index);
     setProgress(0);
+  };
+
+  const handlePrevious = () => {
+    if (currentFeature > 0) {
+      // Stop any current audio
+      stopAudio();
+      setIsSpeaking(false);
+      
+      setCurrentFeature(prev => prev - 1);
+      setProgress(0);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentFeature < features.length - 1) {
+      // Stop any current audio
+      stopAudio();
+      setIsSpeaking(false);
+      
+      setCurrentFeature(prev => prev + 1);
+      setProgress(0);
+    }
   };
 
   const currentProgressPercent = features[currentFeature] 
@@ -211,16 +307,22 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
               </div>
               
               {/* Speaking animation */}
-              {isPlaying && !isMuted && (
+              {isSpeaking && (
                 <div className="absolute inset-0 border-4 border-white/30 rounded-full animate-ping"></div>
               )}
             </div>
             
             {/* Status indicator */}
             <div className={`absolute -bottom-2 -right-2 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center ${
-              isPlaying ? 'bg-green-500' : 'bg-gray-400'
+              isSpeaking ? 'bg-green-500' : isPlaying ? 'bg-blue-500' : 'bg-gray-400'
             }`}>
-              {isPlaying ? <Play className="h-3 w-3 text-white" /> : <Pause className="h-3 w-3 text-white" />}
+              {isSpeaking ? (
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+              ) : isPlaying ? (
+                <Play className="h-3 w-3 text-white" />
+              ) : (
+                <Pause className="h-3 w-3 text-white" />
+              )}
             </div>
           </div>
 
@@ -279,18 +381,46 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
 
           {/* Controls */}
           <div className="flex items-center justify-between">
-            <button
-              onClick={togglePlayPause}
-              className={`flex items-center px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                isPlaying 
-                  ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-              }`}
-            >
-              {isPlaying ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
-              {isPlaying ? 'Pause' : 'Play'}
-            </button>
+            {/* Navigation Controls */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handlePrevious}
+                disabled={currentFeature === 0}
+                className={`p-2 rounded-lg transition-all duration-200 ${
+                  currentFeature === 0
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                }`}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              
+              <button
+                onClick={togglePlayPause}
+                className={`flex items-center px-3 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  isPlaying 
+                    ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                }`}
+              >
+                {isPlaying ? <Pause className="h-4 w-4 mr-1" /> : <Play className="h-4 w-4 mr-1" />}
+                <span className="text-xs">{isPlaying ? 'Pause' : 'Play'}</span>
+              </button>
+              
+              <button
+                onClick={handleNext}
+                disabled={currentFeature === features.length - 1}
+                className={`p-2 rounded-lg transition-all duration-200 ${
+                  currentFeature === features.length - 1
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                }`}
+              >
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
 
+            {/* Feature Dots */}
             <div className="flex items-center space-x-1">
               {features.map((_, index) => (
                 <button
@@ -307,6 +437,26 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
               ))}
             </div>
           </div>
+
+          {/* Voice Configuration Notice */}
+          {isPlaying && !elevenLabsService.isConfigured() && (
+            <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-center text-xs text-amber-800">
+                <div className="w-2 h-2 bg-amber-500 rounded-full mr-2 animate-pulse"></div>
+                <span>Add Eleven Labs API key for voice features</span>
+              </div>
+            </div>
+          )}
+
+          {/* Speaking Indicator */}
+          {isSpeaking && (
+            <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center text-xs text-green-800">
+                <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                <span>AI Assistant Speaking...</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Feature Navigation (Expanded View) */}
@@ -332,15 +482,6 @@ const TavusAgentExplainer: React.FC<TavusAgentExplainerProps> = ({ className = '
                 </button>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* Captions (when playing) */}
-        {isPlaying && !isMuted && (
-          <div className="absolute bottom-0 left-0 right-0 bg-black/80 text-white p-3">
-            <p className="text-sm text-center">
-              {features[currentFeature].description}
-            </p>
           </div>
         )}
       </div>
