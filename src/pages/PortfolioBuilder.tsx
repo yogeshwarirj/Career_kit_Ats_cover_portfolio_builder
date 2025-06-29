@@ -1,9 +1,38 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Briefcase, User, Target, Palette, Eye, Download, Globe, ExternalLink, CheckCircle, Sparkles, RefreshCw, Code, Zap, Award, Users, Star, Shield, ArrowRight, Copy, Settings, Lightbulb } from 'lucide-react';
+import { ArrowLeft, Briefcase, User, Target, Palette, Eye, Download, Globe, ExternalLink, CheckCircle, Sparkles, RefreshCw, Code, Zap, Award, Users, Star, Shield, ArrowRight, Copy, Settings, Lightbulb, Plus, X, Calendar, Building, GraduationCap, Trophy } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { geminiPortfolioGenerator, PortfolioGenerationParams, GeneratedPortfolio } from '../lib/geminiPortfolioGenerator';
 import { netlifyIntegration, NetlifyDeployment } from '../lib/netlifyIntegration';
+
+interface Project {
+  id: string;
+  title: string;
+  description: string;
+  technologies: string;
+  liveUrl: string;
+  githubUrl: string;
+}
+
+interface ExperienceEntry {
+  id: string;
+  title: string;
+  company: string;
+  duration: string;
+  description: string;
+}
+
+interface EducationEntry {
+  id: string;
+  degree: string;
+  school: string;
+  year: string;
+}
+
+interface Achievement {
+  id: string;
+  description: string;
+}
 
 interface FormData {
   personalInfo: {
@@ -26,6 +55,16 @@ interface FormData {
     includeTestimonials: boolean;
   };
   skillsInput: string;
+  // Structured data arrays
+  projectsList: Project[];
+  experienceList: ExperienceEntry[];
+  educationList: EducationEntry[];
+  achievementsList: Achievement[];
+  // New item forms
+  newProject: Omit<Project, 'id'>;
+  newExperience: Omit<ExperienceEntry, 'id'>;
+  newEducation: Omit<EducationEntry, 'id'>;
+  newAchievement: Omit<Achievement, 'id'>;
 }
 
 const PortfolioBuilder: React.FC = () => {
@@ -56,7 +95,34 @@ const PortfolioBuilder: React.FC = () => {
       colorScheme: 'blue',
       includeTestimonials: false
     },
-    skillsInput: ''
+    skillsInput: '',
+    // Initialize structured arrays
+    projectsList: [],
+    experienceList: [],
+    educationList: [],
+    achievementsList: [],
+    // Initialize new item forms
+    newProject: {
+      title: '',
+      description: '',
+      technologies: '',
+      liveUrl: '',
+      githubUrl: ''
+    },
+    newExperience: {
+      title: '',
+      company: '',
+      duration: '',
+      description: ''
+    },
+    newEducation: {
+      degree: '',
+      school: '',
+      year: ''
+    },
+    newAchievement: {
+      description: ''
+    }
   });
 
   const handleInputChange = (field: string, value: string | boolean) => {
@@ -78,6 +144,42 @@ const PortfolioBuilder: React.FC = () => {
           [prefField]: value
         }
       }));
+    } else if (field.startsWith('newProject.')) {
+      const projectField = field.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        newProject: {
+          ...prev.newProject,
+          [projectField]: value
+        }
+      }));
+    } else if (field.startsWith('newExperience.')) {
+      const expField = field.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        newExperience: {
+          ...prev.newExperience,
+          [expField]: value
+        }
+      }));
+    } else if (field.startsWith('newEducation.')) {
+      const eduField = field.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        newEducation: {
+          ...prev.newEducation,
+          [eduField]: value
+        }
+      }));
+    } else if (field.startsWith('newAchievement.')) {
+      const achField = field.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        newAchievement: {
+          ...prev.newAchievement,
+          [achField]: value
+        }
+      }));
     } else if (field === 'skillsInput') {
       const skills = (value as string).split(',').map(skill => skill.trim()).filter(skill => skill.length > 0);
       setFormData(prev => ({
@@ -93,9 +195,140 @@ const PortfolioBuilder: React.FC = () => {
     }
   };
 
+  // Add functions
+  const handleAddProject = () => {
+    if (!formData.newProject.title.trim() || !formData.newProject.description.trim()) {
+      toast.error('Please fill in project title and description');
+      return;
+    }
+
+    const newProject: Project = {
+      id: Date.now().toString(),
+      ...formData.newProject
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      projectsList: [...prev.projectsList, newProject],
+      newProject: {
+        title: '',
+        description: '',
+        technologies: '',
+        liveUrl: '',
+        githubUrl: ''
+      }
+    }));
+
+    toast.success('Project added successfully!');
+  };
+
+  const handleAddExperience = () => {
+    if (!formData.newExperience.title.trim() || !formData.newExperience.company.trim()) {
+      toast.error('Please fill in job title and company');
+      return;
+    }
+
+    const newExperience: ExperienceEntry = {
+      id: Date.now().toString(),
+      ...formData.newExperience
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      experienceList: [...prev.experienceList, newExperience],
+      newExperience: {
+        title: '',
+        company: '',
+        duration: '',
+        description: ''
+      }
+    }));
+
+    toast.success('Experience added successfully!');
+  };
+
+  const handleAddEducation = () => {
+    if (!formData.newEducation.degree.trim() || !formData.newEducation.school.trim()) {
+      toast.error('Please fill in degree and school');
+      return;
+    }
+
+    const newEducation: EducationEntry = {
+      id: Date.now().toString(),
+      ...formData.newEducation
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      educationList: [...prev.educationList, newEducation],
+      newEducation: {
+        degree: '',
+        school: '',
+        year: ''
+      }
+    }));
+
+    toast.success('Education added successfully!');
+  };
+
+  const handleAddAchievement = () => {
+    if (!formData.newAchievement.description.trim()) {
+      toast.error('Please enter achievement description');
+      return;
+    }
+
+    const newAchievement: Achievement = {
+      id: Date.now().toString(),
+      ...formData.newAchievement
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      achievementsList: [...prev.achievementsList, newAchievement],
+      newAchievement: {
+        description: ''
+      }
+    }));
+
+    toast.success('Achievement added successfully!');
+  };
+
+  // Delete functions
+  const handleDeleteProject = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      projectsList: prev.projectsList.filter(project => project.id !== id)
+    }));
+    toast.success('Project removed');
+  };
+
+  const handleDeleteExperience = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      experienceList: prev.experienceList.filter(exp => exp.id !== id)
+    }));
+    toast.success('Experience removed');
+  };
+
+  const handleDeleteEducation = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      educationList: prev.educationList.filter(edu => edu.id !== id)
+    }));
+    toast.success('Education removed');
+  };
+
+  const handleDeleteAchievement = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      achievementsList: prev.achievementsList.filter(ach => ach.id !== id)
+    }));
+    toast.success('Achievement removed');
+  };
+
   const handleGeneratePortfolio = async () => {
     // Validate required fields
-    if (!formData.personalInfo.name || !formData.personalInfo.email || !formData.targetRole || !formData.experience || formData.skills.length === 0) {
+    if (!formData.personalInfo.name || !formData.personalInfo.email || !formData.targetRole || formData.skills.length === 0) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -103,13 +336,24 @@ const PortfolioBuilder: React.FC = () => {
     setIsGenerating(true);
 
     try {
+      // Convert structured data to strings for the generator
+      const projectsString = formData.projectsList.map(project => 
+        `${project.title}: ${project.description}. Technologies: ${project.technologies}. ${project.liveUrl ? `Live: ${project.liveUrl}` : ''} ${project.githubUrl ? `GitHub: ${project.githubUrl}` : ''}`
+      ).join('\n\n');
+
+      const experienceString = formData.experienceList.map(exp => 
+        `${exp.title} at ${exp.company} (${exp.duration}): ${exp.description}`
+      ).join('\n\n');
+
+      const achievementsString = formData.achievementsList.map(ach => ach.description).join('\n');
+
       const params: PortfolioGenerationParams = {
         personalInfo: formData.personalInfo,
         targetRole: formData.targetRole,
-        experience: formData.experience,
+        experience: experienceString || formData.experience,
         skills: formData.skills,
-        projects: formData.projects,
-        achievements: formData.achievements,
+        projects: projectsString || formData.projects,
+        achievements: achievementsString || formData.achievements,
         preferences: formData.preferences
       };
 
@@ -425,18 +669,6 @@ const PortfolioBuilder: React.FC = () => {
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Experience & Background *</label>
-                      <textarea
-                        rows={4}
-                        value={formData.experience}
-                        onChange={(e) => handleInputChange('experience', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                        placeholder="Describe your professional experience, background, and career journey..."
-                        required
-                      />
-                    </div>
-                    
-                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Skills & Technologies *</label>
                       <input
                         type="text"
@@ -457,29 +689,332 @@ const PortfolioBuilder: React.FC = () => {
                         </div>
                       )}
                     </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Projects Description</label>
-                      <textarea
-                        rows={4}
-                        value={formData.projects}
-                        onChange={(e) => handleInputChange('projects', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                        placeholder="Describe your key projects, what you built, technologies used, and outcomes..."
-                      />
+                  </div>
+                </div>
+
+                {/* Projects Section */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Code className="h-5 w-5 mr-2 text-blue-600" />
+                    Projects
+                  </h3>
+                  
+                  {/* Add New Project Form */}
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <h4 className="font-medium text-gray-900 mb-3">Add New Project</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Project Title *</label>
+                        <input
+                          type="text"
+                          value={formData.newProject.title}
+                          onChange={(e) => handleInputChange('newProject.title', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="E-commerce Website"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Technologies</label>
+                        <input
+                          type="text"
+                          value={formData.newProject.technologies}
+                          onChange={(e) => handleInputChange('newProject.technologies', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="React, Node.js, MongoDB"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Live URL</label>
+                        <input
+                          type="url"
+                          value={formData.newProject.liveUrl}
+                          onChange={(e) => handleInputChange('newProject.liveUrl', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="https://myproject.com"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">GitHub URL</label>
+                        <input
+                          type="url"
+                          value={formData.newProject.githubUrl}
+                          onChange={(e) => handleInputChange('newProject.githubUrl', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="https://github.com/user/project"
+                        />
+                      </div>
                     </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Key Achievements</label>
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
                       <textarea
                         rows={3}
-                        value={formData.achievements}
-                        onChange={(e) => handleInputChange('achievements', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                        placeholder="List your key achievements, awards, certifications, or notable accomplishments..."
+                        value={formData.newProject.description}
+                        onChange={(e) => handleInputChange('newProject.description', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Describe your project, its features, and impact..."
                       />
                     </div>
+                    <button
+                      onClick={handleAddProject}
+                      className="mt-3 flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Project
+                    </button>
                   </div>
+
+                  {/* Projects List */}
+                  {formData.projectsList.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-gray-900">Added Projects ({formData.projectsList.length})</h4>
+                      {formData.projectsList.map((project) => (
+                        <div key={project.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h5 className="font-medium text-gray-900">{project.title}</h5>
+                              <p className="text-sm text-gray-600 mt-1">{project.description}</p>
+                              {project.technologies && (
+                                <p className="text-sm text-blue-600 mt-1">Technologies: {project.technologies}</p>
+                              )}
+                              <div className="flex space-x-4 mt-2">
+                                {project.liveUrl && (
+                                  <a href={project.liveUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-green-600 hover:underline">
+                                    Live Demo
+                                  </a>
+                                )}
+                                {project.githubUrl && (
+                                  <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-gray-600 hover:underline">
+                                    GitHub
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteProject(project.id)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Experience Section */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Building className="h-5 w-5 mr-2 text-blue-600" />
+                    Work Experience
+                  </h3>
+                  
+                  {/* Add New Experience Form */}
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <h4 className="font-medium text-gray-900 mb-3">Add Work Experience</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Job Title *</label>
+                        <input
+                          type="text"
+                          value={formData.newExperience.title}
+                          onChange={(e) => handleInputChange('newExperience.title', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Software Engineer"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Company *</label>
+                        <input
+                          type="text"
+                          value={formData.newExperience.company}
+                          onChange={(e) => handleInputChange('newExperience.company', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Tech Company Inc."
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+                        <input
+                          type="text"
+                          value={formData.newExperience.duration}
+                          onChange={(e) => handleInputChange('newExperience.duration', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Jan 2022 - Present"
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                      <textarea
+                        rows={3}
+                        value={formData.newExperience.description}
+                        onChange={(e) => handleInputChange('newExperience.description', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Describe your role, responsibilities, and achievements..."
+                      />
+                    </div>
+                    <button
+                      onClick={handleAddExperience}
+                      className="mt-3 flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Experience
+                    </button>
+                  </div>
+
+                  {/* Experience List */}
+                  {formData.experienceList.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-gray-900">Added Experience ({formData.experienceList.length})</h4>
+                      {formData.experienceList.map((exp) => (
+                        <div key={exp.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h5 className="font-medium text-gray-900">{exp.title}</h5>
+                              <p className="text-sm text-blue-600">{exp.company}</p>
+                              {exp.duration && <p className="text-sm text-gray-500">{exp.duration}</p>}
+                              {exp.description && <p className="text-sm text-gray-600 mt-2">{exp.description}</p>}
+                            </div>
+                            <button
+                              onClick={() => handleDeleteExperience(exp.id)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Education Section */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <GraduationCap className="h-5 w-5 mr-2 text-blue-600" />
+                    Education
+                  </h3>
+                  
+                  {/* Add New Education Form */}
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <h4 className="font-medium text-gray-900 mb-3">Add Education</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Degree *</label>
+                        <input
+                          type="text"
+                          value={formData.newEducation.degree}
+                          onChange={(e) => handleInputChange('newEducation.degree', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Bachelor of Science in Computer Science"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">School/University *</label>
+                        <input
+                          type="text"
+                          value={formData.newEducation.school}
+                          onChange={(e) => handleInputChange('newEducation.school', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="University of Technology"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                        <input
+                          type="text"
+                          value={formData.newEducation.year}
+                          onChange={(e) => handleInputChange('newEducation.year', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="2022"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleAddEducation}
+                      className="mt-3 flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Education
+                    </button>
+                  </div>
+
+                  {/* Education List */}
+                  {formData.educationList.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-gray-900">Added Education ({formData.educationList.length})</h4>
+                      {formData.educationList.map((edu) => (
+                        <div key={edu.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h5 className="font-medium text-gray-900">{edu.degree}</h5>
+                              <p className="text-sm text-blue-600">{edu.school}</p>
+                              {edu.year && <p className="text-sm text-gray-500">{edu.year}</p>}
+                            </div>
+                            <button
+                              onClick={() => handleDeleteEducation(edu.id)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Achievements Section */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <Trophy className="h-5 w-5 mr-2 text-blue-600" />
+                    Key Achievements
+                  </h3>
+                  
+                  {/* Add New Achievement Form */}
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <h4 className="font-medium text-gray-900 mb-3">Add Achievement</h4>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Achievement Description *</label>
+                      <textarea
+                        rows={2}
+                        value={formData.newAchievement.description}
+                        onChange={(e) => handleInputChange('newAchievement.description', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Increased team productivity by 40% through implementation of automated testing..."
+                      />
+                    </div>
+                    <button
+                      onClick={handleAddAchievement}
+                      className="mt-3 flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Achievement
+                    </button>
+                  </div>
+
+                  {/* Achievements List */}
+                  {formData.achievementsList.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-gray-900">Added Achievements ({formData.achievementsList.length})</h4>
+                      {formData.achievementsList.map((achievement) => (
+                        <div key={achievement.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="text-sm text-gray-700">{achievement.description}</p>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteAchievement(achievement.id)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Design Preferences */}
@@ -572,7 +1107,7 @@ const PortfolioBuilder: React.FC = () => {
                 <div className="flex justify-center pt-4">
                   <button
                     onClick={handleGeneratePortfolio}
-                    disabled={isGenerating || !formData.personalInfo.name || !formData.personalInfo.email || !formData.targetRole || !formData.experience || formData.skills.length === 0}
+                    disabled={isGenerating || !formData.personalInfo.name || !formData.personalInfo.email || !formData.targetRole || formData.skills.length === 0}
                     className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center"
                   >
                     {isGenerating ? (
@@ -625,7 +1160,7 @@ const PortfolioBuilder: React.FC = () => {
               </div>
 
               {/* Portfolio Content Preview */}
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {/* Header */}
                 <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">{generatedPortfolio.personalInfo.name}</h1>
@@ -648,17 +1183,58 @@ const PortfolioBuilder: React.FC = () => {
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-3">Projects ({generatedPortfolio.sections.projects.length})</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {generatedPortfolio.sections.projects.slice(0, 2).map((project, index) => (
+                      {generatedPortfolio.sections.projects.slice(0, 4).map((project, index) => (
                         <div key={project.id} className="border border-gray-200 rounded-lg p-4">
                           <h4 className="font-medium text-gray-900 mb-2">{project.title}</h4>
                           <p className="text-sm text-gray-600 mb-3">{project.description.substring(0, 100)}...</p>
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex flex-wrap gap-1 mb-2">
                             {project.technologies.slice(0, 3).map((tech, techIndex) => (
                               <span key={techIndex} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                                 {tech}
                               </span>
                             ))}
                           </div>
+                          <div className="flex space-x-2">
+                            {project.liveUrl && (
+                              <span className="text-xs text-green-600">Live Demo</span>
+                            )}
+                            {project.githubUrl && (
+                              <span className="text-xs text-gray-600">GitHub</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Experience Preview */}
+                {generatedPortfolio.sections.experience.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Experience ({generatedPortfolio.sections.experience.length})</h3>
+                    <div className="space-y-4">
+                      {generatedPortfolio.sections.experience.slice(0, 3).map((exp, index) => (
+                        <div key={exp.id} className="border-l-4 border-blue-500 pl-4">
+                          <h4 className="font-medium text-gray-900">{exp.title}</h4>
+                          <p className="text-sm text-blue-600">{exp.company}</p>
+                          <p className="text-sm text-gray-500">{exp.duration}</p>
+                          <p className="text-sm text-gray-600 mt-1">{exp.description.substring(0, 150)}...</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Education Preview */}
+                {generatedPortfolio.sections.education.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Education ({generatedPortfolio.sections.education.length})</h3>
+                    <div className="space-y-3">
+                      {generatedPortfolio.sections.education.map((edu, index) => (
+                        <div key={edu.id} className="border border-gray-200 rounded-lg p-3">
+                          <h4 className="font-medium text-gray-900">{edu.degree}</h4>
+                          <p className="text-sm text-blue-600">{edu.school}</p>
+                          <p className="text-sm text-gray-500">{edu.year}</p>
                         </div>
                       ))}
                     </div>
@@ -668,12 +1244,31 @@ const PortfolioBuilder: React.FC = () => {
                 {/* Skills Preview */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">Skills</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {generatedPortfolio.sections.skills.technical.slice(0, 8).map((skill, index) => (
-                      <span key={index} className="px-3 py-1 bg-gray-100 text-gray-800 text-sm rounded-full">
-                        {skill}
-                      </span>
-                    ))}
+                  <div className="space-y-3">
+                    {generatedPortfolio.sections.skills.technical.length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-gray-700 mb-2">Technical Skills</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {generatedPortfolio.sections.skills.technical.slice(0, 10).map((skill, index) => (
+                            <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {generatedPortfolio.sections.skills.soft.length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-gray-700 mb-2">Soft Skills</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {generatedPortfolio.sections.skills.soft.slice(0, 8).map((skill, index) => (
+                            <span key={index} className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -811,7 +1406,32 @@ const PortfolioBuilder: React.FC = () => {
                         colorScheme: 'blue',
                         includeTestimonials: false
                       },
-                      skillsInput: ''
+                      skillsInput: '',
+                      projectsList: [],
+                      experienceList: [],
+                      educationList: [],
+                      achievementsList: [],
+                      newProject: {
+                        title: '',
+                        description: '',
+                        technologies: '',
+                        liveUrl: '',
+                        githubUrl: ''
+                      },
+                      newExperience: {
+                        title: '',
+                        company: '',
+                        duration: '',
+                        description: ''
+                      },
+                      newEducation: {
+                        degree: '',
+                        school: '',
+                        year: ''
+                      },
+                      newAchievement: {
+                        description: ''
+                      }
                     });
                   }}
                   className="border-2 border-gray-300 text-gray-700 px-8 py-3 rounded-xl font-semibold hover:bg-gray-50 transition-all duration-300"
