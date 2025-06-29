@@ -4,6 +4,7 @@ import { ArrowLeft, Brain, FileText, Download, Settings, Zap, Target, Users, Awa
 import { Toaster, toast } from 'react-hot-toast';
 import { generateQuestions, QuestionGenerationParams, GeneratedQuestion } from '../lib/questionGenerator';
 import { elevenLabsService, playText, stopAudio, isAudioPlaying, playInterviewQuestion } from '../lib/elevenLabsService';
+import { geminiInterviewFeedback, FeedbackResult } from '../lib/geminiInterviewFeedback';
 import jsPDF from 'jspdf';
 
 interface FormData {
@@ -23,6 +24,16 @@ const MockInterviewGenerator: React.FC = () => {
   const [playingGuidanceId, setPlayingGuidanceId] = useState<string | null>(null);
   const [expandedGuidance, setExpandedGuidance] = useState<Set<string>>(new Set());
   const [elevenLabsConfigured, setElevenLabsConfigured] = useState(false);
+
+  // New states for interactive interview
+  const [interviewSessionActive, setInterviewSessionActive] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userAnswer, setUserAnswer] = useState('');
+  const [feedbackResult, setFeedbackResult] = useState<FeedbackResult | null>(null);
+  const [isAnalyzingAnswer, setIsAnalyzingAnswer] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [currentSpokenText, setCurrentSpokenText] = useState(''); // For captions
+  const [isSpeaking, setIsSpeaking] = useState(false); // For visual agent indicator
 
   const [formData, setFormData] = useState<FormData>({
     jobDescription: '',
@@ -59,6 +70,8 @@ const MockInterviewGenerator: React.FC = () => {
       if (playingQuestionId === questionId && isAudioPlaying()) {
         stopAudio();
         setPlayingQuestionId(null);
+        setIsSpeaking(false);
+        setCurrentSpokenText('');
         return;
       }
 
@@ -66,15 +79,23 @@ const MockInterviewGenerator: React.FC = () => {
       stopAudio();
       setPlayingQuestionId(null);
       setPlayingGuidanceId(null);
+      setIsSpeaking(false);
+      setCurrentSpokenText('');
 
       setPlayingQuestionId(questionId);
+      setCurrentSpokenText(questionText);
+      setIsSpeaking(true);
       
       await playInterviewQuestion(questionText);
       
       setPlayingQuestionId(null);
+      setIsSpeaking(false);
+      setCurrentSpokenText(''); // Clear caption after speaking
     } catch (error) {
       console.error('Error playing question:', error);
       setPlayingQuestionId(null);
+      setIsSpeaking(false);
+      setCurrentSpokenText('');
       
       if (error instanceof Error) {
         switch (error.message) {
@@ -96,11 +117,13 @@ const MockInterviewGenerator: React.FC = () => {
     }
   };
 
-  const handlePlayGuidance = async (questionId: string, guidanceText: string) => {
+  const handlePlayGuidance = async (id: string, guidanceText: string) => {
     try {
-      if (playingGuidanceId === questionId && isAudioPlaying()) {
+      if (playingGuidanceId === id && isAudioPlaying()) {
         stopAudio();
         setPlayingGuidanceId(null);
+        setIsSpeaking(false);
+        setCurrentSpokenText('');
         return;
       }
 
@@ -108,15 +131,23 @@ const MockInterviewGenerator: React.FC = () => {
       stopAudio();
       setPlayingQuestionId(null);
       setPlayingGuidanceId(null);
+      setIsSpeaking(false);
+      setCurrentSpokenText('');
 
-      setPlayingGuidanceId(questionId);
+      setPlayingGuidanceId(id);
+      setCurrentSpokenText(guidanceText);
+      setIsSpeaking(true);
       
       await playInterviewQuestion(guidanceText);
       
       setPlayingGuidanceId(null);
+      setIsSpeaking(false);
+      setCurrentSpokenText(''); // Clear caption after speaking
     } catch (error) {
       console.error('Error playing guidance:', error);
       setPlayingGuidanceId(null);
+      setIsSpeaking(false);
+      setCurrentSpokenText('');
       toast.error('Failed to play guidance audio. Please try again.');
     }
   };
@@ -311,6 +342,107 @@ const MockInterviewGenerator: React.FC = () => {
 
     navigator.clipboard.writeText(fullText);
     toast.success('Questions copied to clipboard!');
+  };
+
+  const handleAnalyzeAnswer = async () => {
+    if (!userAnswer.trim()) {
+      toast.error('Please type your answer before submitting for feedback.');
+      return;
+    }
+
+    const currentQuestion = generatedQuestions[currentQuestionIndex];
+    if (!currentQuestion) {
+      toast.error('No question selected for feedback.');
+      return;
+    }
+
+    // Check if Gemini is configured
+    const configStatus = geminiInterviewFeedback.getConfigurationStatus();
+    if (!configStatus.configured) {
+      toast.error(configStatus.message);
+      return;
+    }
+
+    setIsAnalyzingAnswer(true);
+    setFeedbackResult(null);
+    setShowFeedback(false);
+    stopAudio(); // Stop any playing audio
+    setIsSpeaking(false);
+    setCurrentSpokenText('');
+
+    try {
+      const feedback = await geminiInterviewFeedback.analyzeAnswer(currentQuestion, userAnswer);
+      setFeedbackResult(feedback);
+      setShowFeedback(true);
+      toast.success('Feedback generated successfully!');
+
+      // Small pause before playing feedback
+      setTimeout(() => {
+        if (elevenLabsConfigured && feedback.overallFeedback) {
+          handlePlayGuidance('feedback', feedback.overallFeedback);
+        }
+      }, 1000); // 1 second pause
+      
+    } catch (error) {
+      console.error('Error getting feedback:', error);
+      if (error instanceof Error) {
+        switch (error.message) {
+          case 'INVALID_API_KEY':
+            toast.error('Invalid Gemini API key. Please check your configuration.');
+            break;
+          case 'QUOTA_EXCEEDED':
+            toast.error('API quota exceeded. Please try again later.');
+            break;
+          case 'NETWORK_ERROR':
+            toast.error('Network error. Please check your internet connection.');
+            break;
+          case 'GEMINI_NOT_CONFIGURED':
+            toast.error('Gemini AI is not configured. Please add your API key.');
+            break;
+          default:
+            toast.error('Failed to get feedback. Please try again.');
+        }
+      } else {
+        toast.error('Failed to get feedback. Please try again.');
+      }
+    } finally {
+      setIsAnalyzingAnswer(false);
+    }
+  };
+
+  const handleNextQuestion = () => {
+    if (currentQuestionIndex < generatedQuestions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+      setUserAnswer('');
+      setFeedbackResult(null);
+      setShowFeedback(false);
+      stopAudio();
+      setIsSpeaking(false);
+      setCurrentSpokenText('');
+    }
+  };
+
+  const handlePreviousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
+      setUserAnswer('');
+      setFeedbackResult(null);
+      setShowFeedback(false);
+      stopAudio();
+      setIsSpeaking(false);
+      setCurrentSpokenText('');
+    }
+  };
+
+  const handleEndInterview = () => {
+    setInterviewSessionActive(false);
+    setCurrentQuestionIndex(0);
+    setUserAnswer('');
+    setFeedbackResult(null);
+    setShowFeedback(false);
+    stopAudio();
+    setIsSpeaking(false);
+    setCurrentSpokenText('');
   };
 
   const features = [
@@ -685,6 +817,16 @@ const MockInterviewGenerator: React.FC = () => {
                   Download PDF
                 </button>
               </div>
+
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={() => setInterviewSessionActive(true)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center"
+                >
+                  <Play className="h-5 w-5 mr-2" />
+                  Start Interactive Interview
+                </button>
+              </div>
             </div>
 
             {/* Questions Preview */}
@@ -801,6 +943,171 @@ const MockInterviewGenerator: React.FC = () => {
               >
                 Download PDF
               </button>
+            </div>
+          </div>
+        )}
+
+        {interviewSessionActive && generatedQuestions.length > 0 && (
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 text-sm font-medium mb-4 animate-fade-in">
+                <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
+                Interactive Mock Interview
+              </div>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4 leading-[1.15]">
+                Question {currentQuestionIndex + 1} of {generatedQuestions.length}
+              </h2>
+              <p className="text-lg text-gray-600">
+                Answer the question and get instant AI feedback.
+              </p>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+              {/* Visual Agent Caption Area */}
+              <div className={`mb-6 p-4 rounded-lg text-center text-lg font-semibold transition-all duration-300 ${isSpeaking ? 'bg-blue-100 border-2 border-blue-400 animate-pulse' : 'bg-gray-50 border border-gray-200'}`}>
+                {currentSpokenText || (isSpeaking ? 'Speaking...' : 'Ready for interaction')}
+              </div>
+
+              {/* Current Question Card */}
+              <div className="mb-6 p-6 bg-blue-50 rounded-xl border border-blue-200">
+                <div className="flex items-start justify-between mb-4">
+                  <h3 className="text-xl font-semibold text-gray-900 flex-1 pr-4">
+                    {generatedQuestions[currentQuestionIndex].question}
+                  </h3>
+                  <div className="flex items-center space-x-2 flex-shrink-0">
+                    {elevenLabsConfigured && (
+                      <button
+                        onClick={() => handlePlayQuestion(generatedQuestions[currentQuestionIndex].id, generatedQuestions[currentQuestionIndex].question)}
+                        disabled={playingQuestionId === generatedQuestions[currentQuestionIndex].id}
+                        className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50"
+                        title="Listen to question"
+                      >
+                        {playingQuestionId === generatedQuestions[currentQuestionIndex].id ? (
+                          <Pause className="h-5 w-5" />
+                        ) : (
+                          <Play className="h-5 w-5" />
+                        )}
+                      </button>
+                    )}
+                    <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                      {generatedQuestions[currentQuestionIndex].category}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600">
+                  Difficulty: <span className="font-medium capitalize">{generatedQuestions[currentQuestionIndex].difficulty}</span>
+                </p>
+              </div>
+
+              {/* User Answer Input Card */}
+              <div className="mb-6 p-6 bg-gray-100 rounded-xl border border-gray-300">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Your Answer</label>
+                <textarea
+                  rows={8}
+                  value={userAnswer}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="Type your answer here..."
+                  disabled={isAnalyzingAnswer}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-center space-x-4 mb-6">
+                <button
+                  onClick={handleAnalyzeAnswer}
+                  disabled={isAnalyzingAnswer || !userAnswer.trim()}
+                  className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-green-700 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center"
+                >
+                  {isAnalyzingAnswer ? (
+                    <>
+                      <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-5 w-5 mr-2" />
+                      Get Feedback
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Feedback Display Card */}
+              {showFeedback && feedbackResult && (
+                <div className="mt-8 p-6 bg-purple-50 rounded-xl border border-purple-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-gray-900">AI Feedback</h3>
+                    <div className={`text-3xl font-bold ${feedbackResult.score >= 80 ? 'text-green-600' : feedbackResult.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      {feedbackResult.score}%
+                    </div>
+                  </div>
+                  
+                  <p className="text-gray-700 mb-4">{feedbackResult.overallFeedback}</p>
+
+                  {elevenLabsConfigured && (
+                    <div className="mb-4">
+                      <button
+                        onClick={() => handlePlayGuidance('feedback', feedbackResult.overallFeedback)}
+                        disabled={playingGuidanceId === 'feedback'}
+                        className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 disabled:opacity-50"
+                      >
+                        {playingGuidanceId === 'feedback' ? (
+                          <Pause className="h-4 w-4 mr-2" />
+                        ) : (
+                          <Play className="h-4 w-4 mr-2" />
+                        )}
+                        Listen to Feedback
+                      </button>
+                    </div>
+                  )}
+
+                  {feedbackResult.strengths.length > 0 && (
+                    <div className="mb-3">
+                      <h4 className="font-semibold text-green-700 mb-2">Strengths:</h4>
+                      <ul className="list-disc list-inside text-gray-700 text-sm space-y-1">
+                        {feedbackResult.strengths.map((s, i) => <li key={i}>{s}</li>)}
+                      </ul>
+                    </div>
+                  )}
+
+                  {feedbackResult.improvements.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-red-700 mb-2">Improvements:</h4>
+                      <ul className="list-disc list-inside text-gray-700 text-sm space-y-1">
+                        {feedbackResult.improvements.map((i, idx) => <li key={idx}>{i}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Navigation Buttons */}
+              <div className="mt-8 flex justify-between">
+                <button
+                  onClick={handlePreviousQuestion}
+                  disabled={currentQuestionIndex === 0 || isAnalyzingAnswer}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ← Previous Question
+                </button>
+                <button
+                  onClick={handleNextQuestion}
+                  disabled={currentQuestionIndex === generatedQuestions.length - 1 || isAnalyzingAnswer || !showFeedback}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next Question →
+                </button>
+              </div>
+
+              <div className="mt-4 text-center">
+                <button
+                  onClick={handleEndInterview}
+                  className="text-gray-700 hover:text-red-600 transition-colors duration-200 px-4 py-2"
+                >
+                  End Interview Session
+                </button>
+              </div>
             </div>
           </div>
         )}
