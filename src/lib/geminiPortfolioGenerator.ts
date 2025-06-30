@@ -12,6 +12,9 @@ export interface GeneratedPortfolio {
   };
   sections: {
     about: string;
+    careerObjective?: string;
+    personalInterests?: string;
+    whatMakesMeUnique?: string;
     projects: Array<{
       id: string;
       title: string;
@@ -166,6 +169,9 @@ class GeminiPortfolioGenerator {
       personalInfo: params.personalInfo,
       sections: {
         about: this.generateAboutSection(params),
+        careerObjective: '', // Empty by default - will be populated when form includes this data
+        personalInterests: '', // Empty by default - will be populated when form includes this data
+        whatMakesMeUnique: '', // Empty by default - will be populated when form includes this data
         projects: projects,
         experience: experience,
         education: this.generateEducationSection(params),
