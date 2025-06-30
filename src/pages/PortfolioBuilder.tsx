@@ -763,18 +763,7 @@ const PortfolioBuilder: React.FC = () => {
                     <h3>Professional Background</h3>
                     <p>${about.background}</p>
                 </div>
-                <div class="about-card">
-                    <h3>Career Objectives</h3>
-                    <p>${about.objectives}</p>
-                </div>
-                <div class="about-card">
-                    <h3>Personal Interests</h3>
-                    <p>${about.interests}</p>
-                </div>
-                <div class="about-card">
-                    <h3>What Makes Me Unique</h3>
-                    <p>${about.uniqueValue}</p>
-                </div>
+              
             </div>
         </div>
     </section>
@@ -1196,39 +1185,8 @@ const PortfolioBuilder: React.FC = () => {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Career Objectives</label>
-              <textarea
-                rows={4}
-                value={portfolioData.about.objectives}
-                onChange={(e) => updateAbout('objectives', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="What are your career goals and aspirations?"
-              />
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Personal Interests</label>
-              <textarea
-                rows={4}
-                value={portfolioData.about.interests}
-                onChange={(e) => updateAbout('interests', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="What are your hobbies and interests outside of work?"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">What Makes You Unique</label>
-              <textarea
-                rows={4}
-                value={portfolioData.about.uniqueValue}
-                onChange={(e) => updateAbout('uniqueValue', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="What sets you apart from others in your field?"
-              />
-            </div>
-          </div>
+         </div>
         );
 
       case 2: // Education
