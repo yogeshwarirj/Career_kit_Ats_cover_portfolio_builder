@@ -622,7 +622,7 @@ const CoverLetterGenerator: React.FC = () => {
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Your Skills & Achievements *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Your Skills *</label>
                       <input
                         type="text"
                         value={formData.skillsInput}
