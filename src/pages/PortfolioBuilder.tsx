@@ -1921,8 +1921,8 @@ const PortfolioBuilder: React.FC = () => {
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed animate-fade-in-up delay-200">
             Build a stunning portfolio website that showcases your skills, projects, and achievements. Stand out from the crowd with a professional online presence.
           </p>
+        </div>
 
-     
 
         {/* Progress Steps */}
         <div className="mb-8">
