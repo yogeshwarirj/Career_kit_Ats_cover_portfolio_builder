@@ -370,6 +370,51 @@ class NetlifyIntegration {
         background-color: ${colors.background};
     }
 
+    /* Career Objectives */
+    .career-objectives-content {
+      text-align: center;
+    }
+
+    .career-objectives-text {
+      font-size: 1.25rem;
+      color: ${colors.text}dd;
+      margin-bottom: 1rem;
+      line-height: 1.6;
+      max-width: 3xl;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* Personal Interests */
+    .personal-interests-content {
+      text-align: center;
+    }
+
+    .personal-interests-text {
+      font-size: 1.125rem;
+      color: ${colors.text}dd;
+      margin-bottom: 1rem;
+      line-height: 1.6;
+      max-width: 2xl;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* What Makes Me Unique */
+    .unique-content {
+      text-align: center;
+    }
+
+    .unique-text {
+      font-size: 1.125rem;
+      color: ${colors.text}dd;
+      margin-bottom: 1rem;
+      line-height: 1.6;
+      max-width: 2xl;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
     /* Typography */
     h1, h2, h3, h4, h5, h6 {
         font-weight: 600;
