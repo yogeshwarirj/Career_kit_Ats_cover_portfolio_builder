@@ -1753,7 +1753,7 @@ const PortfolioBuilder: React.FC = () => {
                   className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 disabled:opacity-50"
                 >
      
-                   Deploy
+                  Download & Deploy
                 </button>
               </div>
             </div>
